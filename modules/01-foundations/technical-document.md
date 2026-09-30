@@ -132,6 +132,10 @@ infrastructure module (`03-backend-tasks.md` §1.3).
 | 1 | GET `/healthz` | none — public liveness | process-alive proof for Nginx/HestiaCP + 15 uptime checks; `{"status":"ok"}`, `no-store` | `INTERNAL` (unexpected only) | FND-US-006 |
 | 2 | GET `/readyz` | none (public; IP-restriction open — 01 §9 Q3) | Neon ping + Redis PING (1s timeouts); 200 with per-dependency results, or 503 naming failed deps (bn/en) | `INTERNAL` (dependency down) | FND-US-006 |
 
+Outside production only (`APP_ENV` ≠ `production`), `serve` also mounts GET `/docs` (Swagger UI),
+GET `/openapi.json` (the embedded spec) and GET `/` → 302 `docs`. They are developer tooling, not
+contract routes: not in the spec, not validated, 404 in production (`internal/apidocs`).
+
 Cross-cutting every route, all modules: `X-Request-Id` (≤64 chars sanitized, else generated uuid
 v7, echoed); RFC-7807 envelope with open-set `code`; rate-limit classes `auth/ai/payments/
 messaging/default` fixed here, enforced by consumers; destructive/financial routes must call
@@ -196,11 +200,11 @@ declare them (`06-integration-tasks.md` §5).
 
 | Variable | Required | Example / default | Used by |
 | --- | --- | --- | --- |
-| `DATABASE_URL` | yes | `postgres://…neon.tech/db` | pgx pool; ping at boot, fail fast |
+| `DATABASE_URL` | yes | local: `postgres://postgres:postgres@localhost:5432/kc?sslmode=disable` · production: Neon `kushol-connect-db` (direct endpoint for migrations) | pgx pool; ping at boot, fail fast |
 | `REDIS_URL` | yes | `redis://127.0.0.1:6379/0` | go-redis (limits, caches) |
 | `APP_ENV` | yes | `development` \| `test` \| `production` | config module |
 | `LOG_LEVEL` | yes | `info` (debug/info/warn/error) | slog setup |
-| `HTTP_PORT` | yes | `8080` (1–65535) — in-container listen port; host port is 15's `API_PORT` | chi server; `healthcheck` subcommand |
+| `HTTP_PORT` | yes | `5433` locally; `8080` in containers (1–65535) — host port is 15's `API_PORT` | chi server; `healthcheck` subcommand |
 | `SHUTDOWN_TIMEOUT` | no | `20s` | graceful HTTP drain + worker in-flight jobs |
 | `TRUSTED_PROXIES` | no | `127.0.0.1/32,::1/128` — production adds the Compose network CIDR (Docker publishes ports via the bridge gateway) | RealIP: whose `X-Forwarded-For` is believed |
 | `WORKER_CONCURRENCY` | no | `2` (1–32) | jobs worker goroutines |
@@ -212,9 +216,9 @@ each parsed only by its zod `src/env.ts`:
 
 | Variable | Repo | Required | Example | Notes |
 | --- | --- | --- | --- | --- |
-| `NEXT_PUBLIC_API_URL` | web | yes | `http://localhost:8080` | public (inlined at build) — never a secret |
-| `NEXT_PUBLIC_SITE_URL` | web | yes | `http://localhost:3000` | `metadataBase`; public |
-| `EXPO_PUBLIC_API_URL` | app | yes | `http://<lan-ip>:8080` | inlined in the bundle; per-channel values in EAS profiles (15 `OPS-AP-004`) |
+| `NEXT_PUBLIC_API_URL` | web | yes | `http://localhost:5433` | public (inlined at build) — never a secret |
+| `NEXT_PUBLIC_SITE_URL` | web | yes | `http://localhost:4433` | `metadataBase`; public |
+| `EXPO_PUBLIC_API_URL` | app | yes | `http://<lan-ip>:5433` | inlined in the bundle; per-channel values in EAS profiles (15 `OPS-AP-004`) |
 
 ### 8.2 Runtime config — the two lists
 
@@ -349,3 +353,5 @@ keep their `TODO: Confirm` marker.
 | 2026-09-30 | Consistency pass: module-specific error codes registered (§10); migration version rule (monotonic in build order, see `docs/modules/README.md`) | Claude |
 | 2026-09-30 | Isolated applications (owner): module 01 works only in the api repo — spec moved to `applications/api/openapi/openapi.yaml`, no `packages/shared`/Turborepo, TS client generation and web/app tooling moved to 02 (`DSN-FE-000`/`DSN-AP-000`); problem copy owned by api `internal/i18n` (`errors.*`); env adds `SHUTDOWN_TIMEOUT`, `TRUSTED_PROXIES`, `WORKER_CONCURRENCY`; verified pins recorded (§2) | Claude |
 | 2026-09-30 | Owner: "complete 01-foundations for api, web and app" — web and app repo scaffolds return to 01 (`FND-FE-001`, `FND-AP-001`; were 02 `DSN-FE-000`/`DSN-AP-000`), `FND-INT-006` back in 01; web/app env vars added to §8.1; jobs `run_at` now uses the database clock (bug found by `FND-IT-003`) | Claude |
+| 2026-09-30 | §8.1: local development on Postgres `kc` (localhost) with ports api 5433 · web 4433 · ai 8433 (reserved) via `applications/dev-start.sh`; production database is the Neon project `kushol-connect-db` (Singapore, Postgres 18) | Claude |
+| 2026-09-30 | §5.1: Swagger UI at `/docs` and the spec at `/openapi.json` outside production (owner request) | Claude |

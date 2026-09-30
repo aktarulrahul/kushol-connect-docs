@@ -92,7 +92,7 @@ and unaffected by build/OTA wiring.
 
 ## 9. Task Checklist
 
-- [ ] `OPS-AP-001` — `eas.json` profiles (development / preview / production) matching the table in §2.1
+- [x] `OPS-AP-001` — `eas.json` profiles (development / preview / production) matching the table in §2.1 — **done early in 01 (owner, 2026-09-30, 01 ADR-16):** `applications/app/eas.json` adds `development-simulator`; `development` sets no `EXPO_PUBLIC_API_URL` (Metro supplies it); preview/production use `https://api.kusholconnect.com` (infra plan §9); `submit.production` = Play internal track (draft) + App Store Connect. `eas init` (project id) is owner-run
 - [ ] `OPS-AP-002` — icon + splash from 02 wired into app config for all profiles
 - [ ] `OPS-AP-003` — OTA channels + `runtimeVersion` policy + canary/republish-rollback policy documented (DEPLOYMENT.md)
 - [ ] `OPS-AP-004` — per-channel `EXPO_PUBLIC_API_URL` env wiring (dev/preview/prod)

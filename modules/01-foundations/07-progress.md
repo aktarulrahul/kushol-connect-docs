@@ -13,7 +13,7 @@ nothing committed yet) · **Last updated:** 2026-09-30
 | Gate 1 · UI approval | Skipped (N/A) | 2026-09-30 | Per `prompt-build.md` §3 exception |
 | 3 · Docs sync | ✅ | 2026-09-30 | Checklists ticked, registries + tech-stack pins updated |
 | 4 · Backend build | ✅ code + unit + integration green | 2026-09-30 | See evidence |
-| Gate 2 · owner runs migrations | ⏳ **waiting on owner** | — | Versions `20260930000001–000003` against Neon (direct endpoint) |
+| Gate 2 · owner runs migrations | ⏳ **waiting on owner** | — | Neon project `kushol-connect-db` exists (Singapore, Postgres 18, linked from `applications/api`); versions `20260930000001–000003` not yet applied there (direct endpoint). Local `kc` is migrated by `dev-start.sh` |
 | 5 · Integration | ✅ `FND-INT-001…006` | 2026-09-30 | Web/app repo scaffolds added on owner instruction (ADR-8) |
 | Gate 3 · integrated flows | ⏳ waiting on owner | — | Developer golden paths (below) |
 | 6 · Gaps & verification | ✅ `08-gaps.md` written · final verification ⏳ owner | 2026-09-30 | Module stays 🚧 until Gates 2, 3 and final verification pass |
@@ -34,6 +34,10 @@ nothing committed yet) · **Last updated:** 2026-09-30
 | ADR-10 | ESLint 10 without `eslint-config-next` / `eslint-config-expo` | Their bundled react/import/jsx-a11y plugins don't declare ESLint 10 support (checked 2026-09-30). Both repos use `@eslint/js` + `typescript-eslint` strict-type-checked + react-hooks (+ `@next/eslint-plugin-next` on web) |
 | ADR-11 | TypeScript 6.0.3 (not 7.0) in web and app | typescript-eslint 8.71 supports `<6.1`. TS 6 no longer loads `@types/*` automatically, so the app lists `types` explicitly |
 | ADR-12 | Client repos check drift against their **committed** spec copy | CI can't see the api repo; `pnpm sync:api-spec` copies it locally, and `pnpm contracts:check` regenerates into a temp file and compares |
+| ADR-13 | **Local development on a local Postgres; Neon for production** (owner, 2026-09-30) | `applications/dev-start.sh` / `dev-stop.sh` run the stack against Postgres 18 `kc` on localhost (refusing any non-local `DATABASE_URL`) with Redis in a `kc-redis` container; local ports api 5433 · web 4433 · ai 8433 (reserved) · Metro 8081 (owner). Neon project `kushol-connect-db` (`curly-cake-39653464`, AWS Singapore, Postgres 18) is production; `neon.ts`, the link context and the pulled `.env.local` live in `applications/api` (owner: "used in prod api"). Test image moved to `postgres:18-alpine` to match |
+| ADR-14 | **API docs at `/docs`** (owner, 2026-09-30: "implement swagger in http://localhost:5433/docs") | Swagger UI 5.32.8 from `github.com/swaggest/swgui` v1.8.9 (assets embedded, no CDN) with our own page + init script in `internal/apidocs`, so the CSP stays `script-src 'self'`; spec served from the binary at `/openapi.json`; `/` redirects to `/docs`. Mounted only when `APP_ENV` ≠ `production` — owner can open it in production later by changing one line in `cmd/api` |
+| ADR-15 | **Web holding page** (owner, 2026-09-30: "fix the web") | `/` was an unstyled `<h1>` in the corner. Now a centred brand name in deep teal on paper (`docs/design-reference` §2; tokens and Hind Siliguri still arrive with 02). Under `next dev` only, a card shows `/readyz` status and links the api docs; production builds stay static and omit it |
+| ADR-16 | **Development builds + EAS, never Expo Go** (owner, 2026-09-30: "don't use expo go"; "use expo eas … Google Play and Apple App Store through TestFlight") | `expo-dev-client` 57.0.19 added; `ios.bundleIdentifier` / `android.package` = `com.kusholconnect.app` (owner choice, closes G-7). `app/eas.json` pulled forward from 15 (`OPS-AP-001`): `development`, `development-simulator`, `preview` (APK, `https://api.kusholconnect.com`), `production` (store, auto-increment); submit → Play internal track (draft) and App Store Connect/TestFlight. `dev-start.sh` now starts the app by default: builds the dev client locally with Xcode (`expo prebuild --clean` + `expo run:ios`, no Expo account needed), rebuilds only when `app.json`/lockfile change or `--rebuild`, opens it on an iPhone simulator. App `/` gets the same holding treatment as web (ADR-15) with a `__DEV__`-only api status card |
 
 ## Defaults relied on
 
@@ -41,7 +45,7 @@ nothing committed yet) · **Last updated:** 2026-09-30
 - C5: default rate-limit class 120 req/min/IP — `TODO: Confirm` (owner Rahul), in `ratelimit.DefaultRule`.
 - Go module path `github.com/aktarulrahul/kushol-connect/applications/api` — `TODO: Confirm` the api repo's final remote.
 - `jobs.status` keeps `FAILED` in its CHECK (spec); no code path sets it.
-- Postgres major for tests `postgres:17-alpine` — `TODO: Confirm` against the Neon project's major at Gate 2.
+- Postgres major: Neon `kushol-connect-db` runs 18 (checked with `neon projects get`, 2026-09-30); tests use `postgres:18-alpine`, local Postgres.app is 18.6.
 - App identifiers (`android.package`, `ios.bundleIdentifier`) not set — `TODO: Confirm` before the first EAS build (15).
 
 ## Pinned versions (verified 2026-09-30)
@@ -73,11 +77,17 @@ pnpm/action-setup v6 · upload-artifact v7. Full list in `docs/tech-stack.md`.
 | app | `expo-doctor` | 21/21 checks pass |
 | app | `expo export --platform android` | Hermes bundle 2.7 MB |
 | web + app | boundary probe (`process.env`, `fetch`, `openapi-fetch` outside allowed files) | 3/3 rejected in each repo |
+| api | integration suite on `postgres:18-alpine` | all packages `ok`, exit 0 |
+| all | `dev-start.sh --app --detach` | `kc` migrated (`20260930000003`, `dirty=false`); `/healthz` ok; `/readyz` 200 (postgres + redis ok); web `/` renders "কুশল CONNECT" on 4433; Metro builds the iOS bundle (1,234 modules); api reachable on the LAN IP; air rebuilds on a `.go` edit; `dev-stop.sh` leaves no processes; a Neon `DATABASE_URL` in `api/.env` is refused |
+| api | `/docs` in a browser | `/` → `/docs`; Swagger UI renders, no console/CSP errors; "Try it out" on `/readyz` → 200 `ready` (postgres + redis ok); unit tests cover gzip negotiation, CSP, and 404 for all docs routes when disabled; api `fmt-check` · `vet` · `lint` (0 issues) · `test` · `test-integration` · `contracts-check` green |
+| web | holding page | `next dev`: centred brand + api status card (`ready`) at 1280px and 360px; 10 unit tests; `pnpm build` keeps `/` static without the card; `pnpm test:e2e` 2/2, axe 0 serious/critical |
+| app | iOS Simulator | **not run** — no iOS Simulator runtime installed on this Mac (G-6) |
 
 ## Developer golden paths (Gate 3)
 
+0. **Local stack:** `cd applications && ./dev-start.sh` → api http://localhost:5433/healthz ok, web http://localhost:4433 shows "কুশল CONNECT" with the api status card, api docs at http://localhost:5433/docs; `--ios` adds the app in the iOS Simulator; Ctrl-C (or `./dev-stop.sh`) stops it.
 1. **api:** `cd applications/api && make gate` → exit 0 (Docker running).
-2. **api on Neon (after Gate 2):** `bin/api migrate-status` → `dirty=false`, versions equal; `bin/api serve` → `curl localhost:8080/healthz` = `{"status":"ok"}`; `curl -H 'Accept-Language: en' localhost:8080/readyz` = 200 with `postgres`/`redis` ok (stop Redis → 503 problem+json, `dependencies[].ok=false`).
+2. **api on Neon (after Gate 2):** `bin/api migrate-status` → `dirty=false`, versions equal; `bin/api serve` → `curl localhost:5433/healthz` = `{"status":"ok"}`; `curl -H 'Accept-Language: en' localhost:5433/readyz` = 200 with `postgres`/`redis` ok (stop Redis → 503 problem+json, `dependencies[].ok=false`).
 3. **api worker:** `bin/api worker` runs next to `serve` and logs the idle poll; Ctrl-C drains within `SHUTDOWN_TIMEOUT`.
 4. **web:** `cd applications/web && pnpm install && cp .env.example .env.local && pnpm dev` → `/` shows "কুশল CONNECT"; `pnpm gate && pnpm test:e2e` green.
 5. **app:** `cd applications/app && pnpm install && cp .env.example .env` (LAN IP) → `pnpm start` → open on a device/emulator → "কুশল CONNECT" centred; `pnpm gate` green.

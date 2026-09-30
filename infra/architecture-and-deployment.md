@@ -365,7 +365,7 @@ for mail as well as the app.
 
 | # | Item | Needed by |
 | --- | --- | --- |
-| 1 | Confirm VPS data-centre location → choose Neon region (F1) | Before module 01 build |
+| 1 | Confirm VPS data-centre location → choose Neon region (F1). **Neon side done 2026-09-30:** project `kushol-connect-db` (`curly-cake-39653464`) created by the owner in AWS Asia Pacific 1 (Singapore, `aws-ap-southeast-1`), Postgres 18, Free plan. VPS location still `TODO: Confirm` to check the latency assumption | Before module 01 build |
 | 2 | Run §5.1 host checks and share output | Before module 15 Part A |
 | 3 | Switch domain off parking + add A records (§6) | Before first deploy |
 | 4 | HestiaCP mail setup (§7.2 checklist): mail domain, 5 addresses, DNS records, PTR (coordinate with co-tenants), port-25 check | Anytime (independent of the app) |
@@ -396,3 +396,4 @@ for mail as well as the app.
 | 2026-09-30 | `noreply@` confirmed as the sender for OTP codes and notifications (§7.3 rules, volume guard) | Claude |
 | 2026-09-30 | Email switched to HestiaCP's mail server per owner (§7.2 checklist, SMTP-based app mail, F17, mail DNS/PTR records) | Claude |
 | 2026-09-30 | Isolated application repos (owner): per-repo image builds, F18 (home for deploy files), F19 (`TRUSTED_PROXIES` behind Docker), F16 decided | Claude |
+| 2026-09-30 | §8 item 1: Neon project created in Singapore (Postgres 18); Neon tooling (`neon.ts`, link context) lives in the api repo | Claude |
