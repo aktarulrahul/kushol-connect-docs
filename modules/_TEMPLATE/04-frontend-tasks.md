@@ -4,8 +4,8 @@
 **Stack:** Next.js App Router · TypeScript strict · Tailwind v4 tokens · shadcn/ui · Motion · Embla · RHF + Zod
 **Last updated:** YYYY-MM-DD
 
-> `design-system.md` is binding: tokens only, the type scale, the motion system (§7), the review
-> checklist (§12).
+> `docs/design-reference/README.md` (palette, Hind Siliguri + Inter, logo rules) is binding:
+> tokens only from `packages/shared`, every user-facing string in Bengali + English.
 
 ---
 
@@ -13,7 +13,7 @@
 
 | # | Route | Screen | Rendering | Access |
 | --- | --- | --- | --- | --- |
-| 1 | | | Server Component (+ islands) | Public / Admin |
+| 1 | | | Server Component | Public / Super Admin / School Admin / Vendor |
 
 ## 2. Screen Breakdown
 
@@ -54,8 +54,8 @@ input · unsaved-changes guard (admin).
 
 | Need | Mechanism |
 | --- | --- |
-| Public read | Server Component → cached service read |
-| Admin mutation | Server Action → toast + revalidated view |
+| Public read | Server Component → generated OpenAPI client → api |
+| Mutation | Server Action / Route Handler → generated OpenAPI client → api → toast + refreshed view |
 
 ## 5. Motion Spec
 
@@ -79,7 +79,8 @@ input · unsaved-changes guard (admin).
 
 ## 8. Design-System Compliance
 
-`design-system.md` §13 checklist passes.
+`docs/design-reference/README.md` usage rules hold (tokens, typography, logo clear-space); every
+string verified in both languages.
 
 ## 9. Task Checklist
 

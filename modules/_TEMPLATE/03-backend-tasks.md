@@ -5,7 +5,8 @@
 **Stack (web):** Next.js Route Handlers / Server Actions · zod forms · generated `openapi-fetch` client → api
 **Last updated:** YYYY-MM-DD
 
-> Schema first. Nothing below it is designed until the schema is settled (`instruction.md` §3.7).
+> Schema first. Nothing below it is designed until the schema is settled. Every table states its
+> tenant-scope column/rule — unscoped tables are a defect (`prompt.txt` §9).
 
 ---
 
@@ -33,7 +34,7 @@
 
 | Dataset | Status | Source |
 | --- | --- | --- |
-| | `DRAFT` | brief § / `TODO:` |
+| | `DRAFT` (clearly fictional, e.g. "Demo High School") | brd/prd § / `TODO:` |
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Module:** `NN-<module-name>` · **Last updated:** YYYY-MM-DD
 
-> Written **before** any task list and any code (`instruction.md` §4).
+> Written **before** any task list and any code (`docs/prompt/prompt-build.md` §4 step 1).
 
 ---
 
@@ -17,7 +17,7 @@
 ### 1.2 Relationships
 
 ```text
-<ASCII sketch — must match data-model.md>
+<ASCII sketch — must match this module's 03 §1 tables, which are the data model>
 ```
 
 ### 1.3 Invariants
@@ -36,12 +36,13 @@
 | --- | --- | --- |
 | | | |
 
-**Cache tags revalidated / consumed:** see `05-integration-tasks.md` §4.
+**Cache keys / tags revalidated / consumed:** see `06-integration-tasks.md` §4.
 
 ## 3. Lifecycle
 
 ```text
-DRAFT ──publish (guards)──▶ PUBLISHED ──unpublish──▶ DRAFT
+<entity states relevant to this module — e.g. user: PENDING ──verify──▶ VERIFIED ──suspend──▶ SUSPENDED;
+order: CREATED ──paid──▶ PAID ──fulfilled──▶ DONE. Or "None — this module has no state machine.">
 ```
 
 | From | Action | To | Guards | Side effects |
@@ -62,7 +63,8 @@ DRAFT ──publish (guards)──▶ PUBLISHED ──unpublish──▶ DRAFT
 
 ## 6. Security
 
-Entry points, `requireAdmin()` placement, validation, sanitisation, rate limits, privacy.
+Entry points, auth middleware placement (authenticate → role claims → tenant-scope), validation,
+sanitisation, rate limits, privacy. Every table here must state its tenant-scope rule.
 
 ## 7. Accessibility & Motion
 
@@ -88,7 +90,8 @@ Expected volumes, hot queries and their indexes, bundle impact (gzip) of new dep
 | Disadvantages | | |
 | Complexity / weight | | |
 
-**Recommendation:** … **ADR:** `docs/decisions/NNN-<slug>.md` if non-trivial.
+**Recommendation:** … **ADR:** record non-trivial decisions in this module's `07-progress.md`
+(or a new `docs/decisions/NNN-<slug>.md` if it affects other modules).
 
 ## 11. Assumptions & Risks
 

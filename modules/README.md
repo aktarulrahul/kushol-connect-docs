@@ -1,18 +1,20 @@
 # Module Index — Kushol Connect (the only task queue)
 
 Every module lives in its own folder, named `NN-<kebab-case-name>` and numbered in dependency
-order. Each folder contains **five specification files**; two working files are added when its
-build starts.
+order. Each folder contains **six specification files** (copied from `_TEMPLATE/`) plus a
+consolidated **technical document**; two working files are added when its build starts.
 
 | File | Purpose |
 | --- | --- |
 | `01-user-stories.md` | Purpose · actors · scope · stories (Given/When/Then) · business & validation rules · edge cases · open questions |
 | `02-solution-approach.md` | Domain model · boundary · lifecycle · rendering & caching · configuration two-list · security · failure · performance · alternatives · risks |
 | `03-backend-tasks.md` | **Schema first** (tenant-scoped) · REST/WS contracts · service & repository tasks · jobs · tests · checklist |
-| `04-frontend-tasks.md` | Screens · states · forms · data flow · **motion table** · responsive (360px first) · bn/en strings · a11y · checklist |
-| `05-integration-tasks.md` | Integration surface · exported/consumed contracts · **cache keys** · externals (FCM, DeepSeek, gateways) · UI↔server seam · degradation · tests · checklist |
-| `06-progress.md` *(at build)* | What was built, decisions taken while building, verification evidence |
-| `07-gaps.md` *(at build)* | Genuine remaining gaps only — reason, impact, next action |
+| `04-frontend-tasks.md` | **Web** screens · states · forms · data flow · **motion table** · responsive · bn/en strings · a11y · checklist |
+| `05-app-tasks.md` | **Mobile app** screens (expo-router) · states incl. offline · media upload flow · motion · 360px-first · bn/en · a11y · checklist |
+| `06-integration-tasks.md` | Integration surface · exported/consumed contracts · **cache keys** · externals (FCM, R2, DeepSeek, gateways, SMS) · UI↔server seam · degradation · tests · checklist |
+| `technical-document.md` | Single engineer-facing reference compressing `01`–`06`: stack · architecture · data · contracts · surfaces · config · security · errors · ops · tests · traceability (must agree with the spec files — specs win on drift) |
+| `07-progress.md` *(at build)* | What was built, decisions taken while building, verification evidence |
+| `08-gaps.md` *(at build)* | Genuine remaining gaps only — reason, impact, next action |
 
 To add a module: copy `_TEMPLATE/` to `NN-<name>/`, fill every section ("None" / "N/A — reason"
 rather than blank), and add a row below **in the same commit**.
@@ -33,6 +35,12 @@ checklist in `03` → `04` → `05`. A second task list always drifts from the f
 Spec: `📝 Spec drafted` · `✅ Spec complete` (open questions answered or defaults accepted).
 Build: `⬜ Not started` · `🚧 In development` · `🟢 Delivered` (Definition of Done,
 `docs/prompt/prompt-build.md` §5).
+
+A 🚧 module passes three **manual gates** before it can turn 🟢: Gate 1 — owner approves the
+mock-driven UI (`04`+`05`) · Gate 2 — owner runs the `03` SQL migration script against the
+shared database and confirms · Gate 3 — owner approves the integrated web/app↔api flows.
+Gate outcomes are recorded in the module's `07-progress.md`; gaps from the final check go to
+`08-gaps.md`.
 
 A module is **ready to build** when its spec is ✅ and every dependency is 🟢.
 
@@ -56,8 +64,9 @@ A module is **ready to build** when its spec is ✅ and every dependency is 🟢
 | 14 lms-erp-sync | `LMS` | `LMS-BE-001` |
 | 15 deployment-operations | `OPS` | `OPS-E2E-001` |
 
-Suffixes: `US` story · `BR` business rule · `BE` backend task · `FE` frontend task · `INT`
-integration task · `UT` unit test · `IT` integration test · `E2E` Playwright/Maestro test.
+Suffixes: `US` story · `BR` business rule · `BE` backend task · `FE` web-frontend task · `AP`
+mobile-app task · `INT` integration task · `UT` unit test · `IT` integration test · `E2E`
+Playwright (web) / Maestro (app) test.
 
 ---
 
@@ -65,21 +74,21 @@ integration task · `UT` unit test · `IT` integration test · `E2E` Playwright/
 
 | # | Module | Phase | Size | Spec | Build | Depends on | Covers (apps) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 01 | [`foundations`](./01-foundations/) | 1 | M | ⬜ | ⬜ | — | Monorepo scaffold (pnpm+Turborepo for web/app/shared, Go module for api), OpenAPI codegen pipeline (oapi-codegen + openapi-typescript), env/config parsing, Postgres via testcontainers-go, sqlc + golang-migrate base, logging (slog), error format, headers, health, CI quality gate, test harness · `api` `shared` `contracts` |
-| 02 | [`design-system`](./02-design-system/) | 1 | M | ⬜ | ⬜ | 01 | Brand tokens (deep-teal palette), Hind Siliguri + Inter, RN primitives (NativeWind) + web primitives (shadcn-style), bn/en string catalogs, app icon/splash from logo · `shared` `app` `web` |
-| 03 | [`identity-access`](./03-identity-access/) | 1 | M | ⬜ | ⬜ | 01, 02 | Five roles (Super Admin/School Admin/Teacher/Student/Guardian), custom Go auth: phone OTP (local SMS gateway) + Google/GitHub SSO, registration, login (JWT mobile / session web), verification workflow (Admin or Student Ambassador), role guards · `api` `app` `web` |
-| 04 | [`organization-hierarchy`](./04-organization-hierarchy/) | 1 | M | ⬜ | ⬜ | 03 | City → School → Section model, school onboarding/tenancy, auto-grouping on verification, FCM topic subscription mapping, year-end migration design · `api` `shared` |
-| 05 | [`communication-engine`](./05-communication-engine/) | 1 | **L** | ⬜ | ⬜ | 04 | Group chat (official/custom/DM) over the Go WebSocket gateway (gorilla rooms + Redis pub/sub), notice boards (one-way), Message Request for out-of-network DMs, media (image/PDF/voice) with Cloudflare R2 uploads, optimistic UI · `api` `app` |
-| 06 | [`notifications`](./06-notifications/) | 1 | M | ⬜ | ⬜ | 04, 05 | FCM topic fan-out, per-device push via expo-notifications, deep links into app screens, delivery tracking · `api` `app` |
-| 07 | [`command-center-web`](./07-command-center-web/) | 1 | **L** | ⬜ | ⬜ | 03, 04 | Landing page (B2B funnel: school ROI calculator, vendor inquiry, download links) + Super Admin portal (tenants, vendor approval, revenue) + School Admin portal (roster, notices, migration trigger) shell · `web` `api` |
-| 08 | [`ai-study-hub`](./08-ai-study-hub/) | 2 | **L** | ⬜ | ⬜ | 05 | `AIService` interface in Go (DeepSeek direct at first; FastAPI service in `applications/ai` later — clients never change), quota'd, Notes Scanner (vision tagging into searchable archive), Smart Study Hub, Auto-CT MCQ generation + in-app testing with auto-grading · `api` `ai` `app` |
-| 09 | [`teacher-analytics`](./09-teacher-analytics/) | 2 | M | ⬜ | ⬜ | 08 | Pain Point Matrix: weekly per-section weakness aggregation from failed MCQs + chat queries, teacher/school-admin dashboard · `api` `web` `app` |
-| 10 | [`tuition-marketplace`](./10-tuition-marketplace/) | 2 | **L** | ⬜ | ⬜ | 05 | Requirement posts (subject/budget/location), geo+skill matching to verified seniors, tutor profiles & verification, match notifications + in-app negotiation chat · `api` `app` `web` |
-| 11 | [`campus-commerce`](./11-campus-commerce/) | 3 | **L** | ⬜ | ⬜ | 07 | Vendor storefronts scoped to schools, product catalog (books/uniforms/stationery), orders with pickup or third-party courier, inventory management · `api` `web` `app` |
-| 12 | [`payments`](./12-payments/) | 3 | M | ⬜ | ⬜ | 07, 11 | bKash/Nagad/SSLCommerz integration, fee-payment deep links, webhook signature verification, idempotent ledger, PDF receipts · `api` `web` `app` |
-| 13 | [`b2b-ads-events`](./13-b2b-ads-events/) | 3 | M | ⬜ | ⬜ | 06, 07 | Demographic-targeted campaigns (grade/section/city), sponsored push/native ads with moderation, event listings & ticketing commission · `api` `web` |
-| 14 | [`lms-erp-sync`](./14-lms-erp-sync/) | 3 | M | ⬜ | ⬜ | 04, 07 | CSV/Excel roster upload (self-serve), REST webhooks for live LMS/ERP sync, idempotent ingestion, reconciliation reports · `api` `web` |
-| 15 | [`deployment-operations`](./15-deployment-operations/) | all | M | ⬜ | ⬜ | 01 (A) · all (B) | Docker (api + web), Compose (Postgres/Redis/MinIO), Nginx + TLS, EAS pipelines, backups + restore drill, runbooks, `DEPLOYMENT.md` · `infra` |
+| 01 | [`foundations`](./01-foundations/) | 1 | M | 📝 | ⬜ | — | Monorepo scaffold (pnpm+Turborepo for web/app/shared, Go module for api), OpenAPI codegen pipeline (oapi-codegen + openapi-typescript), env/config parsing, Postgres via testcontainers-go, sqlc + golang-migrate base, logging (slog), error format, headers, health, CI quality gate, test harness · `api` `shared` `contracts` |
+| 02 | [`design-system`](./02-design-system/) | 1 | M | 📝 | ⬜ | 01 | Brand tokens (deep-teal palette), Hind Siliguri + Inter, RN primitives (NativeWind) + web primitives (shadcn-style), bn/en string catalogs, app icon/splash from logo · `shared` `app` `web` |
+| 03 | [`identity-access`](./03-identity-access/) | 1 | M | 📝 | ⬜ | 01, 02 | Five roles (Super Admin/School Admin/Teacher/Student/Guardian), custom Go auth: phone OTP (local SMS gateway) + Google/GitHub SSO, registration, login (JWT mobile / session web), verification workflow (Admin or Student Ambassador), role guards · `api` `app` `web` |
+| 04 | [`organization-hierarchy`](./04-organization-hierarchy/) | 1 | M | 📝 | ⬜ | 03 | City → School → Section model, school onboarding/tenancy, auto-grouping on verification, FCM topic subscription mapping, year-end migration design · `api` `shared` |
+| 05 | [`communication-engine`](./05-communication-engine/) | 1 | **L** | 📝 | ⬜ | 04 | Group chat (official/custom/DM) over the Go WebSocket gateway (gorilla rooms + Redis pub/sub), notice boards (one-way), Message Request for out-of-network DMs, media (image/PDF/voice) with Cloudflare R2 uploads, optimistic UI · `api` `app` |
+| 06 | [`notifications`](./06-notifications/) | 1 | M | 📝 | ⬜ | 04, 05 | FCM topic fan-out, per-device push via expo-notifications, deep links into app screens, delivery tracking · `api` `app` |
+| 07 | [`command-center-web`](./07-command-center-web/) | 1 | **L** | 📝 | ⬜ | 03, 04 | Landing page (B2B funnel: school ROI calculator, vendor inquiry, download links) + Super Admin portal (tenants, vendor approval, revenue) + School Admin portal (roster, notices, migration trigger) shell · `web` `api` |
+| 08 | [`ai-study-hub`](./08-ai-study-hub/) | 2 | **L** | 📝 | ⬜ | 05 | `AIService` interface in Go (DeepSeek direct at first; FastAPI service in `applications/ai` later — clients never change), quota'd, Notes Scanner (vision tagging into searchable archive), Smart Study Hub, Auto-CT MCQ generation + in-app testing with auto-grading · `api` `ai` `app` |
+| 09 | [`teacher-analytics`](./09-teacher-analytics/) | 2 | M | 📝 | ⬜ | 08 | Pain Point Matrix: weekly per-section weakness aggregation from failed MCQs + chat queries, teacher/school-admin dashboard · `api` `web` `app` |
+| 10 | [`tuition-marketplace`](./10-tuition-marketplace/) | 2 | **L** | 📝 | ⬜ | 05 | Requirement posts (subject/budget/location), geo+skill matching to verified seniors, tutor profiles & verification, match notifications + in-app negotiation chat · `api` `app` `web` |
+| 11 | [`campus-commerce`](./11-campus-commerce/) | 3 | **L** | 📝 | ⬜ | 07 | Vendor storefronts scoped to schools, product catalog (books/uniforms/stationery), orders with pickup or third-party courier, inventory management · `api` `web` `app` |
+| 12 | [`payments`](./12-payments/) | 3 | M | 📝 | ⬜ | 07, 11 | bKash/Nagad/SSLCommerz integration, fee-payment deep links, webhook signature verification, idempotent ledger, PDF receipts · `api` `web` `app` |
+| 13 | [`b2b-ads-events`](./13-b2b-ads-events/) | 3 | M | 📝 | ⬜ | 06, 07 | Demographic-targeted campaigns (grade/section/city), sponsored push/native ads with moderation, event listings & ticketing commission · `api` `web` |
+| 14 | [`lms-erp-sync`](./14-lms-erp-sync/) | 3 | M | 📝 | ⬜ | 04, 07 | CSV/Excel roster upload (self-serve), REST webhooks for live LMS/ERP sync, idempotent ingestion, reconciliation reports · `api` `web` |
+| 15 | [`deployment-operations`](./15-deployment-operations/) | all | M | 📝 | ⬜ | 01 (A) · all (B) | Docker (api + web), Compose (Postgres/Redis/MinIO), Nginx + TLS, EAS pipelines, backups + restore drill, runbooks, `DEPLOYMENT.md` · `infra` |
 
 ## Dependency graph
 
@@ -108,8 +117,12 @@ integration task · `UT` unit test · `IT` integration test · `E2E` Playwright/
 | **3 · Ecosystem Scale (month 7–12)** | 11 → 12 → 13 → 14 (+15-B) | Vendor sells through the platform with payment + receipt; a targeting campaign reaches exactly the chosen demographic; a school syncs rosters via webhook |
 | **Post-launch** | — | Monitoring, cost reporting (DeepSeek per active user), pilot feedback loop |
 
-Within a module: backend (`03`) → frontend (`04`) → integration (`05`). A module's exported
-contract (`05` §2) is written before another module calls it.
+Within a module: **UI first** (`04` web + `05` app, mock-driven) → **manual UI approval** →
+docs sync → **backend** (`03`, schema first; the SQL migration script is delivered for the owner
+to **run manually**) → **integration** (`06`; mocks swapped for the generated client) →
+**manual approval of integrated flows** → gap check + final verification. A module's exported
+contract (`06` §2) is still written before another module calls it. Full stage/gate detail:
+`docs/prompt/prompt-build.md` §3–§4.
 
 ---
 
@@ -117,7 +130,7 @@ contract (`05` §2) is written before another module calls it.
 
 | Module | Question | Default if unanswered |
 | --- | --- | --- |
-| 01 | *(resolved)* Backend framework | **Go** for `api` including messaging (chi + gorilla/websocket + sqlc); AI later extracted to Python FastAPI behind the `AIService` interface — update `prd.md` §6 to match |
+| 01 | *(resolved 2026-09-29)* Monorepo + toolchain | Go module for `api` (chi + gorilla/websocket + sqlc + pgx + golang-migrate); pnpm+Turborepo for `web`/`app`/`shared`; OpenAPI 3.1 spec in `contracts/openapi/` generating Go server types + TS clients; Postgres on Neon free (ap-southeast-1); media on Cloudflare R2; VPS = Hostinger KVM 2 + HestiaCP |
 | 02 | Logo vector files | Typographic fallback ("কুশল CONNECT") + supplied PNG for mockups; recorded as a gap |
 | 03 | Student Ambassador criteria / verification SLA | Any verified Student Ambassador of the same school may verify same-school join requests; SLA 48h, auto-reminder |
 | 04 | City list at launch | Dhaka + Chattogram only; new cities added by Super Admin |
