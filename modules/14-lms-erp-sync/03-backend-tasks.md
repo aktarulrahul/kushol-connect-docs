@@ -2,7 +2,7 @@
 
 **Module:** `14-lms-erp-sync`
 **Status:** 📝 Spec drafted 2026-09-30 · **Owner:** Rahul (product owner)
-**Stack (api):** Go · chi REST handlers + gorilla/websocket gateway · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `contracts/openapi/openapi.yaml` · slog logging
+**Stack (api):** Go · chi REST handlers + gorilla/websocket gateway · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `applications/api/openapi/openapi.yaml` · slog logging
 **Stack (web):** Next.js Route Handlers / Server Actions · zod forms · generated `openapi-fetch` client → api
 **Last updated:** 2026-09-30
 
@@ -319,5 +319,5 @@ raw secrets never appear in logs, audit entries, or any GET response.
 - [ ] `LMS-BE-011`–`013` webhook core: verify (HMAC/timestamp/rate) + apply + redrive — ____
 - [ ] `LMS-BE-014`–`015` event log + reconciliation report — ____
 - [ ] Entry points: 12 route groups per §2 + OpenAPI spec entries + contract regen — ____
-- [ ] i18n keys `sync.*` (+ `validation.*` reuse) added to `packages/shared` bn/en catalogs — ____
+- [ ] i18n keys `sync.*` (+ `validation.*` reuse) added to each app's `src/i18n` bn/en catalogs — ____
 - [ ] Tests: `LMS-UT-001`–`006` · `LMS-IT-001`–`012` green in CI — ____

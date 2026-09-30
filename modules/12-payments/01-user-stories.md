@@ -97,7 +97,7 @@ The five roles are defined by module 03; verification gates every participatory 
 **Acceptance criteria**
 
 - **Given** an invoice is issued for student X, **when** the notification job runs, **then** every guardian linked to X (03's guardian link; the student themself if none) receives a directed push (`notify.SendToUser`, class per 06) titled **bn: "বকেয়া ফি" · en: "Fee due"** with the amount — e.g. bn "বকেয়া ফি: ৳১,২৫০.০০" / en "Fee due: ৳1,250.00" — and `deepLink: /payments/{invoiceId}`.
-- **Given** the recipient's locale is `bn` (default) or `en`, **when** the payload is built, **then** the string comes from `packages/shared` `payments.*` in that language (06 renders per device locale).
+- **Given** the recipient's locale is `bn` (default) or `en`, **when** the payload is built, **then** the string comes from `payments.*` in the api's catalog (`applications/api/internal/i18n`) in that language (06 renders per device locale).
 - **Given** the push fails, **when** 06 reports degradation, **then** the invoice remains payable in-app under Marketplace → "Pay fees" — the flow never depends on the push.
 
 **Notes** — Payload carries key + ids + deep link only (`NTF-BR-003`); no amounts-in-URL, content fetched after auth.
@@ -302,7 +302,7 @@ Content accuracy (`prompt.txt` §12): no seeded invoices, amounts or gateway fig
 
 ## 6. Validation Rules
 
-| Field | Rule | Message key (`packages/shared` i18n catalog) |
+| Field | Rule | Message key (per-app `src/i18n` catalog) |
 | --- | --- | --- |
 | invoice `title` | Required, 3–120 chars, trimmed | `validation.payments.title` |
 | invoice `amount_bdt` | Required, numeric(12,2), > 0, ≤ 1,000,000 | `validation.payments.amount` |

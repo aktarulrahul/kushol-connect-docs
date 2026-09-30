@@ -38,10 +38,10 @@ Implements `brd.md` **BR-03** and `prd.md` **§5.3**: guardians/students post tu
 | Layer | Technology | Why | Notes |
 | --- | --- | --- | --- |
 | api | Go 1.24+ · chi · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (Neon) · Redis · in-DB job table + 01 worker | REST handlers, matching/expiry jobs, cache read-through | `tech-stack.md` api table; no model calls — rule-based matching only (`02` §10) |
-| contracts | OpenAPI 3.1 (`contracts/openapi/`) | single source for Go server types + TS clients | paths #1–#15 regenerated on change |
+| contracts | OpenAPI 3.1 (`applications/api/openapi/`) | single source for Go server types + TS clients | paths #1–#15 regenerated on change |
 | web | Next.js App Router · Server Components/Actions · TanStack Table + Query · RHF + zod · shadcn/ui | admin surface only (verification queue + oversight) | fills module 07's portal shell |
 | app | Expo · expo-router · TanStack Query · zustand · RHF + zod · expo-location | guardian/student/tutor surfaces (wizard, browse, matches, evidence) | bn-first, 360px-first, offline queue |
-| shared | `packages/shared` bn/en catalogs + zod schemas | `tuition.*` / `validation.tuition.*` message keys | bn default, en secondary |
+| web + app (per app) | each app's `src/i18n` bn/en catalogs + zod schemas | `tuition.*` / `validation.tuition.*` message keys | bn default, en secondary |
 
 ---
 
@@ -237,7 +237,7 @@ From `02-solution-approach.md` §5.
 
 ## 10. Error Handling
 
-All errors surface as RFC-7807 `application/problem+json`. User-visible messages resolve via `packages/shared` catalogs — every message key ships in **bn + en** (Bengali default), e.g. `validation.tuition.*`.
+All errors surface as RFC-7807 `application/problem+json`. User-visible messages resolve via each app's `src/i18n` catalogs — every message key ships in **bn + en** (Bengali default), e.g. `validation.tuition.*`.
 
 | Code | Meaning | When this module returns it | Client handling |
 | --- | --- | --- | --- |

@@ -8,7 +8,7 @@
 N/A — this module ships **no mobile app screens**. The hierarchy picker UI (City → School → Section
 cascade) lives in module 03's onboarding (`03-identity-access`, prefix `IDT-AP-*`); this module owns
 only the **data contract** those screens consume: the three public picker endpoints
-(`03-backend-tasks.md` §2) and the bn/en strings under `hierarchy.*` in `packages/shared`. Migration
+(`03-backend-tasks.md` §2) and the bn/en strings under `hierarchy.*` in each app's `src/i18n`. Migration
 and tenant management are Command Center (web, module 07) surfaces — never in-app.
 
 ---

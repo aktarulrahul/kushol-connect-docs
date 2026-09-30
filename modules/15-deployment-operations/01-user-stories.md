@@ -11,7 +11,7 @@
 
 Ships the platform's infrastructure and operations in two parts. **Part A** (after 01/02) — the walking skeleton: multi-stage images built in CI → GHCR, a Compose stack (**api + worker + web + redis only**) on the Hostinger KVM 2 VPS behind HestiaCP Nginx + Let's Encrypt TLS, one-command deploy gated on `/readyz`, rollback < 5 min. **Part B** (after 14) — production hardening: prod wiring (Neon, R2, FCM, gateways), nightly backups with an executed restore drill, runbooks, EAS pipelines, log discipline, and the pilot checklist — captured in `DEPLOYMENT.md`. Serves `brd.md` §8 (pilot readiness, rollout) and `persona.md` "Operate what you build": a small team must run this alone.
 
-**Correction vs the README row (binding):** the index row says "Compose (Postgres/Redis/MinIO)"; `docs/tech-stack.md` §Infrastructure supersedes it (decision 2026-09-29): Postgres runs **off-box on Neon** (free tier, `ap-southeast-1`), media on **Cloudflare R2** — Compose runs **api + worker + web + redis only**; MinIO is deliberately not used. **Language split (binding):** runbooks and `DEPLOYMENT.md` are English (operator-facing); anything user-facing — maintenance banner/page copy, degraded-mode strings — is bn + en via the `ops.*` namespace in `packages/shared` (bn default).
+**Correction vs the README row (binding):** the index row says "Compose (Postgres/Redis/MinIO)"; `docs/tech-stack.md` §Infrastructure supersedes it (decision 2026-09-29): Postgres runs **off-box on Neon** (free tier, `ap-southeast-1`), media on **Cloudflare R2** — Compose runs **api + worker + web + redis only**; MinIO is deliberately not used. **Language split (binding):** runbooks and `DEPLOYMENT.md` are English (operator-facing); anything user-facing — maintenance banner/page copy, degraded-mode strings — is bn + en via the `ops.*` namespace in `applications/web/src/i18n` (bn default).
 
 ## 2. Actors
 
@@ -147,7 +147,7 @@ No product end-user roles act here — every story is operator/developer/CI-faci
 
 - **Given** the checker, **when** `/healthz` fails twice from outside, **then** an alert reaches the operator within 5 minutes (provider `TODO: Confirm`, 15 §9 Q1).
 - **Given** any Compose service, **when** inspected, **then** it declares `mem_limit`, `restart: unless-stopped` and a healthcheck (BR-006); an OOM-killed api restarts and lands in the incident log.
-- **Given** the maintenance flag set, **when** users open `kusholconnect.com` or the web build ships `NEXT_PUBLIC_MAINTENANCE_MODE=true`, **then** the static bn/en page (bn default) or banner shows `ops.maintenance.*` from `packages/shared` — both entries build-checked; flag removal recovers instantly (`no-store`).
+- **Given** the maintenance flag set, **when** users open `kusholconnect.com` or the web build ships `NEXT_PUBLIC_MAINTENANCE_MODE=true`, **then** the static bn/en page (bn default) or banner shows `ops.maintenance.*` from `applications/web/src/i18n` — both entries build-checked; flag removal recovers instantly (`no-store`).
 
 **Notes** — In-container healthchecks use `/healthz`; the deploy gate uses `/readyz` — different jobs, one contract (01).
 
@@ -256,13 +256,13 @@ No product end-user roles act here — every story is operator/developer/CI-faci
 | `OPS-BR-005` | Image tags are immutable (git SHA); rollback = redeploy the previous logged tag, never rebuild | GHCR tag scheme + release log |
 | `OPS-BR-006` | Every container declares `mem_limit`, `restart: unless-stopped` and a healthcheck — uncapped is a defect on the shared host | Compose file + review checklist |
 | `OPS-BR-007` | A backup is not a backup until a restore from it has succeeded (checksum-verified drill pre-pilot; quarterly after) | `ops/restore.sh` + pilot checklist |
-| `OPS-BR-008` | Operator docs (runbooks, `DEPLOYMENT.md`) are English; any ops copy reaching end users ships bn + en from `packages/shared` `ops.*` | Docs convention + build-time catalog check |
+| `OPS-BR-008` | Operator docs (runbooks, `DEPLOYMENT.md`) are English; any ops copy reaching end users ships bn + en from `applications/web/src/i18n` `ops.*` | Docs convention + build-time catalog check |
 
 Content truth (`prompt.txt` §12): none shipped here — no publishable content. The only shipped copy is `ops.*` strings, which make no factual claims; provider names under `TODO: Confirm` stay unpublished until confirmed.
 
 ## 6. Validation Rules
 
-| Field | Rule | Message key (`packages/shared` i18n catalog) |
+| Field | Rule | Message key (`applications/web/src/i18n` catalog) |
 | --- | --- | --- |
 | Image tag | `^(main\|release)-[0-9a-f]{7,40}$`; deploy script refuses anything else | Operator-facing only — never rendered to end users |
 | `.env` completeness | Every key in the deployable's `.env.example` present + non-empty for prod; parseable by 01 config | `ops.config.envIncomplete` — bn: `পরিবেশ ভেরিয়েবল অসম্পূর্ণ` / en: `Environment variables incomplete` (operator surfaces only) |

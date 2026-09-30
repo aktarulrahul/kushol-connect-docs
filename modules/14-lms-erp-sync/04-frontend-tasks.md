@@ -6,7 +6,7 @@
 **Last updated:** 2026-09-30
 
 `docs/design-reference/README.md` (palette, Hind Siliguri + Inter, logo rules) is binding:
-tokens only from `packages/shared`, every user-facing string in Bengali + English.
+tokens only from each app's `src/theme`, every user-facing string in Bengali + English.
 
 ---
 
@@ -205,7 +205,7 @@ pending · map `fields` errors · never lose input · unsaved-changes guard on t
 
 ## 8. Design-System Compliance & bn/en Strings
 
-Tokens from `packages/shared` only; Hind Siliguri for bn; every string via `sync.*` (bn default +
+Tokens from each app's `src/theme` only; Hind Siliguri for bn; every string via `sync.*` (bn default +
 en). Representative catalog entries:
 
 | Key | bn | en |
@@ -232,6 +232,6 @@ en). Representative catalog entries:
 - [ ] `LMS-FE-011` event log drawer + redrive action — ____
 - [ ] `LMS-FE-012` `/school/roster/reconciliation` report screen + dashboard link — ____
 - [ ] `LMS-FE-013` replace 07 stubs: `/school/roster` + `/school/integrations` nav entries — ____
-- [ ] `LMS-FE-014` bn/en catalog entries (`sync.*`) in `packages/shared` + zod schemas mirrored — ____
+- [ ] `LMS-FE-014` bn/en catalog entries (`sync.*`) in each app's `src/i18n` + zod schemas mirrored — ____
 - [ ] `LMS-FE-015` a11y pass (§7) + reduced-motion verification + axe clean — ____
 - [ ] `LMS-FE-016` responsive pass per §6 (360 px reference: portal usable on tablet, wizard on phone) — ____

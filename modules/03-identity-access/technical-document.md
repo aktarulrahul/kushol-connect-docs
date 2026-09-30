@@ -259,7 +259,7 @@ post-P1.
 ## 10. Error Handling
 
 All errors surface as RFC-7807 `application/problem+json` with localized `message` (bn default);
-copy resolves via `auth.*` / `verification.*` / `validation.*` keys in `packages/shared` — bn + en
+copy resolves via `auth.*` / `verification.*` / `validation.*` keys in each app's `src/i18n` — bn + en
 (e.g. `auth.otp.prompt`, `verification.pending.body`).
 
 | Code | Meaning | When this module returns it | Client handling |

@@ -177,7 +177,7 @@ offline: list from cache, actions refused per §8.
 
 ## 3. Forms & Input
 
-| Field | Control | zod rule (from `packages/shared`) | Default | Conditional on |
+| Field | Control | zod rule (per-app `src/schemas`) | Default | Conditional on |
 | --- | --- | --- | --- | --- |
 | `variantId` | chips | must be a stocked variant of the product | first stocked | product has variants |
 | `qty` | stepper | 1–10 (`validation.commerce.qty_range`) | 1 | — |

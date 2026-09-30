@@ -10,7 +10,7 @@ trust of principals, teachers, guardians and students, or it earns nothing.
 
 ### Project Context
 
-- **What:** Kushol Connect — three applications in one pnpm monorepo:
+- **What:** Kushol Connect — isolated applications, each its own repository (no shared package):
   `applications/app` (React Native / Expo mobile app for Students, Teachers, Guardians),
   `applications/web` (Next.js public landing page + Command Center: Super Admin, School Admin and
   Vendor portals), and `applications/api` (Go backend: REST + WebSocket messaging, multi-tenant
@@ -84,7 +84,7 @@ session + refresh-token design for mobile, argon2id hashing, phone-OTP flows (lo
 OIDC social sign-in (Google, GitHub), CSRF/rate limiting on web, upload hardening, payment-webhook
 signature verification, secret handling across three apps.
 
-**DevOps** — pnpm monorepo + Turborepo (web/app/shared) beside a Go module, multi-stage Docker
+**DevOps** — one repository and CI per application (Go api, pnpm web, pnpm app), multi-stage Docker
 builds for `api` (Go) + `web`, Expo EAS builds, VPS + Nginx reverse proxy, CI quality gates,
 backups (`pg_dump` + media), runbooks.
 

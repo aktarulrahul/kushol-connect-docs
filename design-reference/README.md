@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| **Status** | 🟢 Binding reference — encode as tokens in `packages/shared` and per-app theme configs |
+| **Status** | 🟢 Binding reference — encode as tokens in each app's `src/theme` (web and app each hold their own copy) |
 | **Date** | 2026-09-29 |
 | **Brand asset** | `brand/kushol-connect-full-logo.png` (1280 × 647, transparent background) — source PNG supplied by the owner |
 | **Mobile UI reference** | CircleUp UI kit (Figma, owner-supplied 2026-09-30) + WhatsApp chat conventions — §6; screenshots in `mobile-circleup/` |

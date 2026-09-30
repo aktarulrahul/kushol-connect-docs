@@ -3,7 +3,7 @@
 **Module:** `08-ai-study-hub`
 **Status:** 📝 Spec drafted 2026-09-30
 **Owner:** Rahul (product owner)
-**Stack (api):** Go · chi REST handlers + gorilla/websocket gateway · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `contracts/openapi/openapi.yaml` · slog logging
+**Stack (api):** Go · chi REST handlers + gorilla/websocket gateway · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `applications/api/openapi/openapi.yaml` · slog logging
 **Stack (ai):** N/A at v1 — `applications/ai` (Python FastAPI) is a later adapter behind the same `AIService` interface (internal HTTP, never client-facing); this module ships the Go interface + DeepSeek adapter now
 **Stack (web):** N/A — no web frontend in this module (module 07 renders cost cards; module 09 renders analytics; both consume the endpoints/exports declared here)
 **Last updated:** 2026-09-30
@@ -315,6 +315,6 @@ publish guard blocks `TODO:`; public reads never return drafts.
 - [ ] `AIH-BE-012` cost guard + breaker flag; `AIH-BE-026` guard job
 - [ ] `AIH-BE-013` cost-report service + endpoint #16; `AIH-BE-014` AttemptStats + classify exports
 - [ ] `AIH-BE-023`/`AIH-BE-025` jobs registered with module-01 runner (tagging, generation, refund hook)
-- [ ] OpenAPI paths #1–#16 in `contracts/openapi/` (+ regenerated Go/TS contract code)
+- [ ] OpenAPI paths #1–#16 in `applications/api/openapi/` (+ regenerated Go/TS contract code)
 - [ ] Seed: Demo High School AI dataset (fictional, marked)
 - [ ] Tests: `AIH-UT-001`–`006`, `AIH-IT-001`–`011` green in CI

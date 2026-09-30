@@ -54,7 +54,7 @@ users ─HTTPS─► HestiaCP Nginx (TLS, Let's Encrypt, fail2ban)              
 
 ## 2. Module Boundary
 
-**Owns (writes):** `deploy/` (Dockerfile.api, Dockerfile.web, docker-compose.yml, Nginx/HestiaCP template notes, `.dockerignore`), `ops/` (deploy/rollback/backup/restore scripts, release log, cron definitions, Makefile targets), `.env.example` per deployable, CI image-publish workflow, `eas.json` build wiring, static maintenance page, runbooks + `DEPLOYMENT.md`, `ops.*` string keys in `packages/shared`.
+**Owns (writes):** `deploy/` (Dockerfile.api, Dockerfile.web, docker-compose.yml, Nginx/HestiaCP template notes, `.dockerignore`), `ops/` (deploy/rollback/backup/restore scripts, release log, cron definitions, Makefile targets), `.env.example` per deployable, CI image-publish workflow, `eas.json` build wiring, static maintenance page, runbooks + `DEPLOYMENT.md`, `ops.*` string keys in `applications/web/src/i18n`.
 
 **Reads from other modules (via their exported contracts only):**
 
@@ -105,7 +105,7 @@ Backup:   nightly cron ─► dump ─► checksum ─► R2 ─► off-site ─
 | `APP_ENV`, `LOG_LEVEL`, feature env values from module `.env.example`s | Healthcheck paths/intervals; `/readyz` gate timeout (120 s) |
 | Maintenance flag (Nginx file + `NEXT_PUBLIC_MAINTENANCE_MODE` build input) | `127.0.0.1`-only port bindings; GHCR tag scheme `main-<sha7>` |
 | Backup schedule (cron) + retention counts; uptime checker contacts | Backup artifact naming + checksum format; prune policy |
-| Ops alert routing (email/Telegram) | `ops.*` string keys (bn/en copy editable in `packages/shared` only) |
+| Ops alert routing (email/Telegram) | `ops.*` string keys (bn/en copy editable in `applications/web/src/i18n` only) |
 
 **Environment matrix**
 
@@ -133,7 +133,7 @@ Entry points and their rules (none touch product data — **tenant scope: N/A, n
 
 ## 7. Accessibility & Motion
 
-No product UI in this module. The two user-facing surfaces — the static maintenance page and the maintenance banner — follow the platform rules: bn (default) + en copy from `packages/shared` `ops.*`, WCAG AA contrast on paper background, correct `lang` attribute per language, `role="status"` banner announcement, and static/instant rendering (no animation dependency). Details in 04 §2/§5/§7.
+No product UI in this module. The two user-facing surfaces — the static maintenance page and the maintenance banner — follow the platform rules: bn (default) + en copy from `applications/web/src/i18n` `ops.*`, WCAG AA contrast on paper background, correct `lang` attribute per language, `role="status"` banner announcement, and static/instant rendering (no animation dependency). Details in 04 §2/§5/§7.
 
 ## 8. Failure Scenarios & Recovery
 

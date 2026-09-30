@@ -46,10 +46,10 @@ owns; 13 only reserves + exposes the seam); email/SMS ad channels; A/B testing; 
 
 | Layer | Technology | Why | Notes |
 | --- | --- | --- | --- |
-| api | Go · chi handlers · services · tenant-scoped repos · sqlc + pgx · PostgreSQL | Campaign/event/ticket domain + scheduled topic broadcast serving | Stack per `docs/tech-stack.md` api table; testcontainers-go for IT; contracts generated from `contracts/openapi/openapi.yaml` |
+| api | Go · chi handlers · services · tenant-scoped repos · sqlc + pgx · PostgreSQL | Campaign/event/ticket domain + scheduled topic broadcast serving | Stack per `docs/tech-stack.md` api table; testcontainers-go for IT; contracts generated from `applications/api/openapi/openapi.yaml` |
 | api (jobs) | In-DB job table + 01 Go worker | `campaign.dispatch`, `campaign.complete`, `ads.daily_aggregate`, `tickets.sweep` | No Kafka/RabbitMQ (`tech-stack.md`) |
 | web | Next.js App Router · Server Components/Actions · TanStack Table · Recharts · RHF + zod | Vendor portal + moderation queue + public events; charts reuse 07's Recharts — no new dependency | `tech-stack.md` web table; no client-side ad JS — labels/selection are server-side |
-| shared | `packages/shared` i18n catalogs `ads.*`, `events.*`, `validation.ads.*`, `validation.events.*` | bn (default) + en strings from day one | Parity gate from module 02 |
+| web + app (per app) | each app's `src/i18n` catalogs `ads.*`, `events.*`, `validation.ads.*`, `validation.events.*` | bn (default) + en strings from day one | Parity gate from module 02 |
 | app | None — README scopes module 13 to `api` + `web` | Sponsored push arrives via 06; no RN screens built here | Recorded gap, §6.2 |
 
 ---
@@ -255,7 +255,7 @@ worker down → dispatches queue and drain; Redis down → no-store surfaces una
 | `UNAUTHENTICATED` / `RATE_LIMITED` | No session / `default` class exceeded | All protected routes | Login redirect / retry-after |
 
 All errors surface as RFC-7807 `application/problem+json`; user-visible messages resolve via
-`packages/shared` — every key ships in **bn + en** (Bengali default), e.g. honest-state copy for
+each app's `src/i18n` — every key ships in **bn + en** (Bengali default), e.g. honest-state copy for
 payment pending, estimate unknown, sold out.
 
 ---

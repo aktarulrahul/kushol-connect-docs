@@ -2,8 +2,8 @@
 
 **Module:** `01-foundations`
 **Status:** 📝 Spec drafted 2026-09-30 · **Owner:** Rahul (product owner)
-**Stack (api):** Go · chi REST handlers + gorilla/websocket gateway · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `contracts/openapi/openapi.yaml` · slog logging
-**Stack (web):** Next.js Route Handlers / Server Actions · zod forms · generated `openapi-fetch` client → api
+**Stack (api):** Go · chi REST handlers + gorilla/websocket gateway · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `applications/api/openapi/openapi.yaml` · slog logging
+**Stack (web):** N/A — this module touches only `applications/api`
 **Last updated:** 2026-09-30
 
 Schema first. Nothing below it is designed until the schema is settled. Every table states its
@@ -117,9 +117,9 @@ are never edited.
 
 ### Web Server Action / Route Handler (Next.js)
 
-N/A — this module ships no web routes. The generated `openapi-fetch` client and zod schemas are
-scaffolded in `packages/shared` (FND-BE-002) and first consumed by 03-identity-access (login) and
-07-command-center-web.
+N/A — this module ships no web routes. Web and app generate their own `openapi-fetch` client from
+the api's spec in their own repos (02 `DSN-FE-000`/`DSN-AP-000`); first consumers are
+03-identity-access (login) and 07-command-center-web.
 
 ---
 
@@ -127,9 +127,9 @@ scaffolded in `packages/shared` (FND-BE-002) and first consumed by 03-identity-a
 
 | ID | Method | Rules / guards | Revalidates | Audit |
 | --- | --- | --- | --- | --- |
-| `FND-BE-001` | Monorepo + Go module scaffold: pnpm workspaces (`web`/`app`/`shared`), `turbo.json` tasks, `go.mod`, Makefile, handler→service→repository layout, husky + lint-staged | ESLint boundary rule: web/app import api only via generated client | — | — |
-| `FND-BE-002` | Codegen pipeline: `contracts/openapi/openapi.yaml` skeleton (Problem schema, health paths, error shape) → oapi-codegen (Go types + `ServerInterface`) → openapi-typescript + openapi-fetch into `packages/shared/src/api-client` | `make contracts` / `pnpm generate:api`; generated code committed; drift = defect (BR-001) | — | — |
-| `FND-BE-003` | Config modules: Go typed struct parser (required/optional, enums) + TS zod env; single accessor; fail-fast `Validate()` at boot | No `os.Getenv`/`process.env` outside config (BR-002); names every offending var | — | — |
+| `FND-BE-001` | api repo scaffold (`applications/api`, its own git repo — no root workspace, no shared package): `go.mod` + `tools.mod` (pinned sqlc / oapi-codegen / golangci-lint / goimports via `go tool`), Makefile (`build`, `contracts`, `contracts-check`, `lint`, `test`, `test-integration`, `gate`), `.editorconfig`, `.gitignore`, `.env.example`, handler→service→repository layout | forbidigo lint: no `os.Getenv` outside `internal/config` | — | — |
+| `FND-BE-002` | Codegen pipeline: `applications/api/openapi/openapi.yaml` skeleton (Problem schema, health paths, error shape) → oapi-codegen (Go types + chi `ServerInterface` + embedded spec for request validation); sqlc from `db/queries` | `make contracts` regenerates; `make contracts-check` regenerates into a temp dir and diffs (drift = defect, BR-001); web/app generate their own TS clients (02) | — | — |
+| `FND-BE-003` | Config module (Go, caarlos0/env): typed struct (required/optional, enums, URL schemes, port range, durations, CIDR lists); per-subcommand loaders; fail-fast | No `os.Getenv` outside config (BR-002); names every offending var | — | — |
 | `FND-BE-004` | DB base: pgx pool (Neon-compatible TLS), sqlc config + `queries/` dir, golang-migrate (pinned choice — not goose) embedded wiring, testcontainers-go fixture (per-test Postgres + migrations up) | Pool ping with backoff for Neon cold start; context timeouts | — | — |
 | `FND-BE-005` | Error envelope service: domain error type + RFC-7807 writer; code registry; bn/en message selection (`Accept-Language`, bn default); `requestId` injection | Never leaks stacks/internal errors; unknown codes render generic copy | — | — |
 | `FND-BE-006` | Middleware chain: RealIP (trust `X-Forwarded-For` **only** when the peer is `127.0.0.1`/the configured proxy list — never from arbitrary clients; rate limits and audit use this IP), RequestID, Recover, security headers, slog request logger (method/path/status/duration/request_id), redaction list, rate-limit class registry, auth/tenant-scope scaffolding (stub claims until 03) | Order fixed per 02 §6; panics → `INTERNAL`, no stack leak; secrets redacted (BR-006) | — | — |
@@ -137,7 +137,7 @@ scaffolded in `packages/shared` (FND-BE-002) and first consumed by 03-identity-a
 | `FND-BE-008` | `audit.Record(ctx, Entry)` tx-aware helper + sqlc queries (insert; scoped lists); DB append-only rule/trigger | Same-tx atomicity: audit failure aborts the action; no UPDATE/DELETE path exists (BR-005) | — | writes here |
 | `FND-BE-009` | `jobs.Enqueue` / `jobs.Register` + worker loop: claim (`SKIP LOCKED`, `run_at <= now()`), execute, ack/retry, graceful drain on SIGTERM | At-least-once; handlers idempotent (BR-004); unregistered type → enqueue error | — | — |
 | `FND-BE-014` | Single binary, subcommands: `serve` (HTTP + WS), `worker` (jobs loop + reaper + schedules — run as its own container), `migrate` (applies embedded migrations — **owner-run only**, Gate 2), `migrate-status` (read-only: current DB version vs the image's expected version, exit ≠ 0 if behind — used by 15's deploy check), `healthcheck` (probes local `/healthz`; distroless has no curl) | Same config module for all; `serve` never runs migrations at boot; `migrate` refuses without an explicit `--confirm` | — | — |
-| `FND-BE-010` | CI quality gate: GitHub Actions — api (gofmt/goimports, golangci-lint, `go vet`, unit + testcontainers integration), TS (`pnpm lint/typecheck/test/build` per workspace), codegen drift job | Required checks block merge; no skip flags | — | — |
+| `FND-BE-010` | CI quality gate: GitHub Actions workflow in the api repo — gofmt/goimports, golangci-lint, `go vet`, unit + testcontainers integration, codegen drift (`make contracts-check`) | Required checks block merge; no skip flags | — | — |
 
 ## 4. Repository Tasks
 
@@ -191,9 +191,9 @@ guard here; guard lands with the first content module (04).
 
 ### Repository · Service · Entry points · Seed · Tests
 
-- [ ] `FND-BE-001` — monorepo + Go module scaffold
-- [ ] `FND-BE-002` — OpenAPI codegen pipeline (Go + TS) + skeleton spec
-- [ ] `FND-BE-003` — config modules (Go + zod TS)
+- [ ] `FND-BE-001` — api repo + Go module scaffold
+- [ ] `FND-BE-002` — OpenAPI codegen pipeline (Go) + skeleton spec
+- [ ] `FND-BE-003` — config module (Go)
 - [ ] `FND-BE-005` — RFC-7807 error envelope + code registry + bn/en copy
 - [ ] `FND-BE-006` — middleware chain (request-id, recover, headers, slog redaction, rate-limit classes, auth scaffolding)
 - [ ] `FND-BE-007` — `/healthz` + `/readyz`

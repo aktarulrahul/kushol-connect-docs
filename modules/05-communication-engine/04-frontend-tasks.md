@@ -7,7 +7,7 @@
 **Last updated:** 2026-09-30
 
 > `docs/design-reference/README.md` (palette, Hind Siliguri + Inter, logo rules) is binding:
-> tokens only from `packages/shared`, every user-facing string in Bengali + English.
+> tokens only from each app's `src/theme`, every user-facing string in Bengali + English.
 
 ---
 
@@ -60,7 +60,7 @@ N/A — no web UI. (App-side a11y: `05-app-tasks.md` §7; 07-side composer a11y:
 
 ## 8. Design-System Compliance
 
-N/A — no web UI. The bn/en strings this module contributes to `packages/shared` (`chat.*`,
+N/A — no web UI. The bn/en strings this module contributes to each app's `src/i18n` (`chat.*`,
 `notices.*`, `validation.*`) are enumerated in `01` §6 and `05-app-tasks.md` §2; 07's composer
 reuses the same keys.
 

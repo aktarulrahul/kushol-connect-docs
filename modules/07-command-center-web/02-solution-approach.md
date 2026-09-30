@@ -110,7 +110,7 @@ migration (04-owned, driven by this module's wizard):
 - **Tenant scope:** School Admin screens send no `schoolId`; scope comes from claims server-side
   (`WEB-BR-008`). Super Admin routes require the role claim in the layout gate and again at the api.
 - **Validation:** every form and every Route Handler re-validates with the same zod schemas from
-  `packages/shared`; server errors map RFC-7807 codes → `validation.*`/`errors.*` catalog keys.
+  each app's `src/i18n`; server errors map RFC-7807 codes → `validation.*`/`errors.*` catalog keys.
 - **Privacy:** lead data is contact-minimal; the audit viewer is read-only; no secrets in client
   bundles (`NEXT_PUBLIC_*` limited to site URL + download flag).
 - **Tenant-scope rule per table:** `landing_leads` platform-wide (Super Admin reads; public writes

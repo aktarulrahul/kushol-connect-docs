@@ -252,7 +252,7 @@ WS→store: `message.new` appends to Query cache; `message.ack` swaps the temp b
 | `NOT_FOUND` / `INTERNAL` | No room / unexpected | Cross-school DM without an accepted request (hint to send one) / unhandled failures (incl. 04 down on room resolution) | Offer Message Request composer; generic error + retry |
 
 All errors surface as RFC-7807 `application/problem+json`. User-visible messages resolve via
-`packages/shared` catalogs — every key ships in **bn + en** (Bengali default); namespaces `chat.*`,
+each app's `src/i18n` catalogs — every key ships in **bn + en** (Bengali default); namespaces `chat.*`,
 `notices.*`, `validation.*`.
 
 ---

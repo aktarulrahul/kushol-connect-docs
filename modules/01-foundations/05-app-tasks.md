@@ -7,9 +7,9 @@
 
 N/A file — this module ships **no app screens**. The Expo app scaffold (project shell, expo-router
 setup, EAS config, fonts) lands with 02-design-system (primitives shell, icon/splash) and
-03-identity-access (onboarding screens). What this module delivers for the app side: the
-`packages/shared` workspace it will import from, the generated OpenAPI TS client and the zod
-schemas (FND-BE-002), and the bn/en catalog convention (content arrives with 02).
+03-identity-access (onboarding screens). This module works only in `applications/api`; the only
+thing it hands the app is the api contract (`applications/api/openapi/openapi.yaml`). The app repo
+scaffold and its generated client are 02's `DSN-AP-000`.
 
 ---
 
@@ -24,7 +24,7 @@ N/A — no screens; see §1.
 
 ## 3. Forms & Input
 
-N/A — no forms; shared zod schemas from `packages/shared` start with 03-identity-access onboarding.
+N/A — no forms; the app's own zod schemas (`src/schemas`) start with 03-identity-access onboarding.
 
 ## 4. Data Flow
 
@@ -50,6 +50,5 @@ specified per feature module (e.g. 05-communication-engine chat queue).
 
 ## 9. Task Checklist
 
-- None — no AP tasks. Related scaffold tasks live in `03-backend-tasks.md`: `FND-BE-001`
-  (workspace shell), `FND-BE-002` (generated client + zod schemas), `FND-BE-010` (app
-  lint/typecheck/test tasks in CI; EAS hooks added by 02/03).
+- None — no AP tasks. The app repo scaffold, client generation and app CI are 02's `DSN-AP-000`
+  (EAS hooks added by 02/03).

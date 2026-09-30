@@ -5,7 +5,7 @@
 **Last updated:** 2026-09-30
 
 > `docs/design-reference/README.md` (palette, Hind Siliguri + Inter, logo rules) is binding:
-> tokens only from `packages/shared`, every user-facing string in Bengali + English.
+> tokens only from each app's `src/theme`, every user-facing string in Bengali + English.
 
 ---
 
@@ -81,7 +81,7 @@ desktop ≥1024                                tablet 640–1023
 | Component | Server/Client | Notes |
 | --- | --- | --- |
 | `StudentPicker` | Client | consumes 04's cached school roster; only own-school students |
-| `InvoiceForm` | Client | RHF + zod from `packages/shared`; amount input `inputMode="decimal"` |
+| `InvoiceForm` | Client | RHF + zod from each app's `src/schemas`; amount input `inputMode="decimal"` |
 
 **States** — Loading (picker skeleton) · Empty (no verified students → link to roster) · Error (field-mapped + request id) · Success (toast bn "ইনভয়েস ইস্যু হয়েছে" / en "Invoice issued" → navigates to ledger with the new row highlighted).
 
@@ -160,5 +160,5 @@ No decorative animation on money screens.
 - [ ] `PAY-FE-008` Void action (row menu + reason dialog + `CONFLICT` error state)
 - [ ] `PAY-FE-009` Empty/error/loading states for every surface (incl. bn empty copy above)
 - [ ] `PAY-FE-010` Responsive pass (≥640 first) + reduced-motion pass
-- [ ] `PAY-FE-011` bn/en string completion in `packages/shared` (`payments.*`, `validation.*`) + typecheck
+- [ ] `PAY-FE-011` bn/en string completion in each app's `src/i18n` (`payments.*`, `validation.*`) + typecheck
 - [ ] `PAY-FE-012` axe (WCAG 2.2 AA) clean on all five surfaces + Playwright golden path: issue → appears in ledger → totals correct

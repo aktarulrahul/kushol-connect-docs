@@ -153,7 +153,7 @@ On every directed tap the app fires `POST /notifications/deliveries/{deliveryId}
 
 ## 3. Forms & Input
 
-| Field | Control | zod rule (from `packages/shared`) | Default | Conditional on |
+| Field | Control | zod rule (per-app `src/schemas`) | Default | Conditional on |
 | --- | --- | --- | --- | --- |
 | Preference `muted` per class | labelled switch (3 rows) | `validation.notifications.class_invalid` · `muted_required` | all unmuted | always |
 | Device `token` / `platform` / `appVersion` | system-provided (`@react-native-firebase/messaging`), not user input | `validation.notifications.token_invalid` · `platform_invalid` | auto | post-permission |

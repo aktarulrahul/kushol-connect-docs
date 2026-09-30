@@ -7,7 +7,7 @@
 **Last updated:** 2026-09-30
 
 > `docs/design-reference/README.md` (palette, Hind Siliguri + Inter, logo rules) is binding:
-> tokens only from `packages/shared`, every user-facing string in Bengali + English.
+> tokens only from each app's `src/theme`, every user-facing string in Bengali + English.
 
 ---
 
@@ -155,7 +155,7 @@ decision.
 
 ## 8. Design-System Compliance
 
-`docs/design-reference/README.md` usage rules hold: tokens from `packages/shared`, Hind Siliguri
+`docs/design-reference/README.md` usage rules hold: tokens from each app's `src/theme`, Hind Siliguri
 for Bangla admin copy (queue, decisions) with Inter for data, verified-badge component shared
 with the app. Every string verified in bn + en — queue: "টিউটর ভেরিফিকেশন কিউ / Tutor
 verification queue"; badge: "ভেরিফাইড টিউটর / Verified Tutor"; decisions: "অনুমোদন / Approve",
@@ -167,7 +167,7 @@ verification queue"; badge: "ভেরিফাইড টিউটর / Verified
 - [ ] `TUT-FE-002` Verification detail + `EvidenceViewer` (05 media reuse) + degraded-evidence state
 - [ ] `TUT-FE-003` Approve/reject forms (shared zod `validation.tuition.*`, server actions, tag revalidation)
 - [ ] `TUT-FE-004` Requirements oversight `/school/tuitions` (read-only table + guarded close action + audit note display)
-- [ ] `TUT-FE-005` bn/en string keys `tuition.admin.*` added to `packages/shared` + bilingual verification
+- [ ] `TUT-FE-005` bn/en string keys `tuition.admin.*` added to each app's `src/i18n` + bilingual verification
 - [ ] `TUT-FE-006` Motion + reduced-motion variants per §5
 - [ ] `TUT-FE-007` Responsive tables/cards per §6
 - [ ] `TUT-FE-008` Accessibility pass (§7) + Playwright smoke: queue → detail → approve → row removed

@@ -237,7 +237,7 @@ N/A — the student/teacher AI surfaces are mobile-only by design; the Command C
 | `VALIDATION_FAILED` | Malformed input incl. unconfirmed/foreign media asset, kind/role mismatch, foreign section | All routes | Per-field `validation.ai.*` keys bn/en; input preserved |
 | `ErrMalformedOutput` (internal) | Model output fails schema validation twice | Inside jobs → entity FAILED | Honest "failed + quota refunded" copy with retry — never a junk archive row or dead end |
 
-All errors surface as RFC-7807 `application/problem+json`; messages resolve via `packages/shared` (`ai.*`, `validation.ai.*`) — **bn + en** from day one (bn default).
+All errors surface as RFC-7807 `application/problem+json`; messages resolve via each app's `src/i18n` (`ai.*`, `validation.ai.*`) — **bn + en** from day one (bn default).
 
 ---
 

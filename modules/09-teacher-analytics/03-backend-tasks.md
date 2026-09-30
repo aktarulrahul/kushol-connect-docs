@@ -2,7 +2,7 @@
 
 **Module:** `09-teacher-analytics`
 **Status:** 📝 Spec drafted 2026-09-30 · **Owner:** Rahul (product owner)
-**Stack (api):** Go · chi REST handlers + gorilla/websocket gateway · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `contracts/openapi/openapi.yaml` · slog logging
+**Stack (api):** Go · chi REST handlers + gorilla/websocket gateway · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `applications/api/openapi/openapi.yaml` · slog logging
 **Stack (web):** Next.js Route Handlers / Server Actions · zod forms · generated `openapi-fetch` client → api
 **Last updated:** 2026-09-30
 
@@ -192,6 +192,6 @@ rows never returned by any read path.
 - [ ] `ANL-BE-006`/`016`–`017` jobs: weekly worker + refresh worker (register with 01 runner) — ____
 - [ ] `ANL-BE-007`/`018` P1 Monday push step via 06 — ____
 - [ ] Entry points: 4 endpoints per §2 + OpenAPI spec entries + contract regen — ____
-- [ ] i18n: `analytics.*` + `validation.*` keys in `packages/shared` (bn + en) — ____
+- [ ] i18n: `analytics.*` + `validation.*` keys in each app's `src/i18n` (bn + en) — ____
 - [ ] Demo seed rows (§1.3, fictional, marked demo) — ____
 - [ ] Tests: `ANL-UT-001`–`005` · `ANL-IT-001`–`009` green in CI — ____

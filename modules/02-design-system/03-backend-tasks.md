@@ -9,7 +9,7 @@
 
 ## 1. Database Design
 
-**N/A — no database.** Module 02 owns **zero tables**: design tokens, string catalogs and UI primitives are code/config in `packages/shared` and per-app folders. Data-model ownership stays with: `01-foundations` (audit_log, jobs) · `03-identity-access` (users, auth_identities, otp_codes, sessions, refresh_tokens, verification_requests) · `04-organization-hierarchy` (cities, schools, sections, enrollments, fcm_topic_bindings, migration_runs, migration_run_items) · `05-communication-engine` (chat_groups, chat_group_members, chat_messages, message_requests, notices, media_assets) · `06-notifications` (device_tokens, notification_deliveries, notification_preferences). Nothing here migrates, seeds or queries.
+**N/A — no database.** Module 02 owns **zero tables**: design tokens, string catalogs and UI primitives are code/config inside each app (`src/theme`, `src/i18n`, `src/components`). Data-model ownership stays with: `01-foundations` (audit_log, jobs) · `03-identity-access` (users, auth_identities, otp_codes, sessions, refresh_tokens, verification_requests) · `04-organization-hierarchy` (cities, schools, sections, enrollments, fcm_topic_bindings, migration_runs, migration_run_items) · `05-communication-engine` (chat_groups, chat_group_members, chat_messages, message_requests, notices, media_assets) · `06-notifications` (device_tokens, notification_deliveries, notification_preferences). Nothing here migrates, seeds or queries.
 
 ### 1.1 Tables
 
@@ -21,7 +21,7 @@ N/A — no database.
 
 ### 1.3 Seed
 
-N/A — no rows. The closest equivalent — catalog seed strings — is code in `packages/shared/i18n/bn.json` / `en.json`, specified in §2 below; illustrative copy stays clearly fictional (`prompt.txt` §12).
+N/A — no rows. The closest equivalent — catalog seed strings — is code in each app's `src/i18n/bn.json` / `en.json`, specified in §2 below; illustrative copy stays clearly fictional (`prompt.txt` §12).
 
 ---
 
@@ -29,7 +29,7 @@ N/A — no rows. The closest equivalent — catalog seed strings — is code in 
 
 No endpoints exist (`DSN-BE` items: none). The module's real contract is the **catalog JSON schema** consumed by `t()` — written here because it is the cross-module interface every other module codes against.
 
-### Catalog shape (`packages/shared/i18n/bn.json` / `en.json`)
+### Catalog shape (each app's `src/i18n/bn.json` / `en.json`)
 
 ```json
 {
@@ -43,7 +43,7 @@ No endpoints exist (`DSN-BE` items: none). The module's real contract is the **c
 | Rule | Value |
 | --- | --- |
 | Shape | flat map: `key → { bn: string, en: string }` — no nesting, no extra locale fields |
-| Keys | dot-namespaced under the registry in `02-solution-approach.md` §1.1: `common · validation · errors · auth · verification · hierarchy · chat · notices · notifications · settings · landing · admin · school · vendor · ai · analytics · tuition · marketplace · commerce · payments · ads · events · sync · ops` (source of truth in code: `packages/shared/i18n/namespaces.ts`) |
+| Keys | dot-namespaced under the registry in `02-solution-approach.md` §1.1: `common · validation · errors · auth · verification · hierarchy · chat · notices · notifications · settings · landing · admin · school · vendor · ai · analytics · tuition · marketplace · commerce · payments · ads · events · sync · ops` (source of truth in code: `src/i18n/namespaces.ts` (in each of web and app)) |
 | Parity | identical key sets in both files; non-empty values; identical `{param}` placeholders |
 | Params | `{name}` placeholders, interpolated by `t(key, params)` |
 | Helper | `t(key: CatalogKey, params?: Record<string, string \| number>): string` — `CatalogKey` typed from the catalog; fallback requested locale → `bn` → key literal (dev warning); never throws |

@@ -7,7 +7,7 @@
 **Last updated:** 2026-09-30
 
 > `docs/design-reference/README.md` (palette, Hind Siliguri + Inter, logo rules) is binding:
-> tokens only from `packages/shared`, every user-facing string in Bengali + English.
+> tokens only from each app's `src/theme`, every user-facing string in Bengali + English.
 
 ---
 
@@ -34,7 +34,7 @@ AI-specific web UI is specified twice.
 ## 3. Forms
 
 N/A — no web forms. All input surfaces (test-generation form, search bar, share toggle) are
-app-side (`05-app-tasks.md` §3) with zod schemas from `packages/shared` mirroring
+app-side (`05-app-tasks.md` §3) with zod schemas from each app's `src/schemas` mirroring
 `validation.ai.*`; 07's month picker and 09's filters reuse the generated contract shapes.
 
 ## 4. Data Flow
@@ -65,7 +65,7 @@ axe/WCAG 2.2 AA gate in their own modules' checklists.)
 
 ## 8. Design-System Compliance
 
-N/A — no web UI. The bn/en strings this module contributes to `packages/shared` (`ai.*`,
+N/A — no web UI. The bn/en strings this module contributes to each app's `src/i18n` (`ai.*`,
 `validation.ai.*`) are enumerated in `01` §6 and `05-app-tasks.md` §2/§3; 07's cost cards and 09's
 matrix reuse those keys (feature names, quota copy, "AI paused" banner) rather than inventing
 parallel strings.

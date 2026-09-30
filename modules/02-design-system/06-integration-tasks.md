@@ -13,8 +13,8 @@ gate or external font dependency may exist in code unless it is declared here
 
 | # | Counterparty | Direction | Mechanism | Failure is… |
 | --- | --- | --- | --- | --- |
-| I-1 | every module (`03-identity-access` … `14-lms-erp-sync`) | they call us | imports from `packages/shared` (tokens, catalogs, `t()`) + per-app primitive folders | build-time fatal (missing export); runtime degraded (fallback chains) — never fatal at runtime |
-| I-2 | `01-foundations` | we call them | workspace/TS config/CI gate/test harness | fatal (build blocked) — scaffolding must exist first (dependency order) |
+| I-1 | every module (`03-identity-access` … `14-lms-erp-sync`) | they call us | import from their own app's `src/theme` (tokens), `src/i18n` (`t()`) and primitive folders | build-time fatal (missing export); runtime degraded (fallback chains) — never fatal at runtime |
+| I-2 | `01-foundations` | we call them | api contract + problem-code registry (no web/app scaffolding — 02 scaffolds its own repos) | degraded — UI builds on fixtures until the contract exists |
 | I-3 | api → app/web | N/A — this module exchanges no server data (no REST/WS/FCM) |
 | I-4 | Google Fonts (external) | outbound | build-time download only (`next/font/google`); app fonts bundled via `@expo-google-fonts` packages | degraded — fallback stacks; never a runtime fetch |
 
@@ -47,7 +47,7 @@ prop/signature changes are additive first; renames go deprecate → remove (life
 
 | We call | Owner | On failure |
 | --- | --- | --- |
-| `01-foundations` workspace + CI hooks | `01-foundations` | build blocked — fix scaffolding first (dependency order) |
+| api contract (`applications/api/openapi/openapi.yaml`) | `01-foundations` | fixtures keep the UI buildable; client generation waits for the spec |
 | Google Fonts (build-time only) | external | web build fails loudly; escape hatch: vendor the subset woff2 (`02-solution-approach §8`) |
 | npm: radix / zeego / lucide / @expo-google-fonts | external (pinned) | install-time failure — CI blocks |
 
@@ -84,7 +84,7 @@ Catalog keys and token names are additive-first: never rename a shipped key (add
 never a hex-derived name) so values can change the day the SVG lands (`verify` note,
 `docs/design-reference/README.md` §2); primitive props are additive-first, and breaking changes
 need an ADR note in this module's `07-progress.md`. The catalog JSON schema lives in
-`03-backend-tasks §2` and is versioned with the `packages/shared` package.
+`03-backend-tasks §2` and is versioned with each app (web and app hold identical-schema copies).
 
 ## 8. Failure & Degradation Matrix
 
@@ -104,15 +104,16 @@ need an ADR note in this module's `07-progress.md`. The catalog JSON schema live
 | `DSN-UT-002` | `t()` fallback chain never throws or returns empty | Unit | missing-key edge (`01-user-stories §7` #1) |
 | `DSN-UT-003` | Web primitive render tests: focus/pressed/disabled states, bn +30% fixtures, accessible names | Unit (Vitest + Testing Library) | `DSN-US-005`, `DSN-US-003` |
 | `DSN-UT-004` | RN primitive render tests (jest-expo): same fixtures | Unit | `DSN-US-005`, `DSN-US-003` |
+| `DSN-UT-005` | Token reference pin: each app's `src/theme` values equal the canonical table in `docs/design-reference/README.md` (web and app repos each run it) | Unit (CI, per repo) | `DSN-BR-002`; web ↔ app drift (risk 6) |
 | `DSN-IT-001` | Token-usage lint over `applications/web` + `applications/app`: no raw hex/px/font-family outside allowed paths | CI lint gate | `DSN-BR-002` |
 | `DSN-IT-002` | Apps render themed + localized end-to-end (web Next build smoke; app root render with fonts/theme/locale) | Integration | `DSN-US-001`, `DSN-US-004` |
 | `DSN-E2E-001` | Smoke: bn default renders and the en toggle works on web (Playwright) and app (Maestro); reduced-motion static splash checked | E2E (Playwright + Maestro) | `DSN-US-004`, `DSN-US-006` |
 
 ## 10. Task Checklist
 
-- [ ] `DSN-INT-001` — Catalog JSON schema + validator implemented in `packages/shared`, wired into CI (with `03-backend-tasks §2`)
+- [ ] `DSN-INT-001` — Catalog JSON schema + validator implemented in each app's `src/i18n`, wired into CI (with `03-backend-tasks §2`)
 - [ ] `DSN-INT-002` — Token-only ESLint rule active for `web` + `app` CI
 - [ ] `DSN-INT-003` — Exported contract (this file §2) published to consumers; `03-identity-access` consumes it first (smoke-proven by `DSN-IT-002`)
-- [ ] `DSN-UT-001` … `DSN-UT-004` — green in CI
+- [ ] `DSN-UT-001` … `DSN-UT-005` — green in CI (in both the web and app repos where applicable)
 - [ ] `DSN-IT-001` … `DSN-IT-002` — green in CI
 - [ ] `DSN-E2E-001` — green on web (Playwright) + app (Maestro)

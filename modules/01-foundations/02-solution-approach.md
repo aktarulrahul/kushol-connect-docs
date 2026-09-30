@@ -3,8 +3,9 @@
 **Module:** `01-foundations` · **Status:** 📝 Spec drafted 2026-09-30 · **Owner:** Rahul (product owner) · **Last updated:** 2026-09-30
 
 Written before any task list and any code. Toolchain resolved 2026-09-29 (README "Blocked before
-build" row 01): Go module for `api`, pnpm+Turborepo for TS workspaces, OpenAPI 3.1 in
-`contracts/openapi/`, Neon Postgres, Cloudflare R2, Hostinger KVM 2 + HestiaCP.
+build" row 01, layout revised 2026-09-30): one git repo per application and no shared package;
+this module works only in `applications/api` — Go module, OpenAPI 3.1 in `applications/api/openapi/`,
+Neon Postgres, Cloudflare R2, Hostinger KVM 2 + HestiaCP.
 
 ---
 
@@ -16,8 +17,8 @@ build" row 01): Go module for `api`, pnpm+Turborepo for TS workspaces, OpenAPI 3
 | --- | --- | --- |
 | `Job` | A unit of background work queued in the `jobs` table and executed by the Go worker | Yes |
 | `AuditLog` | Append-only record of a destructive/financial action (actor, entity, before/after) | Yes |
-| OpenAPI contract | `contracts/openapi/openapi.yaml` + generated Go server types and TS clients | Yes (tooling; no table) |
-| Config module | Typed env parsing per app (Go config struct / zod env) | Yes (no table) |
+| OpenAPI contract | `applications/api/openapi/openapi.yaml` + generated Go server types (web/app generate their own TS clients from a synced copy — 02) | Yes (tooling; no table) |
+| Config module | Typed env parsing for the api (`internal/config`, caarlos0/env) | Yes (no table) |
 | Middleware chain | Request-id, recover, logging, security headers, rate-limit classes, auth/tenant scaffolding | Yes (no table) |
 
 ### 1.2 Relationships
@@ -41,15 +42,15 @@ owner modules (03/04) migrate. Those modules may add FKs on their own tables —
 | `FND-INV-002` | `jobs.status` ∈ {QUEUED, RUNNING, SUCCEEDED, FAILED, DEAD}; transitions only via the worker/claim query | CHECK + `FOR UPDATE SKIP LOCKED` claim |
 | `FND-INV-003` | `jobs.idempotency_key`, when present, is globally unique; duplicates return the original job | UNIQUE index + `Enqueue` |
 | `FND-INV-004` | A job is DEAD only when `attempts ≥ max_attempts`; retries re-queue with `run_at` in the future | Worker decision function (unit-tested) |
-| `FND-INV-005` | Every generated Go/TS artifact matches the current spec (zero drift) | CI regenerate + `git diff --exit-code` |
+| `FND-INV-005` | Every generated Go artifact matches the current spec (zero drift); client repos check their own copies | CI regenerate + `git diff --exit-code` |
 | `FND-INV-006` | No repository query touches tenant rows without a `school_id` scope unless declared platform-level | Repo review + integration tests (BR-003) |
 
 ## 2. Module Boundary
 
-**Owns (writes):** `contracts/openapi/openapi.yaml` skeleton + codegen pipeline · middleware chain,
+**Owns (writes):** `applications/api/openapi/openapi.yaml` skeleton + codegen pipeline · middleware chain,
 error envelope, headers, health · `audit_log` and `jobs` tables and their Go services/worker ·
-config modules (Go + TS) · CI workflows and the testcontainers harness · empty workspace shells for
-`web`/`app`/`shared` (content arrives with 02/03).
+the api config module · the api repo's CI workflow and the testcontainers harness · api-side bn/en
+copy for problem messages (`internal/i18n`). Nothing outside `applications/api`.
 
 **Reads from other modules (via their exported service functions only):**
 
@@ -82,7 +83,7 @@ audit_log: created once, immutable — no state machine.
 
 | Surface | Rendering | Cached read | Tags |
 | --- | --- | --- | --- |
-| None — infrastructure module; no rendered surfaces. The generated TS client and Turborepo task graph are build-time artifacts for 02+ | — | — | — |
+| None — infrastructure module; no rendered surfaces. The OpenAPI spec is the build-time artifact web/app consume (02+) | — | — | — |
 
 ## 5. Configuration — the two lists
 
@@ -103,8 +104,8 @@ Rule: nothing else reads env — both lists are surfaced only through the config
 - Tenant-scope rules: `audit_log.school_id` nullable — scoped reads when school context present,
   platform rows (null) visible only to Super Admin surfaces (07+); `jobs.school_id` nullable —
   tenant jobs scoped, platform jobs trusted to the worker service boundary.
-- Validation: every handler input validated against generated OpenAPI validators; zod mirrors in
-  `packages/shared`.
+- Validation: every handler input validated against the OpenAPI spec (`httpx.Validator`); web/app
+  mirror the shapes in their own `src/schemas` (02).
 - Privacy: `before`/`after` snapshots must not include secrets or full webhook payloads (BR-006);
   redaction list applied at log time. Errors are RFC-7807 with bn/en copy — never stack traces.
 
@@ -131,9 +132,8 @@ element carries a reduced-motion variant row (04 §5 / 05 §5 of those modules),
 - Hot queries: `jobs` claim — partial index `(run_at) WHERE status='QUEUED'` + `SKIP LOCKED`
   (cheap at any realistic queue depth); reaper — `(status, locked_at) WHERE status='RUNNING'`;
   audit list — `(school_id, created_at DESC)` and `(entity_type, entity_id)`.
-- Bundle impact: generated TS client is type-only until used (tree-shakeable, zero runtime
-  without a call site); Turborepo cache keeps CI minutes flat as workspaces grow. Go binary
-  footprint unchanged by tooling deps.
+- Bundle impact: none for clients from this module. Codegen/lint tools live in `tools.mod`, so the
+  Go binary footprint is unchanged by tooling deps.
 - CI budget target: full gate ≤ 10 min on GitHub runners (TODO: Confirm after first runs — owner
   Rahul).
 
@@ -153,8 +153,8 @@ element carries a reduced-motion variant row (04 §5 / 05 §5 of those modules),
 
 | | C (chosen) | D |
 | --- | --- | --- |
-| Advantages | One spec → Go server types + TS clients; drift checkable in CI; contract reviewable | No codegen step; quick hacks |
-| Disadvantages | Codegen toolchain to pin; 3.1 feature subset discipline | Types diverge silently; `tech-stack.md` §Shared & tooling: web/app never hand-write API types |
+| Advantages | One spec (owned by api) → Go server types here, TS clients generated in each client repo; drift checkable in CI; contract reviewable | No codegen step; quick hacks |
+| Disadvantages | Codegen toolchain to pin; 3.1 feature subset discipline | Types diverge silently; `tech-stack.md` §Tooling: web/app never hand-write API types |
 | Complexity / weight | One `make contracts` target | Hidden cost: every mismatch is a runtime bug |
 
 **Recommendation:** C — spec is the single source; regenerate on every change (BR-001).

@@ -7,7 +7,7 @@
 
 This module ships **no web surfaces** — the mobile app is the only notification consumer.
 `docs/design-reference/README.md` rules still bind any future admin surface built from this
-module's data (module 07): tokens only from `packages/shared`, every user-facing string in
+module's data (module 07): tokens only from each app's `src/theme`, every user-facing string in
 Bengali + English.
 
 ---
@@ -56,7 +56,7 @@ axe-audited under module 07's checklist.
 ## 8. Design-System Compliance
 
 N/A for screens. This module contributes the `notifications.*` and `validation.notifications.*`
-bn/en catalog entries to `packages/shared` (consumed by the app today, module 07 dashboards
+bn/en catalog entries to each app's `src/i18n` (consumed by the app today, module 07 dashboards
 later); no tokens or typography decisions are made here.
 
 ## 9. Task Checklist

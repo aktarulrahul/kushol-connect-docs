@@ -85,7 +85,7 @@ machine output on stdout, human progress on stderr; no prompts; every script saf
 
 | UI element | Calls | Contract |
 | --- | --- | --- |
-| Maintenance page (Nginx static, 04 §2.1) | none — fully static | bn/en copy baked from `packages/shared` `ops.maintenance.*`; served on flag, `no-store` |
+| Maintenance page (Nginx static, 04 §2.1) | none — fully static | bn/en copy baked from `applications/web/src/i18n` `ops.maintenance.*`; served on flag, `no-store` |
 | Maintenance banner (web, 04 §2.2) | none — build-time env `NEXT_PUBLIC_MAINTENANCE_MODE` | `ops.maintenance.banner` bn/en; build-time catalog check |
 | App build channels (05 §4) | `EXPO_PUBLIC_API_URL` baked per EAS profile | dev / preview / prod API URLs; no runtime ops calls |
 | Status communication | no product UI — operator notifies school admins per the incident runbook template | incident log entry (English) + user-facing message in bn/en if shipped via notices (06/07 own the channel) |

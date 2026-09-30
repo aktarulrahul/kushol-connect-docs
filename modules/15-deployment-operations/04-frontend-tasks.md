@@ -5,7 +5,7 @@
 **Stack:** Next.js App Router · TypeScript strict · Tailwind v4 tokens · shadcn/ui · Motion · RHF + Zod
 **Last updated:** 2026-09-30
 
-Design tokens come only from `packages/shared`; every user-facing ops string ships in Bengali + English
+Design tokens come only from each app's `src/theme`; every user-facing ops string ships in Bengali + English
 via the `ops.*` catalog (the web side of this module's language split — runbooks stay English). Most of
 this module is infra (03/05/06); the web surface is deliberately small but real: prod build hardening,
 security headers, a CWV budget gate, and the maintenance banner + page.
@@ -40,7 +40,7 @@ security headers, a CWV budget gate, and the maintenance banner + page.
 | Component | Server/Client | Notes |
 | --- | --- | --- |
 | BrandMark | Static | From 02 assets; clear-space rules respected |
-| MaintenanceMessage | Static | Strings baked from `packages/shared` `ops.*` at page build; bn default, `?lang=en` variant file |
+| MaintenanceMessage | Static | Strings baked from `applications/web/src/i18n` `ops.*` at page build; bn default, `?lang=en` variant file |
 | LanguageToggle | Static link | Two prebuilt files (bn/en) — works without JS, served by Nginx |
 
 **States**
@@ -58,7 +58,7 @@ security headers, a CWV budget gate, and the maintenance banner + page.
 | Component | Server/Client | Notes |
 | --- | --- | --- |
 | OpsBanner | Client | Rendered only when `NEXT_PUBLIC_MAINTENANCE_MODE=true` at build; `role="status"`, dismissible, sticky top |
-| — strings — | — | `ops.maintenance.banner` (bn: `রক্ষণাবেক্ষণ চলছে…` / en: `Maintenance in progress…`) from `packages/shared` |
+| — strings — | — | `ops.maintenance.banner` (bn: `রক্ষণাবেক্ষণ চলছে…` / en: `Maintenance in progress…`) from `applications/web/src/i18n` |
 
 **States**
 
@@ -77,7 +77,7 @@ None — no forms on ops surfaces (the page must work with JS disabled and nothi
 | Need | Mechanism |
 | --- | --- |
 | Banner flag | Build-time env `NEXT_PUBLIC_MAINTENANCE_MODE` baked into the standalone output — no runtime fetch, survives api outages |
-| Ops strings | Imported from `packages/shared` `ops.*` catalogs (bn default + en) — build-time check that both exist before the flag can ship |
+| Ops strings | Imported from `applications/web/src/i18n` `ops.*` catalogs (bn default + en) — build-time check that both exist before the flag can ship |
 | Maintenance page | Fully static pair of files (bn/en) under `deploy/`, served by Nginx — no Next, no api involvement |
 | Health/monitoring | None — UI never polls ops state (uptime checker owns detection, 03 §2) |
 
@@ -106,7 +106,7 @@ None — no forms on ops surfaces (the page must work with JS disabled and nothi
 
 ## 8. Design-System Compliance
 
-`docs/design-reference/README.md` holds for both surfaces: tokens from `packages/shared` only,
+`docs/design-reference/README.md` holds for both surfaces: tokens from each app's `src/theme` only,
 Hind Siliguri (bn) + Inter (en), logo clear-space; `ops.*` strings verified in both languages before
 the maintenance flag may ship (build-time check, OPS §6 validation).
 
@@ -115,5 +115,5 @@ the maintenance flag may ship (build-time check, OPS §6 validation).
 - [ ] `OPS-FE-001` — web standalone Dockerfile output verified in CI (build + boot + `/` 200) — with OPS-BE-002
 - [ ] `OPS-FE-002` — CSP + security headers via HestiaCP/Nginx template (HSTS, X-Content-Type-Options, frame-ancestors, CSP enforce) — with OPS-BE-006
 - [ ] `OPS-FE-003` — Lighthouse CI on prod landing: CWV budget green gate (perf/a11y/bp/SEO ≥ thresholds recorded in DEPLOYMENT.md)
-- [ ] `OPS-FE-004` — OpsBanner component + `ops.maintenance.*` bn/en strings in `packages/shared` (+ build-time catalog check)
+- [ ] `OPS-FE-004` — OpsBanner component + `ops.maintenance.*` bn/en strings in `applications/web/src/i18n` (+ build-time catalog check)
 - [ ] `OPS-FE-005` — static bn/en maintenance page wired to the Nginx flag (`no-store`, no-JS safe)

@@ -182,7 +182,7 @@ verifies, BR-006); verified-email match links the identity silently.
 
 ## 3. Forms & Input
 
-| Field | Control | zod rule (from `packages/shared`) | Default | Conditional on |
+| Field | Control | zod rule (per-app `src/schemas`) | Default | Conditional on |
 | --- | --- | --- | --- | --- |
 | locale | segmented | `validation.locale.invalid` | `bn` | always |
 | role | cards | enum | student | always |

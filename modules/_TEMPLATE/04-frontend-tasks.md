@@ -5,7 +5,7 @@
 **Last updated:** YYYY-MM-DD
 
 > `docs/design-reference/README.md` (palette, Hind Siliguri + Inter, logo rules) is binding:
-> tokens only from `packages/shared`, every user-facing string in Bengali + English.
+> tokens only from each app's `src/theme`, every user-facing string in Bengali + English.
 
 ---
 

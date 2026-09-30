@@ -7,7 +7,7 @@
 **Last updated:** 2026-09-30
 
 > `docs/design-reference/README.md` (palette, Hind Siliguri + Inter, logo rules) is binding:
-> tokens only from `packages/shared`, every user-facing string in Bengali + English, bn default.
+> tokens only from each app's `src/theme`, every user-facing string in Bengali + English, bn default.
 > This module **fills module 07's `/vendor` shell** (nav/stubs were built in 07) and adds the
 > `/admin/commission` stub slot.
 

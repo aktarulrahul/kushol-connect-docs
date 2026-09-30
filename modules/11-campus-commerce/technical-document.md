@@ -39,10 +39,10 @@ Implements `brd.md` **BR-04** and `prd.md` **§5.4**: approved vendors open stor
 | Layer | Technology | Why | Notes |
 | --- | --- | --- | --- |
 | api | Go 1.24+ · chi · services · ownership/tenant-scoped repositories · sqlc + pgx · PostgreSQL (Neon) · Redis · in-DB job table + 01 worker | REST handlers, placement transaction, auto-cancel/digest jobs | `tech-stack.md` api table; no carrier API, no gateway — payment via module 12's seam |
-| contracts | OpenAPI 3.1 (`contracts/openapi/`) | single source for Go server types + TS clients (+ `OUT_OF_STOCK` problem code) | paths #1–#20 |
+| contracts | OpenAPI 3.1 (`applications/api/openapi/`) | single source for Go server types + TS clients (+ `OUT_OF_STOCK` problem code) | paths #1–#20 |
 | web | Next.js App Router · Server Components/Actions · TanStack Table + Query (board 30 s / inventory 60 s polls) · RHF + zod · shadcn/ui | vendor portal + `/admin/commission` stub | fills module 07's `/vendor` shell |
 | app | Expo · expo-router · TanStack Query · RHF + zod | buyer surfaces only (vendors use the web portal) | bn-first, 360px-first |
-| shared | `packages/shared` bn/en catalogs + zod schemas | `commerce.*` / `validation.commerce.*` keys | bn default |
+| web + app (per app) | each app's `src/i18n` bn/en catalogs + zod schemas | `commerce.*` / `validation.commerce.*` keys | bn default |
 
 ---
 
@@ -254,7 +254,7 @@ From `02-solution-approach.md` §5.
 
 ## 10. Error Handling
 
-All errors surface as RFC-7807 `application/problem+json`. User-visible messages resolve via `packages/shared` catalogs — every message key ships in **bn + en** (Bengali default), e.g. `validation.commerce.*`.
+All errors surface as RFC-7807 `application/problem+json`. User-visible messages resolve via each app's `src/i18n` catalogs — every message key ships in **bn + en** (Bengali default), e.g. `validation.commerce.*`.
 
 | Code | Meaning | When this module returns it | Client handling |
 | --- | --- | --- | --- |

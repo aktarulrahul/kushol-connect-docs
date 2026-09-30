@@ -2,7 +2,7 @@
 
 **Module:** `15-deployment-operations`
 **Status:** 📝 Spec drafted 2026-09-30 · **Owner:** Rahul (product owner)
-**Stack (api):** Go · chi REST handlers + gorilla/websocket gateway · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (Neon, off-box) · contracts generated from `contracts/openapi/openapi.yaml` · slog logging — *consumed as a GHCR image; this module builds the image, not the code*
+**Stack (api):** Go · chi REST handlers + gorilla/websocket gateway · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (Neon, off-box) · contracts generated from `applications/api/openapi/openapi.yaml` · slog logging — *consumed as a GHCR image; this module builds the image, not the code*
 **Stack (web):** Next.js standalone output · zod forms · generated `openapi-fetch` client → api — *consumed as a GHCR image*
 **Stack (infra):** Docker + Compose v2 (api + worker + web + redis) · GitHub Actions → GHCR · HestiaCP (Nginx/TLS/firewall) · bash deploy/rollback/backup/restore scripts · cron · Makefile
 **Last updated:** 2026-09-30
@@ -110,7 +110,7 @@ Infra-as-code inventory — each row is a *file/artifact delivered*, not a Go se
 | `OPS-BE-012` | `Makefile` targets — `deploy`, `rollback`, `backup`, `restore-drill`, `smoke`, `images` (thin wrappers over `ops/`) | Wrappers only; no second implementation of any script | — | — |
 | `OPS-BE-013` | Part B production wiring — Neon prod DB (console), R2 buckets + versioning, FCM prod `FCM_SERVER_KEY` (06 seam), gateway prod keys + webhook URLs (12 cutover), prod `.env` on host | Env-only changes; each cutover logged + signed in the runbook (OPS-US-007) | — | cutover log |
 | `OPS-BE-014` | Log discipline in prod — Docker `json-file` rotation (10 MB × 5 default), weekly redaction probe script over sampled logs (FND-BR-006 verified live) | Probe failure → incident entry (OPS-US-012) | — | incident log on failure |
-| `OPS-BE-015` | Maintenance mode — Nginx flag → static bn/en page; `NEXT_PUBLIC_MAINTENANCE_MODE` build input for the banner; enable/disable runbook steps | Strings from `packages/shared` `ops.*` (BR-008); `no-store` | — | change log entry |
+| `OPS-BE-015` | Maintenance mode — Nginx flag → static bn/en page; `NEXT_PUBLIC_MAINTENANCE_MODE` build input for the banner; enable/disable runbook steps | Strings from `applications/web/src/i18n` `ops.*` (BR-008); `no-store` | — | change log entry |
 | `OPS-BE-016` | Host prep runbook — record `free -m`, `df -h`, `ss -tlnp`, Docker version, VPS data-centre location; Docker `daemon.json` log rotation; 2 GB swap if none; `kushol` deploy user (docker group, key-only SSH); `/opt/kushol` layout | Evidence in `07-progress.md`; memory caps adjusted from measured headroom | — | runbook |
 
 ## 4. Repository Tasks

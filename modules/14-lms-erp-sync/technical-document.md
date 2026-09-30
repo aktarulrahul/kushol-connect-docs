@@ -56,12 +56,12 @@ ADR); mobile app screens (web-only, README scope `api` `web`).
 
 | Layer | Technology | Why | Notes |
 | --- | --- | --- | --- |
-| api | Go · chi handlers · services · tenant-scoped repos · sqlc + pgx · PostgreSQL | Import pipeline, endpoint lifecycle, webhook core | Stack per `docs/tech-stack.md` api table; contracts generated from `contracts/openapi/openapi.yaml`; testcontainers-go IT |
+| api | Go · chi handlers · services · tenant-scoped repos · sqlc + pgx · PostgreSQL | Import pipeline, endpoint lifecycle, webhook core | Stack per `docs/tech-stack.md` api table; contracts generated from `applications/api/openapi/openapi.yaml`; testcontainers-go IT |
 | api (webhook auth) | Go stdlib crypto — HMAC-SHA256, constant-time compare (`hmac.Equal`) | Per-school versioned secrets, `X-Kushol-*` headers, ±5-min replay window | `tech-stack.md` (custom Go auth / webhook signature verification pattern of module 12) |
 | api (parse) | Streaming CSV parse (row-by-row, no full-file load); XLSX via streaming sheet reader (P1) | 10k-row files must never load whole into memory on the 2-vCPU VPS | CSV P0, XLSX behind the same `format` column (02 §10) |
 | api (jobs) | In-DB job table + 01 Go worker | `roster.import.process`, `roster.import.commit`, `erp.test.dispatch` | `tech-stack.md`: no Kafka/RabbitMQ |
 | web | Next.js App Router · Server Components + TanStack Query (poll 3 s) · RHF + zod | Roster wizard, integrations screens, reconciliation report | `tech-stack.md` web table; CSV parse server-side, XLSX generation in Go — no bundle-heavy libs |
-| shared | `packages/shared` `sync.*` + `validation.*` catalogs | bn (default) + en UI; CSV headers stay English-only machine format | Parity gate from module 02 |
+| web + app (per app) | each app's `src/i18n` `sync.*` + `validation.*` catalogs | bn (default) + en UI; CSV headers stay English-only machine format | Parity gate from module 02 |
 | app | None — README scopes module 14 to `api` + `web` | School Admin surfaces are portal web-only; students experience only the effects via the 04/05/06 chain | `05-app-tasks.md`: `LMS-AP-*` empty by design |
 
 ---
@@ -266,7 +266,7 @@ downloads on the default class, webhook body cap 1 MB, upload cap 20 MB / 10,000
 | `TENANT_MISMATCH` / `NOT_FOUND` | Cross-school access; unknown path ids | All admin routes | Branded 404, nothing leaked |
 
 All errors surface as RFC-7807 `application/problem+json`; user-visible messages resolve via
-`packages/shared` — every `sync.*` key ships in **bn + en** (Bengali default; e.g.
+each app's `src/i18n` — every `sync.*` key ships in **bn + en** (Bengali default; e.g.
 `sync.secret.warning` show-once modal, `sync.import.hash_noop` panel). CSV headers and the webhook
 wire contract stay English/machine-format by design (BR-008).
 

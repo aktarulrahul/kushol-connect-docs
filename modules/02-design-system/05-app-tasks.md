@@ -1,7 +1,7 @@
 # Design System — App Tasks (Mobile)
 
 **Module:** `02-design-system`
-**Stack:** Expo SDK · expo-router · React Native · NativeWind tokens (from `packages/shared`) · @expo-google-fonts · radix-primitives/zeego · lucide-react-native · TanStack Query · zustand · react-hook-form + zod
+**Stack:** Expo SDK · expo-router · React Native · NativeWind tokens (from each app's `src/theme`) · @expo-google-fonts · radix-primitives/zeego · lucide-react-native · TanStack Query · zustand · react-hook-form + zod
 **Last updated:** 2026-09-30
 
 `docs/design-reference/README.md` (palette, Hind Siliguri + Inter, logo rules) and
@@ -47,7 +47,7 @@ Consumption rule identical to web (`04-frontend-tasks §1`): primitives + tokens
 | Component | Client/Server-driven | Notes |
 | --- | --- | --- |
 | Font gate (`useFonts`, `@expo-google-fonts`) | Client | Hind Siliguri + Inter bundled; native splash held until loaded — never an unstyled first frame |
-| NativeWindProvider (shared tokens) | Client | `tailwind.config` preset consumes `packages/shared` tokens; pinned versions |
+| NativeWindProvider (shared tokens) | Client | `tailwind.config` preset consumes each app's `src/theme` tokens; pinned versions |
 | `LocaleProvider` (`t()`) | Client | bn default; persisted selection hand-off owned by `03-identity-access` |
 | Splash reveal | Client | one-time ≤ 900ms; static under reduced motion (`design-reference` §5) |
 
@@ -125,7 +125,7 @@ Consumption rule identical to web (`04-frontend-tasks §1`): primitives + tokens
 
 Module-owned forms: none. Provided to feature modules:
 
-| Field | Control | zod rule (from `packages/shared`) | Default | Conditional on |
+| Field | Control | zod rule (per-app `src/schemas`) | Default | Conditional on |
 | --- | --- | --- | --- | --- |
 | Language | Segmented control (bn/en) | `z.enum(["bn","en"])` | `bn` | Rendered by `03-identity-access` onboarding/settings |
 | (feature fields) | §2.2 controls | Module-owned schemas | — | — |
@@ -188,7 +188,8 @@ Bangla. There is no offline queue surface in this module (queues belong to
 
 ## 9. Task Checklist
 
-- [ ] `DSN-AP-001` — NativeWind configured from `packages/shared` tokens (shared preset; pinned versions)
+- [ ] `DSN-AP-000` — App repo scaffold in `applications/app` (own git repo, no shared package): Expo + expo-router, TypeScript strict, ESLint 10 flat (boundary rule: api only via `src/api`; env only in `src/env.ts`) + Prettier, jest-expo, `sync:api-spec` (copies `../api/openapi/openapi.yaml` to `openapi/openapi.yaml`) + `generate:api` (openapi-typescript → `src/api/schema.gen.ts`, openapi-fetch client), zod env module, GitHub Actions gate (lint/typecheck/test + client drift)
+- [ ] `DSN-AP-001` — NativeWind configured from the app's `src/theme` tokens (pinned versions)
 - [ ] `DSN-AP-002` — @expo-google-fonts Hind Siliguri + Inter bundled; root font gate; splash held until loaded
 - [ ] `DSN-AP-003` — `LocaleProvider` + typed `t()` RN binding (bn default)
 - [ ] `DSN-AP-004` — Button (+icon/loading)

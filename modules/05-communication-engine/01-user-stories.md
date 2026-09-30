@@ -275,7 +275,7 @@ Provides the real-time communication core of Kushol Connect: hierarchy-driven gr
 
 ## 6. Validation Rules
 
-| Field | Rule | Message key (`packages/shared` i18n catalog) |
+| Field | Rule | Message key (per-app `src/i18n` catalog) |
 | --- | --- | --- |
 | Message `body` (text) | 1–4000 chars after trim; no control chars | `validation.chat.body_length` |
 | Message `client_msg_id` | UUID v4, required on every send | `validation.chat.client_msg_id` |

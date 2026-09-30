@@ -45,7 +45,7 @@ logic (13/09, read-only exports) · landing-funnel self-signup (Phase 3) · prom
 | Data access | sqlc + pgx/v5 · PostgreSQL 16 on Neon (ap-southeast-1) | Plain tenant-scoped SQL; testcontainers-go for ITs | Fixed 3-level FK model (ADR in `07-progress.md`) |
 | Cache | Redis (go-redis) | Picker reads cached 24 h with tag invalidation | Down → read-through to Postgres, degraded never fatal |
 | Queueing | In-DB `jobs` table + Go worker (01) | `migration.run` + `hierarchy.backfill`; no Kafka/RabbitMQ | 500-item batches |
-| Shared i18n | `packages/shared` — `hierarchy.*` / `validation.*` | bn + en names in every payload | ~1 KB gzip to shared |
+| i18n (per app) | each app's `src/i18n` — `hierarchy.*` / `validation.*` | bn + en names in every payload | ~1 KB gzip per app |
 | Web / App / Realtime | None — API-only module (README row: `api` + `shared`) | Web surfaces are 07; picker UI is 03; push is 06 | `ORG-FE-*` / `ORG-AP-*` do not exist |
 
 ---
@@ -232,7 +232,7 @@ and tenant management are Command Center (web, 07) surfaces, never in-app.
 | `RATE_LIMITED` | Bucket exceeded | 5/hour school creation, migration create/commit | Retry-later toast |
 
 All errors surface as RFC-7807 `application/problem+json`. User-visible messages resolve via
-`packages/shared` catalogs — every key ships in **bn + en** (Bengali default); namespaces
+each app's `src/i18n` catalogs — every key ships in **bn + en** (Bengali default); namespaces
 `hierarchy.*`, `validation.*`.
 
 ---
@@ -270,7 +270,7 @@ attempts return `TENANT_MISMATCH`/404; public reads never return drafts/archived
 | Expected volumes | 2 launch cities → 10+ schools (year 1) → ~100–300 sections/school-year → ~2,000 enrollments/school; hierarchy metadata low thousands of rows, `enrollments` tens of thousands |
 | Hot paths + indexes | Picker reads (cached, tag-invalidated) · enrollment-by-user+session `(user_id, session_year)` · roster `(section_id, role, status)` paged · migration scan `(school_id, session_year, status)` · unique `sections(school_id, class_level, name, session_year)` · unique `fcm_topic_bindings(topic_name)` |
 | Latency targets | Picker reads served from Redis (24 h TTL); Neon cold start absorbed by warm-up ping; migration apply in 500-item batches — a 2,000-student school = 4 transactions, inside the `jobs` worker budget |
-| Bundle / payload impact | None for apps (API-only); `packages/shared` gains `hierarchy.*` (~1 KB gzip) |
+| Bundle / payload impact | None for apps (API-only); each app's `src/i18n` gains `hierarchy.*` (~1 KB gzip) |
 | Caching | Redis, 24 h TTL, tag invalidation on every mutation (`06` §4); admin reads never cached |
 
 ---

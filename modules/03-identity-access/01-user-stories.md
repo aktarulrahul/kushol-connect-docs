@@ -37,7 +37,7 @@ Student Ambassador is **a flag on a verified student** (`users.is_ambassador`), 
 - Login paths: phone OTP, staff email+password (argon2id), Google/GitHub OIDC; logout / logout-all
 - Tokens & sessions: 15-min access JWT + rotating refresh (mobile), http-only server-side session (web)
 - Verification workflow API + approve/reject + ambassador verification + 48 h SLA reminder job; role guards middleware (authenticate → role claims → tenant scope → verified gate, server-side)
-- Web `/login` + `/verification-pending`; app onboarding stack, pending gate, settings; bn/en strings in `packages/shared` (`auth.*`, `verification.*`, `validation.*`)
+- Web `/login` + `/verification-pending`; app onboarding stack, pending gate, settings; bn/en strings in each app's `src/i18n` (`auth.*`, `verification.*`, `validation.*`)
 
 **Out of scope** (explicit — prevents scope drift)
 
@@ -250,7 +250,7 @@ No publishable content is seeded here; the bootstrap Super Admin comes from env 
 
 ## 6. Validation Rules
 
-| Field | Rule | Message key (`packages/shared` i18n catalog) |
+| Field | Rule | Message key (per-app `src/i18n` catalog) |
 | --- | --- | --- |
 | phone | Required for student/guardian; `^(?:\+?880\|0)1[3-9]\d{8}$`, normalized to `+8801XXXXXXXXX` | `validation.phone.invalid` |
 | phone (staff) | Optional; same format when present | `validation.phone.invalid` |

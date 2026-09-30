@@ -124,7 +124,7 @@ Summary card (school name, serial no, student, title, ৳ amount + fee, gateway,
 
 ## 3. Forms & Input
 
-| Field | Control | zod rule (from `packages/shared`) | Default | Conditional on |
+| Field | Control | zod rule (per-app `src/schemas`) | Default | Conditional on |
 | --- | --- | --- | --- | --- |
 | Gateway | radio group | `validation.payments.gateway` | SSLCommerz (first) | — |
 | (No amounts editable by payers — display only) | — | — | — | — |

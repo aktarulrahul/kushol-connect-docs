@@ -37,7 +37,7 @@ year-end migration that promotes or graduates students.
 - School Admin sections, class-teacher assignment, enrollment roster read API (`GET /school/enrollments`).
 - Auto-grouping seam: `hierarchy.OnUserVerified(userId)` → enrollment → module 05 group join → FCM topic bindings.
 - Year-end migration: dry-run preview → commit, job-driven, transactional per school, idempotent, audited (BR-01).
-- bn/en i18n keys in `packages/shared` (`hierarchy.*`, `validation.*`).
+- bn/en i18n keys in each app's `src/i18n` (`hierarchy.*`, `validation.*`).
 
 **Out of scope** (explicit — prevents scope drift)
 
@@ -54,7 +54,7 @@ year-end migration that promotes or graduates students.
 | 03 identity-access | Users, role claims, verified status, registration-time hierarchy selection; pre-verified account bootstrap; calls `OnUserVerified` |
 | 01 foundations | `jobs` table + worker, RFC-7807 error envelope, config parsing, audit-log sink, migration tooling |
 | 05 / 06 (interface-first) | 05: `chat.JoinSectionGroups` / `chat.ArchiveSectionGroups` exports · 06: reads `fcm_topic_bindings` (no calls from 04 to 06) |
-| shared | `hierarchy.*` / `validation.*` bn + en message catalogs |
+| web + app (per app) | `hierarchy.*` / `validation.*` bn + en message catalogs |
 
 ---
 
@@ -200,7 +200,7 @@ year-end migration that promotes or graduates students.
 
 ## 6. Validation Rules
 
-| Field | Rule | Message key (`packages/shared` i18n catalog) |
+| Field | Rule | Message key (per-app `src/i18n` catalog) |
 | --- | --- | --- |
 | city `nameBn` / `nameEn` | required, 1–100 chars; `nameEn` unique (case-insensitive) | `validation.required` · `hierarchy.city.name_length` · `hierarchy.city.name_duplicate` |
 | school `cityId` | must reference an ACTIVE city | `hierarchy.school.city_required` |

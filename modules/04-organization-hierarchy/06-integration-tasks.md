@@ -90,7 +90,7 @@ mutation above. Admin reads are never cached.
 ## 6. UI ↔ Server Seam
 
 The picker screens (module 03 onboarding) and admin screens (module 07) bind to these calls;
-`hierarchy.*` strings are owned by this module in `packages/shared`:
+`hierarchy.*` strings are owned by this module in each app's `src/i18n`:
 
 | UI element | Calls | Contract |
 | --- | --- | --- |

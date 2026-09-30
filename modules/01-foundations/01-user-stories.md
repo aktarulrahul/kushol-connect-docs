@@ -9,14 +9,14 @@
 
 ## 1. Purpose
 
-Provides the platform skeleton every later module builds on: the pnpm + Turborepo monorepo beside the Go `api` module, the OpenAPI codegen pipeline that makes generated contract types the only API types on any side, and the cross-cutting runtime concerns — fail-fast config parsing, sqlc + golang-migrate base, RFC-7807 errors, `X-Request-Id` headers, redacted slog logging, health endpoints, the append-only `audit_log`, the in-DB `jobs` worker, the CI quality gate and the testcontainers harness. Pure infrastructure for `brd.md` §8 Phase 1 — no product feature of its own.
+Provides the platform skeleton every later module builds on, **inside the `applications/api` repository only** (each application is its own repo; there is no shared package — owner decision 2026-09-30): the Go `api` module, the OpenAPI contract it owns (`applications/api/openapi/openapi.yaml`) with Go codegen and a drift check, and the cross-cutting runtime concerns — fail-fast config parsing, sqlc + golang-migrate base, RFC-7807 errors with api-owned bn/en copy, `X-Request-Id` headers, redacted slog logging, health endpoints, the append-only `audit_log`, the in-DB `jobs` worker, the CI quality gate and the testcontainers harness. Pure infrastructure for `brd.md` §8 Phase 1 — no product feature of its own. Web and app scaffolding (including their generated TS clients) belongs to 02-design-system.
 
 ## 2. Actors
 
 | Actor | What they do in this module |
 | --- | --- |
-| Developer (api / web / app / shared) | Scaffolds workspaces, edits the spec, regenerates contract code, runs the quality gate |
-| Module developer (02–15) | Consumes generated Go/TS contract types, `jobs.Enqueue`, `audit.Record`, health endpoints |
+| Developer (api) | Scaffolds the api repo, edits the spec, regenerates contract code, runs the quality gate |
+| Module developer (02–15) | Consumes the api contract (web/app generate their own TS client from it), `jobs.Enqueue`, `audit.Record`, health endpoints |
 | Operator (Rahul / platform ops) | Reads `/healthz` `/readyz`, owns config; audits destructive actions via `audit_log` later |
 | CI (GitHub Actions) | Enforces lint / typecheck / test / build and the codegen drift check before merge |
 | System (jobs worker) | Claims, runs, retries and dead-letters rows in the `jobs` table |
@@ -27,9 +27,9 @@ The five user roles and vendors (defined by 03-identity-access) have no surface 
 
 **In scope**
 
-- Monorepo scaffold: pnpm workspaces + Turborepo (`web`/`app`/`shared`), Go module `api` (chi + gorilla/websocket shell)
-- OpenAPI 3.1 home (`contracts/openapi/openapi.yaml`) + codegen (oapi-codegen → Go; openapi-typescript/openapi-fetch → `packages/shared`) with a CI drift check
-- Env/config parsing modules (Go + zod TS), fail-fast, never read env elsewhere
+- Go `api` repo scaffold (chi + gorilla/websocket shell) — `applications/api` only; no root workspace, no shared package
+- OpenAPI 3.1 contract owned by api (`applications/api/openapi/openapi.yaml`) + Go codegen (oapi-codegen) with a CI drift check; web/app generate their own TS client from a synced copy (02 `DSN-FE-000`/`DSN-AP-000`)
+- Env/config parsing module (Go), fail-fast, never read env elsewhere
 - Postgres base: pgx pool, sqlc, golang-migrate, testcontainers-go harness
 - RFC-7807 `application/problem+json` envelope with the shared code registry (bn/en copy)
 - `X-Request-Id` middleware, security headers, redacted slog JSON logging
@@ -39,7 +39,7 @@ The five user roles and vendors (defined by 03-identity-access) have no surface 
 
 **Out of scope** (explicit — prevents scope drift)
 
-- Any product feature, screen or route beyond health (03+); auth/OTP (03); hierarchy tables (04); tokens and bn/en catalog *content* (02 — only the workspace shell lands here); Docker/Nginx/backups/runbooks (15); Kafka/RabbitMQ/Redis-Streams queues (rejected — `tech-stack.md` "Deliberately not used")
+- Any product feature, screen or route beyond health (03+); auth/OTP (03); hierarchy tables (04); web/app scaffolding, TS clients, tokens and client bn/en catalogs (02); Docker/Nginx/backups/runbooks (15); Kafka/RabbitMQ/Redis-Streams queues (rejected — `tech-stack.md` "Deliberately not used")
 
 **Depends on**
 
@@ -51,19 +51,19 @@ The five user roles and vendors (defined by 03-identity-access) have no surface 
 
 ## 4. User Stories
 
-### `FND-US-001` — Monorepo scaffold, workspace tooling and fail-fast config
+### `FND-US-001` — api repo scaffold and fail-fast config
 
 **Priority:** P0 · **Traces:** prd.md §6 · tech-stack.md §Shared & tooling · **Depends on:** —
 
-**Story** — As a **developer**, I want the workspaces, Go module and typed config modules scaffolded with a fixed layout, so that every module lands in the same shape, tasks are cached and bad config kills the process at boot.
+**Story** — As a **developer**, I want the api repo, Go module and typed config module scaffolded with a fixed layout, so that every module lands in the same shape and bad config kills the process at boot.
 
 **Acceptance criteria**
 
-- **Given** a fresh clone, **when** `pnpm install && pnpm build` runs, **then** all workspaces build via Turborepo with cached tasks and `go build ./...` compiles the api module.
+- **Given** a fresh clone of the api repo, **when** `make build` runs, **then** `go build ./...` compiles the api with pinned tools from `tools.mod` (no global installs).
 - **Given** a missing/malformed required var (`DATABASE_URL`), **when** the api starts, **then** it exits non-zero naming the offending variable — never a partial start; no code reads env outside the config module (lint-enforced).
-- **Given** the ESLint boundary rule, **when** web/app import anything but the generated client from `packages/shared`, **then** lint fails.
+- **Given** a direct `os.Getenv`/`os.LookupEnv` outside `internal/config`, **when** golangci-lint runs, **then** lint fails (forbidigo rule).
 
-**Notes** — Empty workspace shells only (screens arrive with 02/03); secrets (`JWT_SECRET`, gateway keys, …) are parsed here from module 03 onward.
+**Notes** — api only; web/app scaffolds arrive with 02. Secrets (`JWT_SECRET`, gateway keys, …) are parsed by the config module from module 03 onward.
 
 ---
 
@@ -71,13 +71,13 @@ The five user roles and vendors (defined by 03-identity-access) have no surface 
 
 **Priority:** P0 · **Traces:** tech-stack.md §Shared & tooling · prompt.txt §1 · **Depends on:** FND-US-001
 
-**Story** — As a **developer**, I want `openapi.yaml` to generate Go server types (oapi-codegen) and TS clients (openapi-typescript/openapi-fetch), so that API types are never hand-written on any side.
+**Story** — As a **developer**, I want `applications/api/openapi/openapi.yaml` to generate the Go server types (oapi-codegen) and to be the file web/app generate their own clients from, so that API types are never hand-written on any side.
 
 **Acceptance criteria**
 
-- **Given** a spec change, **when** `make contracts` / `pnpm generate:api` runs, **then** Go types + server interface and the TS client are regenerated.
+- **Given** a spec change, **when** `make contracts` runs, **then** the Go types + server interface are regenerated.
 - **Given** hand-edited generated code (or spec/code drift), **when** CI regenerates and diffs, **then** the merge is blocked.
-- **Given** the skeleton spec, **when** the api builds and a TS consumer type-checks, **then** both compile from the same spec (round-trip).
+- **Given** the skeleton spec, **when** the spec is validated and the api builds, **then** the generated Go compiles and the spec is valid OpenAPI 3.1 for client generators (the TS round-trip is proven by 02's `DSN-FE-000`/`DSN-AP-000`).
 
 **Notes** — Initial spec: Problem schema, health paths, shared error shape only.
 
@@ -108,7 +108,7 @@ The five user roles and vendors (defined by 03-identity-access) have no surface 
 **Acceptance criteria**
 
 - **Given** any service error, **when** a handler responds, **then** the body is RFC-7807 with `type`, `title`, `status`, `code` ∈ {UNAUTHENTICATED, FORBIDDEN, VALIDATION_FAILED, TENANT_MISMATCH, NOT_FOUND, NOT_VERIFIED, RATE_LIMITED, QUOTA_EXCEEDED, CONFLICT, INTERNAL}, localized `message` (bn default) and `requestId`.
-- **Given** `Accept-Language: bn` (default) vs `en`, **when** validation fails, **then** the `message` is Bengali vs English — both shipped in `packages/shared` catalogs.
+- **Given** `Accept-Language: bn` (default) vs `en`, **when** validation fails, **then** the `message` is Bengali vs English — both shipped in the api's own catalog (`applications/api/internal/i18n`).
 - **Given** an unknown future `code`, **when** a client renders it, **then** it falls back to the generic bn/en error string (open-set rule, 06 §7).
 
 **Notes** — The `Problem` schema is defined once here; all modules reuse it.
@@ -183,12 +183,11 @@ The five user roles and vendors (defined by 03-identity-access) have no surface 
 
 **Priority:** P0 · **Traces:** prompt.txt §10 · tech-stack.md §CI · **Depends on:** FND-US-001 … FND-US-008
 
-**Story** — As a **developer**, I want GitHub Actions to run the per-app gate (`go test/vet/lint` + integration; `pnpm lint/typecheck/test/build`) and the codegen drift check, so that nothing merges red.
+**Story** — As a **developer**, I want the api repo's GitHub Actions workflow to run the gate (`go test/vet/lint` + integration) and the codegen drift check, so that nothing merges red. (web/app gates live in their own repos — 02.)
 
 **Acceptance criteria**
 
 - **Given** a PR touching `applications/api`, **when** CI runs, **then** gofmt/goimports, golangci-lint, `go vet`, unit and testcontainers integration tests must pass.
-- **Given** a PR touching TS workspaces, **when** CI runs, **then** `pnpm lint/typecheck/test/build` must pass for each affected workspace (Turborepo graph).
 - **Given** a failing required check, **when** merge is attempted, **then** it is blocked — no skip flags.
 
 **Notes** — EAS build hooks for `app` are added by 02/03 when screens ship; only the task graph exists here.
@@ -199,8 +198,8 @@ The five user roles and vendors (defined by 03-identity-access) have no surface 
 
 | ID | Rule | Enforced where |
 | --- | --- | --- |
-| `FND-BR-001` | API types are generated from `contracts/openapi/openapi.yaml`, never hand-written; drift fails CI | CI drift check + `make contracts` |
-| `FND-BR-002` | Env/config read only inside the config module; missing/invalid config fails startup fast | Config module + lint rule (Go and TS) |
+| `FND-BR-001` | API types are generated from `applications/api/openapi/openapi.yaml`, never hand-written; drift fails CI | CI drift check + `make contracts` |
+| `FND-BR-002` | Env/config read only inside the config module; missing/invalid config fails startup fast | Config module + forbidigo lint rule (Go); web/app enforce the same in their repos (02) |
 | `FND-BR-003` | Every repository query touching tenant-owned rows includes a `school_id` scope, or is declared platform-level with a proving test | Repository layer + integration tests |
 | `FND-BR-004` | The `jobs` queue is at-least-once; handlers must be idempotent (use `idempotency_key` where producers may duplicate) | Worker + handler contract (03 §5) |
 | `FND-BR-005` | `audit_log` is append-only — UPDATE/DELETE rejected by the DB; every destructive/financial action writes an entry in the same transaction | DB rule/trigger + `audit.Record` |
@@ -210,17 +209,18 @@ Content truth (`prompt.txt` §12): "None — infrastructure module"; no publisha
 
 ## 6. Validation Rules
 
-| Field | Rule | Message key (`packages/shared` i18n catalog) |
+| Field | Rule | Message key (per-app `src/i18n` catalog) |
 | --- | --- | --- |
-| `DATABASE_URL` | Non-empty `postgres://` URL; ping at boot | `fnd.config.databaseUrl.invalid` — bn: `DATABASE_URL সঠিক নয়` / en: `DATABASE_URL is invalid` |
-| `REDIS_URL` | Non-empty `redis://` URL | `fnd.config.redisUrl.invalid` — bn/en |
-| `APP_ENV` | Enum `development` \| `test` \| `production` | `fnd.config.appEnv.invalid` |
-| `LOG_LEVEL` | Enum `debug` \| `info` \| `warn` \| `error` | `fnd.config.logLevel.invalid` |
-| `HTTP_PORT` | Integer 1–65535 | `fnd.config.port.invalid` |
-| Envelope `message` | Always present, bn + en, bn default | `fnd.error.<code>` per code (e.g. `fnd.error.validation_failed`) |
+| `DATABASE_URL` | Non-empty `postgres://`/`postgresql://` URL (Neon direct endpoint); ping at boot | Not user-facing — startup error names the variable |
+| `REDIS_URL` | Non-empty `redis://`/`rediss://` URL | Not user-facing — startup error names the variable |
+| `APP_ENV` | Enum `development` \| `test` \| `production` | Not user-facing — startup error names the variable |
+| `LOG_LEVEL` | Enum `debug` \| `info` \| `warn` \| `error` | Not user-facing — startup error names the variable |
+| `HTTP_PORT` | Integer 1–65535 (in-container listen port; the host port is 15's `API_PORT`) | Not user-facing — startup error names the variable |
+| `SHUTDOWN_TIMEOUT` · `TRUSTED_PROXIES` · `WORKER_CONCURRENCY` | Positive duration (default `20s`) · IPs/CIDRs (default `127.0.0.1/32,::1/128`) · integer 1–32 (default 2) | Not user-facing — startup error names the variable |
+| Envelope `message` | Always present, bn + en, bn default | `errors.<code>` per code (e.g. `errors.validation_failed`) in the api catalog |
 | `X-Request-Id` in | Optional; ≤ 64 chars, printable; else generate | Not user-facing — log only |
 
-Mirrored by the OpenAPI `Problem` schema (server) and zod schemas in `packages/shared`. Both languages from day one.
+Mirrored by the OpenAPI `Problem` schema. Both languages from day one.
 
 ## 7. Edge Cases & Negative Paths
 
@@ -242,6 +242,6 @@ None directly — no dashboards consume this module's product data. `jobs` queue
 
 | # | Question | Owner | Status | Default if unanswered |
 | --- | --- | --- | --- | --- |
-| 1 | Monorepo + toolchain | Rahul | Resolved 2026-09-29 | Go module for `api` (chi + gorilla/websocket + sqlc + pgx + golang-migrate); pnpm+Turborepo for `web`/`app`/`shared`; OpenAPI 3.1 in `contracts/openapi/` generating Go server types + TS clients; Postgres on Neon free (ap-southeast-1); media on Cloudflare R2; VPS = Hostinger KVM 2 + HestiaCP |
-| 2 | Where do generated TS clients live? | Rahul | Open | `packages/shared/src/api-client/` (single generated package for web + app) |
+| 1 | Repositories + toolchain | Rahul | Resolved 2026-09-29; layout revised 2026-09-30 | One git repo per app, no shared package; Go module for `api` (chi + gorilla/websocket + sqlc + pgx + golang-migrate); OpenAPI 3.1 in `applications/api/openapi/` generating Go server types; web/app own their toolchains and clients (02); Postgres on Neon (region per plan F1); media on Cloudflare R2; VPS = Hostinger KVM 2 + HestiaCP |
+| 2 | Where do generated TS clients live? | Rahul | Resolved 2026-09-30 (owner: no shared package) | Each client generates its own: `applications/web/src/api/`, `applications/app/src/api/` |
 | 3 | `/readyz` public or loopback-only in production? | Rahul | Open | Public; Nginx/IP restriction applied later by 15 if needed |

@@ -158,7 +158,7 @@ realtime paths (WS/pub-sub); job paths. One flow per major capability.>
 | --- | --- | --- | --- |
 
 > All errors surface as RFC-7807 `application/problem+json`. User-visible messages resolve via
-> `packages/shared` catalogs — every message key ships in **bn + en** (Bengali default).
+> each app's `src/i18n` catalogs — every message key ships in **bn + en** (Bengali default).
 
 ---
 

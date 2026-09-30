@@ -29,7 +29,7 @@ status (e.g. a Super Admin tenant health card) is a new module decision, additiv
 ## 3. Forms & Input
 
 None — no app forms. Upload and endpoint forms live in `04-frontend-tasks.md` §3 (web zod schemas
-from `packages/shared`).
+in `applications/web/src/schemas`).
 
 ## 4. Data Flow
 

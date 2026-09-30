@@ -19,7 +19,7 @@ trustworthy, Bengali-first product — the trust objective in `brd.md` §2 (deta
 
 ### 1.2 Scope
 
-**In:** semantic tokens in `packages/shared` (deep-teal 10-step scale, paper/ink neutrals,
+**In:** semantic tokens in each app's `src/theme` (deep-teal 10-step scale, paper/ink neutrals,
 spacing, radius, type scale, motion) → Tailwind v4 `@theme` (web) + NativeWind (app); fonts Hind
 Siliguri + Inter (`next/font/google` web, bundled `@expo-google-fonts` app) · bn/en string
 catalogs (**this module OWNS the catalogs**): dot-namespaced keys, `t(key, params)`, CI parity
@@ -37,8 +37,8 @@ implementation.
 
 | Direction | Module | What is exchanged |
 | --- | --- | --- |
-| consumes | 01-foundations | pnpm/Turborepo workspace for `packages/shared`, TS strict config, CI quality gate + test harness |
-| consumed by | 03–14 (all feature modules) | imports from `packages/shared` (tokens, catalogs, `t()`) + per-app primitive folders; `03-identity-access` consumes first |
+| consumes | 01-foundations | api contract + problem code registry only (`applications/api/openapi/openapi.yaml`). 01 ships **no** web/app scaffolding — 02 scaffolds web and app tooling itself (TS strict, ESLint 10, Vitest/jest-expo, per-repo CI) |
+| consumed by | 03–14 (all feature modules) | import from their own app's `src/theme` (tokens), `src/i18n` (`t()`) and primitive folders; `03-identity-access` consumes first |
 
 ---
 
@@ -46,7 +46,7 @@ implementation.
 
 | Layer | Technology | Why | Notes |
 | --- | --- | --- | --- |
-| shared | `packages/shared` — token module, `i18n/bn.json` + `en.json`, typed `t()` | single source consumed by web and app | catalogs + tokens are code/config, not data |
+| web + app (per app) | `src/theme` token module + `src/i18n/bn.json` + `en.json` + typed `t()`, inside each of web and app | each app owns its copy; values pinned to `docs/design-reference/README.md` | catalogs + tokens are code/config, not data |
 | web | Next.js App Router · Tailwind v4 `@theme` · shadcn-style hand-written primitives on Radix · `next/font/google` · lucide-react | token control + bn-first sizing baked in (`02-solution-approach.md` §10) | zero runtime CSS-in-JS |
 | app | Expo SDK · React Native · NativeWind · `@expo-google-fonts` · radix-primitives/zeego · lucide-react-native | one token language across platforms | fonts bundled in the binary |
 | api | None — no server code in this module (`03-backend-tasks.md` is all N/A by design) | — | — |
@@ -62,11 +62,11 @@ implementation.
 docs/design-reference (brand truth — palette, fonts, logo rules)
         │ encoded as
         ▼
-packages/shared
-├─ tokens ──► web: Tailwind @theme ──► applications/web/src/components/ui/* ──► screens (07+)
-│         └─► app: NativeWind theme ──► RN primitives ──► screens (03/05/08/10/11)
-└─ i18n bn.json / en.json ──► t(key, params) ──► every user-facing string (web + app)
-                                            (CI parity gate: DSN-UT-001)
+applications/web (own repo)                         applications/app (own repo)
+├─ src/theme tokens ──► Tailwind @theme             ├─ src/theme tokens ──► NativeWind theme
+│    ──► src/components/ui/* ──► screens (07+)      │    ──► RN primitives ──► screens (03/05/08/10/11)
+└─ src/i18n bn/en ──► t(key, params)                └─ src/i18n bn/en ──► t(key, params)
+   (CI parity gate DSN-UT-001 in each repo; token values pinned to the reference by DSN-UT-005)
 
 brand assets (logo lockup/monogram, icon, splash, notification icon)
         └─► <Logo/> component · app.json / EAS config
@@ -74,18 +74,18 @@ brand assets (logo lockup/monogram, icon, splash, notification icon)
 
 ### 3.2 Boundary
 
-**Owns (tables / services):** `packages/shared` tokens + catalogs + `t()` + catalog CI tests ·
+**Owns (tables / services):** each app's `src/theme` tokens + `src/i18n` catalogs + `t()` + catalog CI tests ·
 `applications/web` `@theme` wiring, fonts, `src/components/ui/*` · `applications/app` NativeWind
 config, bundled fonts, RN primitives, icon/splash EAS config. **No database tables** — data-model
 ownership stays with 01 (audit_log, jobs), 03, 04, 05, 06 per `docs/modules/README.md`.
 
-**Reads (via exported service functions only):** `01-foundations` — workspace/TS/CI/test
-scaffolding only; re-scaffolding would fork the toolchain. No server data crosses this boundary.
+**Reads (via exported service functions only):** `01-foundations` — the api contract and problem
+code registry only; 02 scaffolds the web and app repos' tooling itself. No server data crosses this boundary.
 
 ### 3.3 Request / data flows
 
 ```text
-1. Tokens        packages/shared token defs → build-time import → web @theme CSS custom properties
+1. Tokens        src/theme token defs → build-time import → web @theme CSS custom properties
                  | NativeWind config preset → compiled styles. No runtime fetches.
 2. Strings       static catalog import (both locales bundled) → t(key, params) → localized string.
                  Fallback: requested locale → bn → key literal + dev warning; never throws.
@@ -112,7 +112,7 @@ OpenAPI client (`01-foundations`).
 
 | Table | Purpose | Tenant scope | Key indexes | Notes |
 | --- | --- | --- | --- | --- |
-| None — module 02 owns zero tables | design tokens, string catalogs and UI primitives are code/config in `packages/shared` and per-app folders | N/A — no tenant data exists here | N/A | closest equivalent to seed data is the catalog seed strings (`packages/shared/i18n/bn.json`/`en.json`), specified in `03-backend-tasks.md` §2; illustrative copy stays clearly fictional |
+| None — module 02 owns zero tables | design tokens, string catalogs and UI primitives are code/config inside each app (`src/theme`, `src/i18n`, `src/components`) | N/A — no tenant data exists here | N/A | closest equivalent to seed data is the catalog seed strings (each app's `src/i18n/bn.json`/`en.json`), specified in `03-backend-tasks.md` §2; illustrative copy stays clearly fictional |
 
 ---
 
@@ -205,7 +205,7 @@ FCM · R2 · DeepSeek · SMS · payment gateways: **N/A — none touched by this
 | Tenant scope | N/A — no tables, no tenant data (`03-backend-tasks.md` §1 is all N/A) |
 | Rate limits | N/A — no routes |
 | Audit events | none — no server actions to audit |
-| Privacy / minors | downstream properties: primitives render strings as plain text (never `dangerouslySetInnerHTML`) so feature screens inherit XSS-safe rendering; `packages/shared` ships no secrets; web fonts fetched at build via `next/font` and self-hosted — never from a runtime endpoint |
+| Privacy / minors | downstream properties: primitives render strings as plain text (never `dangerouslySetInnerHTML`) so feature screens inherit XSS-safe rendering; `src/theme`/`src/i18n` ship no secrets; web fonts fetched at build via `next/font` and self-hosted — never from a runtime endpoint |
 
 ---
 
@@ -223,7 +223,7 @@ No API errors exist (no endpoints). The module's failure modes and client-visibl
 
 Seam convention fixed for all consumers: server error codes map to `validation.*`/`errors.*`
 catalog keys resolved by `t()` before display; all user-visible messages ship in **bn + en**
-(bn default) via the `packages/shared` catalogs (`06-integration-tasks.md` §6).
+(bn default) via each app's `src/i18n` catalogs (`06-integration-tasks.md` §6).
 
 ---
 
@@ -246,7 +246,7 @@ catalog keys resolved by `t()` before display; all user-visible messages ship in
 | Unit | catalog parity (schema, key sets, placeholders, namespace whitelist) · `t()` fallback safety · web primitive render/a11y fixtures (focus/pressed/disabled, bn +30%, accessible names) · RN primitive render fixtures (jest-expo) | `DSN-UT-001…004` | green in CI |
 | Integration | token-usage lint over web + app (no raw hex/px/font-family) · apps render themed + localized end-to-end (Next build smoke; app root render) | `DSN-IT-001…002` | CI lint + smoke gate |
 | E2E | bn default renders + en toggle works on web (Playwright) and app (Maestro); reduced-motion static splash checked | `DSN-E2E-001` | CI |
-| CI | per-workspace quality gate from 01 (`pnpm lint/typecheck/test/build`) + this module's parity/token gates | — | required checks |
+| CI | per-repo quality gate in web and in app, set up by this module (`pnpm lint/typecheck/test/build`) + parity/token gates | — | required checks |
 
 The generic server-test requirements (unauthenticated denied, `TENANT_MISMATCH`, publish guards)
 are N/A — no entry points exist; the parity + fallback gates are this module's mandatory gates.
@@ -302,3 +302,4 @@ readiness checks; unconfirmed items keep their `TODO: Confirm` marker.
 | --- | --- | --- |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
 | 2026-09-30 | Namespace whitelist replaced by a 24-namespace registry (`02` §1.1) — later modules already used namespaces outside the original eight; CircleUp mobile primitives (`DSN-AP-018`) and professional web primitives (`DSN-FE-019`) added per owner UI direction (`docs/design-reference/README.md` §6–§7) | Claude |
+| 2026-09-30 | Isolated applications (owner): no `packages/shared` — web and app each own `src/theme`, `src/i18n`, `src/schemas`, `src/api`; 02 now scaffolds both repos (`DSN-FE-000`, `DSN-AP-000`); token reference pin `DSN-UT-005`; drift risk recorded | Claude |

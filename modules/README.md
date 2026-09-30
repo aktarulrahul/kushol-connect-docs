@@ -20,8 +20,11 @@ To add a module: copy `_TEMPLATE/` to `NN-<name>/`, fill every section ("None" /
 rather than blank), and add a row below **in the same commit**.
 
 Apps: `api` = `applications/api` (Go), `ai` = `applications/ai` (Python FastAPI, later),
-`web` = `applications/web`, `app` = `applications/app`, `shared` = `packages/shared`,
-`contracts` = `contracts/openapi` (OpenAPI 3.1 — generates Go server types + TS clients).
+`web` = `applications/web`, `app` = `applications/app`. **Each app is its own git repository; there
+is no shared package and no root workspace** (owner decision 2026-09-30). `web` and `app` each own
+`src/api` (client generated from the api's spec), `src/i18n`, `src/theme` and `src/schemas`.
+`contracts` = `applications/api/openapi/openapi.yaml` (OpenAPI 3.1, owned by api — generates the Go
+server types; web/app sync a copy and generate their own TS client).
 
 ---
 
@@ -74,10 +77,10 @@ Playwright (web) / Maestro (app) test.
 
 | # | Module | Phase | Size | Spec | Build | Depends on | Covers (apps) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 01 | [`foundations`](./01-foundations/) | 1 | M | 📝 | ⬜ | — | Monorepo scaffold (pnpm+Turborepo for web/app/shared, Go module for api), OpenAPI codegen pipeline (oapi-codegen + openapi-typescript), env/config parsing, Postgres via testcontainers-go, sqlc + golang-migrate base, logging (slog), error format, headers, health, CI quality gate, test harness · `api` `shared` `contracts` |
-| 02 | [`design-system`](./02-design-system/) | 1 | M | 📝 | ⬜ | 01 | Brand tokens (deep-teal palette), Hind Siliguri + Inter, RN primitives (NativeWind) + web primitives (shadcn-style), bn/en string catalogs, app icon/splash from logo · `shared` `app` `web` |
+| 01 | [`foundations`](./01-foundations/) | 1 | M | 📝 | 🚧 | — | Go `api` scaffold (own repo), OpenAPI 3.1 contract owned by api + Go codegen (oapi-codegen; web/app generate their own client later), env/config parsing, Postgres via testcontainers-go, sqlc + golang-migrate base, logging (slog), error format, headers, health, CI quality gate, test harness · `api` `contracts` |
+| 02 | [`design-system`](./02-design-system/) | 1 | M | 📝 | ⬜ | 01 | Brand tokens (deep-teal palette), Hind Siliguri + Inter, RN primitives (NativeWind) + web primitives (shadcn-style), bn/en string catalogs, app icon/splash from logo — tokens/catalogs encoded separately in each app · `app` `web` |
 | 03 | [`identity-access`](./03-identity-access/) | 1 | M | 📝 | ⬜ | 01, 02 | Five roles (Super Admin/School Admin/Teacher/Student/Guardian), custom Go auth: phone OTP (local SMS gateway) + Google/GitHub SSO, registration, login (JWT mobile / session web), verification workflow (Admin or Student Ambassador), role guards · `api` `app` `web` |
-| 04 | [`organization-hierarchy`](./04-organization-hierarchy/) | 1 | M | 📝 | ⬜ | 03 | City → School → Section model, school onboarding/tenancy, auto-grouping on verification, FCM topic subscription mapping, year-end migration design · `api` `shared` |
+| 04 | [`organization-hierarchy`](./04-organization-hierarchy/) | 1 | M | 📝 | ⬜ | 03 | City → School → Section model, school onboarding/tenancy, auto-grouping on verification, FCM topic subscription mapping, year-end migration design · `api` |
 | 05 | [`communication-engine`](./05-communication-engine/) | 1 | **L** | 📝 | ⬜ | 04 | Group chat (official/custom/DM) over the Go WebSocket gateway (gorilla rooms + Redis pub/sub), notice boards (one-way), Message Request for out-of-network DMs, media (image/PDF/voice) with Cloudflare R2 uploads, optimistic UI · `api` `app` |
 | 06 | [`notifications`](./06-notifications/) | 1 | M | 📝 | ⬜ | 04, 05 | FCM topic fan-out, per-device push via expo-notifications, deep links into app screens, delivery tracking · `api` `app` |
 | 07 | [`command-center-web`](./07-command-center-web/) | 1 | **L** | 📝 | ⬜ | 03, 04 | Landing page (B2B funnel: school ROI calculator, vendor inquiry, download links) + Super Admin portal (tenants, vendor approval, revenue) + School Admin portal (roster, notices, migration trigger) shell · `web` `api` |
@@ -88,7 +91,7 @@ Playwright (web) / Maestro (app) test.
 | 12 | [`payments`](./12-payments/) | 3 | M | 📝 | ⬜ | 07, 11 | bKash/Nagad/SSLCommerz integration, fee-payment deep links, webhook signature verification, idempotent ledger, PDF receipts · `api` `web` `app` |
 | 13 | [`b2b-ads-events`](./13-b2b-ads-events/) | 3 | M | 📝 | ⬜ | 06, 07 | Demographic-targeted campaigns (grade/section/city), sponsored push/native ads with moderation, event listings & ticketing commission · `api` `web` |
 | 14 | [`lms-erp-sync`](./14-lms-erp-sync/) | 3 | M | 📝 | ⬜ | 04, 07 | CSV/Excel roster upload (self-serve), REST webhooks for live LMS/ERP sync, idempotent ingestion, reconciliation reports · `api` `web` |
-| 15 | [`deployment-operations`](./15-deployment-operations/) | all | M | 📝 | ⬜ | 01 (A) · all (B) | Docker (api + web), Compose (Postgres/Redis/MinIO), Nginx + TLS, EAS pipelines, backups + restore drill, runbooks, `DEPLOYMENT.md` · `infra` |
+| 15 | [`deployment-operations`](./15-deployment-operations/) | all | M | 📝 | ⬜ | 01 (A) · all (B) | Docker (api + web), Compose (api/worker/web/Redis — Postgres on Neon, media on R2), Nginx + TLS, EAS pipelines, backups + restore drill, runbooks, `DEPLOYMENT.md` · `infra` |
 
 ## Dependency graph
 
@@ -162,12 +165,12 @@ with the build date before the owner runs them (and note it in `07-progress.md`)
 | --- | --- |
 | Error codes (RFC-7807 `code`) | `01-foundations/technical-document.md` §10 (core + module-specific table) |
 | i18n catalog namespaces | `02-design-system/02-solution-approach.md` §1.1 |
-| Go export packages | `audit` `jobs` (01) · `auth` `sessions` `verification` `users` `guardians` (03) · `hierarchy` (04) · `chat` `media` (05) · `notify` (06) · `vendors` (07) · `ai` `aiquota` (08; `ai.AttemptStats` lives in `ai` because `analytics` is 09's package) · `analytics` (09) · each module's `06` §2 is the signature source |
+| Go export packages | `audit` `jobs` `principal` `i18n` (01; `i18n` = api-side bn/en copy for problem/push/email text) · `auth` `sessions` `verification` `users` `guardians` (03) · `hierarchy` (04) · `chat` `media` (05) · `notify` (06) · `vendors` (07) · `ai` `aiquota` (08; `ai.AttemptStats` lives in `ai` because `analytics` is 09's package) · `analytics` (09) · each module's `06` §2 is the signature source |
 | Web routes | 07 owns the `/admin`, `/school`, `/vendor` route tree and stub names; feature modules fill stubs under the same name (`/school/ai-matrix` 09 · `/school/tutors` 10 · `/school/ledger`, `/school/payments/*` 12 · `/school/roster/*`, `/school/integrations` 14) |
 | API paths | One owner per path; shared-sounding reports are namespaced by owner (`/school/payments/reconciliation` 12 vs `/school/roster/reconciliation` 14) |
 | Env variables | Each module's `technical-document.md` §8.1; full inventory in `prompt.txt` §11 and 15's `.env.example` |
 
-Infrastructure, domain and email plan: `docs/infra/architecture-and-deployment.md` (findings F1–F17, owner actions, spec edits still pending §9).
+Infrastructure, domain and email plan: `docs/infra/architecture-and-deployment.md` (findings F1–F17, owner actions; §9 spec edits applied 2026-09-30).
 
 ### Resolved cross-module decisions (2026-09-30)
 
@@ -184,12 +187,13 @@ Infrastructure, domain and email plan: `docs/infra/architecture-and-deployment.m
 | Payment success needs server-to-server status confirmation; gateway webhook schemes `TODO: Confirm` | 12 `02` §6 |
 | Teachers may use `/school/ai-matrix` (own sections) on web; no other web portal | 07, 09 |
 | UI: mobile = CircleUp layout + WhatsApp chat in Kushol teal; web = professional SaaS | `docs/design-reference/README.md` §6–§7 |
+| **Isolated applications** (owner, 2026-09-30): each app is its own git repo; no `packages/shared`, no root pnpm/Turborepo workspace. The api owns `applications/api/openapi/openapi.yaml` and server-rendered bn/en copy (`internal/i18n`); `web`/`app` each own `src/api` (generated client from a synced spec copy), `src/i18n`, `src/theme`, `src/schemas`. Cross-repo drift is caught by each client's spec-sync check | `prompt.txt` §1, `tech-stack.md`, 01, 02 |
 
 ## Blocked before build — questions and the defaults each module will use
 
 | Module | Question | Default if unanswered |
 | --- | --- | --- |
-| 01 | *(resolved 2026-09-29)* Monorepo + toolchain | Go module for `api` (chi + gorilla/websocket + sqlc + pgx + golang-migrate); pnpm+Turborepo for `web`/`app`/`shared`; OpenAPI 3.1 spec in `contracts/openapi/` generating Go server types + TS clients; Postgres on Neon free (ap-southeast-1); media on Cloudflare R2; VPS = Hostinger KVM 2 + HestiaCP |
+| 01 | *(resolved 2026-09-29; layout revised 2026-09-30)* Repositories + toolchain | One git repo per app, no shared package; Go module for `api` (chi + gorilla/websocket + sqlc + pgx + golang-migrate); `web`/`app` each with their own pnpm toolchain; OpenAPI 3.1 spec in `applications/api/openapi/` generating Go server types (clients generate their own TS client); Postgres on Neon free (ap-southeast-1); media on Cloudflare R2; VPS = Hostinger KVM 2 + HestiaCP |
 | 02 | Logo vector files | Typographic fallback ("কুশল CONNECT") + supplied PNG for mockups; recorded as a gap |
 | 03 | Student Ambassador criteria / verification SLA | Any verified Student Ambassador of the same school may verify same-school join requests; SLA 48h, auto-reminder |
 | 04 | City list at launch | Dhaka + Chattogram only; new cities added by Super Admin |

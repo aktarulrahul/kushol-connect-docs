@@ -38,10 +38,10 @@ Ships the web surface of Kushol Connect: the public B2B funnel — bilingual lan
 | Layer | Technology | Why | Notes |
 | --- | --- | --- | --- |
 | Web framework | Next.js App Router, `output: "standalone"`, TypeScript strict | SEO-native landing + RSC portals behind a server auth gate (`02` §10 Option A; SPA rejected) | `tech-stack.md` web table |
-| Styling / fonts | Tailwind CSS v4 `@theme` tokens · Hind Siliguri + Inter via `next/font` | brand tokens only from `packages/shared`; bn never rendered in Inter | light theme first; self-hosted `bengali`+`latin` subsets |
+| Styling / fonts | Tailwind CSS v4 `@theme` tokens · Hind Siliguri + Inter via `next/font` | brand tokens only from each app's `src/theme`; bn never rendered in Inter | light theme first; self-hosted `bengali`+`latin` subsets |
 | Components | shadcn/ui on radix-ui | one visual API with module 02 primitives | hand-written into `src/components/ui/` |
 | Data tables | TanStack Table + TanStack Query | keyboard-complete admin tables; client interactivity only where tables need it | ~12 kB gzip both, tree-shaken |
-| Forms | react-hook-form + zod | shared schemas in `packages/shared` mirror the OpenAPI shapes | re-validated in every Route Handler |
+| Forms | react-hook-form + zod | shared schemas in each app's `src/schemas` mirror the OpenAPI shapes | re-validated in every Route Handler |
 | Testing (web) | Vitest + Testing Library · Playwright (+ axe) | golden paths + WCAG 2.2 AA gate | Lighthouse CI for CWV budgets |
 | SEO | Metadata API, OG images, JSON-LD Organization, sitemap, robots | landing is the B2B acquisition funnel (`WEB-FE-008`) | per-locale |
 | API (api side) | Go · chi handlers from OpenAPI 3.1 · sqlc + pgx · PostgreSQL (Neon) · Redis | spec-first; Go + TS clients regenerated (`WEB-BE-010`); `leads` rate-class counters | testcontainers-go for IT |
@@ -233,7 +233,7 @@ N/A — module 07 covers `web` + `api` only (README row). App surfaces that cons
 | `UNAUTHENTICATED` | No session | Protected endpoints #3–#9 | Middleware redirect `/login?next=…`, return path honoured |
 | `NOT_FOUND` | Unknown/inactive resource | Bad city id on lead create; archived section refresh; unknown portal route | Branded bn/en 404 with "back to dashboard" |
 
-All errors surface as RFC-7807 `application/problem+json`; user-visible messages resolve via `packages/shared` catalogs — every key ships in **bn + en** (Bengali default).
+All errors surface as RFC-7807 `application/problem+json`; user-visible messages resolve via each app's `src/i18n` catalogs — every key ships in **bn + en** (Bengali default).
 
 ---
 

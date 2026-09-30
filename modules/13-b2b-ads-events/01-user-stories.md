@@ -221,7 +221,7 @@ event listings with ticketing** at a 10% platform commission (PRD §7).
 
 ## 6. Validation Rules
 
-| Field | Rule | Message key (`packages/shared` i18n catalog) |
+| Field | Rule | Message key (per-app `src/i18n` catalog) |
 | --- | --- | --- |
 | campaign `name` / `objective` | name required, 3–120 chars; objective ∈ `awareness` \| `event_promo` | `validation.ads.name_length` · `validation.ads.objective_invalid` |
 | targeting `city_id` / `grade` / `section_ids` | city required, must exist in 04; grade optional, known class level; sections optional, each within `city_id` | `validation.ads.city_required` · `validation.ads.city_not_found` · `validation.ads.grade_invalid` · `validation.ads.section_city_mismatch` |

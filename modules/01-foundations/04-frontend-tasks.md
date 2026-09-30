@@ -6,11 +6,10 @@
 **Last updated:** 2026-09-30
 
 N/A file — this module ships **no web screens**. `docs/design-reference/README.md` becomes binding
-from 02-design-system onward. What this module does deliver for the web side: the
-`packages/shared` workspace shell, the Turborepo task graph (`lint`/`typecheck`/`test`/`build`)
-and the generated `openapi-fetch` client (FND-BE-002) that all later web work imports. Landing and
-Command Center screens belong to 07-command-center-web; tokens and bn/en catalogs to
-02-design-system.
+from 02-design-system onward. This module works only in `applications/api`; the only thing it
+hands the web side is the api contract (`applications/api/openapi/openapi.yaml`). The web repo
+scaffold, its generated `openapi-fetch` client, tokens and bn/en catalogs belong to
+02-design-system (`DSN-FE-000`); landing and Command Center screens to 07-command-center-web.
 
 ---
 
@@ -30,7 +29,7 @@ N/A — no forms. Zod form schemas mirror contract shapes from 03-identity-acces
 ## 4. Data Flow
 
 N/A for screens; the mechanism is fixed here for later modules: Server Component / Server Action →
-generated `openapi-fetch` client (`packages/shared`) → api. Web never touches the database or
+generated `openapi-fetch` client (the web repo's own `src/api`) → api. Web never touches the database or
 hand-written API types.
 
 ## 5. Motion Spec
@@ -48,11 +47,9 @@ N/A — no screens; axe/WCAG 2.2 AA gates apply from 02-design-system (web primi
 
 ## 8. Design-System Compliance
 
-N/A — tokens/Hind Siliguri/Inter catalogs arrive with 02-design-system in `packages/shared`; this
-module only ensures the workspace shell imports resolve (smoke build).
+N/A — tokens, Hind Siliguri/Inter and catalogs arrive with 02-design-system in the web repo's
+`src/theme` / `src/i18n`.
 
 ## 9. Task Checklist
 
-- None — no FE tasks. Related api-side scaffold tasks live in `03-backend-tasks.md`:
-  `FND-BE-001` (workspace shell + Turborepo tasks), `FND-BE-002` (generated TS client),
-  `FND-BE-010` (web lint/typecheck/test/build in CI).
+- None — no FE tasks. The web repo scaffold, client generation and web CI are 02's `DSN-FE-000`.

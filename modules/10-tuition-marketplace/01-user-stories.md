@@ -271,7 +271,7 @@ Implements `brd.md` **BR-03** and `prd.md` **§5.3**: guardians/students post tu
 
 ## 6. Validation Rules
 
-| Field | Rule | Message key (`packages/shared` i18n catalog) |
+| Field | Rule | Message key (per-app `src/i18n` catalog) |
 | --- | --- | --- |
 | `subjects` (requirement & tutor) | 1–5 keys of the shared catalog (গণিত/Mathematics, পদার্থবিজ্ঞান/Physics, রসায়ন/Chemistry, জীববিজ্ঞান/Biology, ইংরেজি/English, বাংলা/Bangla, উচ্চতর গণিত/Higher Mathematics, আইসিটি/ICT) | `validation.tuition.subjects_required` · `subject_unknown` |
 | `class_level` | Catalog key (class_6 … ssc, hsc) | `validation.tuition.class_level_invalid` |

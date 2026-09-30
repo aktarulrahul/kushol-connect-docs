@@ -2,7 +2,7 @@
 
 **Module:** `04-organization-hierarchy`
 **Status:** 📝 Spec drafted 2026-09-30 · **Owner:** Rahul (product owner)
-**Stack (api):** Go · chi REST handlers + gorilla/websocket gateway · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `contracts/openapi/openapi.yaml` · slog logging
+**Stack (api):** Go · chi REST handlers + gorilla/websocket gateway · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `applications/api/openapi/openapi.yaml` · slog logging
 **Stack (web):** Next.js Route Handlers / Server Actions · zod forms · generated `openapi-fetch` client → api
 **Last updated:** 2026-09-30
 

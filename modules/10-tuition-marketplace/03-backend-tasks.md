@@ -3,7 +3,7 @@
 **Module:** `10-tuition-marketplace`
 **Status:** 📝 Spec drafted 2026-09-30
 **Owner:** Rahul (product owner)
-**Stack (api):** Go · chi REST handlers · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `contracts/openapi/openapi.yaml` · slog logging · jobs via module 01 worker
+**Stack (api):** Go · chi REST handlers · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `applications/api/openapi/openapi.yaml` · slog logging · jobs via module 01 worker
 **Stack (web):** Next.js Route Handlers / Server Actions · zod forms · generated `openapi-fetch` client → api (School Admin verification queue + requirements oversight)
 **Last updated:** 2026-09-30
 
@@ -289,6 +289,6 @@ profiles or evidence.
 - [ ] `TUT-BE-012`–`014` match lifecycle services + endpoints #11/#13–#15 (accept tx incl. chat seam + fee fact)
 - [ ] `TUT-BE-015`/`TUT-BE-027` expiry job; `TUT-BE-028` SLA reminder
 - [ ] `TUT-BE-016`/`TUT-BE-025` `VerifiedTutorCount` export (07 handoff)
-- [ ] OpenAPI paths #1–#15 in `contracts/openapi/` + regenerate Go + TS clients
+- [ ] OpenAPI paths #1–#15 in `applications/api/openapi/` + regenerate Go + TS clients
 - [ ] Seed: Demo High School dataset (fictional, marked)
 - [ ] Tests: `TUT-UT-001`–`006`, `TUT-IT-001`–`010` green in CI

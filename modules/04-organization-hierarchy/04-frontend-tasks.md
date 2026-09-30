@@ -9,7 +9,7 @@ N/A — this module ships **no web screens**; it covers apps `api` + `shared` on
 Super Admin tenant screens and the School Admin migration wizard are built in module 07
 (`07-command-center-web`, prefix `WEB-FE-*`) against the endpoints in `03-backend-tasks.md` §2.
 This module specifies the data they need: bn + en names in every payload and the `hierarchy.*` /
-`validation.*` keys in `01-user-stories.md` §6 (`packages/shared` catalogs).
+`validation.*` keys in `01-user-stories.md` §6 (each app's `src/i18n` catalogs).
 
 ---
 
@@ -62,10 +62,10 @@ carries `nameBn` + `nameEn`, and list endpoints return stable ids for labelling.
 
 ## 8. Design-System Compliance
 
-N/A — no UI in this module; module 07 applies the shared tokens (`packages/shared`) to the routes above.
+N/A — no UI in this module; module 07 applies the shared tokens (each app's `src/theme`) to the routes above.
 
 ## 9. Task Checklist
 
 N/A — no `ORG-FE-*` items exist by design (README ID rules). The six routes in §1 are tracked as
 `WEB-FE-*` items inside module 07; this module's frontend-adjacent deliverables are the OpenAPI
-contract entries (`03` §2/§7) and the bn/en catalogs in `packages/shared`.
+contract entries (`03` §2/§7) and the bn/en catalogs in each app's `src/i18n`.

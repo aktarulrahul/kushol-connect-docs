@@ -3,7 +3,7 @@
 **Module:** `05-communication-engine`
 **Status:** 📝 Spec drafted 2026-09-30
 **Owner:** Rahul (product owner)
-**Stack (api):** Go · chi REST handlers + gorilla/websocket gateway · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `contracts/openapi/openapi.yaml` · slog logging
+**Stack (api):** Go · chi REST handlers + gorilla/websocket gateway · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `applications/api/openapi/openapi.yaml` · slog logging
 **Stack (web):** N/A for this module — the School Admin notice composer (module 07) consumes these REST endpoints via the generated `openapi-fetch` client
 **Last updated:** 2026-09-30
 
@@ -339,6 +339,6 @@ publish guard blocks `TODO:`; public reads never return drafts.
 - [ ] `COM-BE-013` delete/tombstone service
 - [ ] `COM-BE-025`–`COM-BE-027` jobs (archival, request expiry, pending-asset cleanup)
 - [ ] `COM-BE-015` REST catch-up endpoint wiring
-- [ ] OpenAPI paths #1–#20 + WS contract documented in `contracts/openapi/`
+- [ ] OpenAPI paths #1–#20 + WS contract documented in `applications/api/openapi/`
 - [ ] Seed: Demo High School dataset (fictional, marked)
 - [ ] Tests: `COM-UT-001`–`007`, `COM-IT-001`–`009` green in CI

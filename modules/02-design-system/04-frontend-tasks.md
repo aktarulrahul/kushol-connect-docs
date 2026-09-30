@@ -1,11 +1,11 @@
 # Design System — Frontend Tasks
 
 **Module:** `02-design-system`
-**Stack:** Next.js App Router · TypeScript strict · Tailwind v4 (`@theme` fed by `packages/shared`) · shadcn-style hand-written primitives on Radix · lucide-react
+**Stack:** Next.js App Router · TypeScript strict · Tailwind v4 (`@theme` fed by each app's `src/theme`) · shadcn-style hand-written primitives on Radix · lucide-react
 **Last updated:** 2026-09-30
 
 `docs/design-reference/README.md` (palette, Hind Siliguri + Inter, logo rules) is binding: tokens
-only from `packages/shared`, every user-facing string in Bengali + English.
+only from each app's `src/i18n`, every user-facing string in Bengali + English.
 
 ---
 
@@ -32,14 +32,14 @@ root layout (app/layout.tsx)
 ├── <html lang={locale}>              ← bn default; updates on toggle
 ├── fonts: HindSiliguri (bengali subset) · Inter (latin subset)   ← next/font, display swap
 ├── globals.css  @theme: --color-* · --spacing-* · --radius-* · --text-* · --ease-*
-└── <LocaleProvider>                  ← t() from packages/shared catalogs
+└── <LocaleProvider>                  ← t() from src/i18n catalogs
 ```
 
 **Components**
 
 | Component | Server/Client | Notes |
 | --- | --- | --- |
-| `@theme` token bridge | Server (build) | CSS custom properties generated from `packages/shared` tokens — the only place hex values appear in `web` |
+| `@theme` token bridge | Server (build) | CSS custom properties generated from each app's `src/theme` tokens — the only place hex values appear in `web` |
 | Font loading (`next/font/google`) | Server (build) | Hind Siliguri `bengali` subset, Inter `latin` subset; CSS-variable mode; fallback stacks incl. Noto Sans Bengali |
 | `LocaleProvider` + `t()` binding | Client | bn default; sets `<html lang>`; typed keys; fallback per `DSN-UT-002` |
 
@@ -116,7 +116,7 @@ Module-owned forms: none. Provided to feature modules:
 | Field | Control | Zod rule | Default | Conditional on |
 | --- | --- | --- | --- | --- |
 | Language | Segmented control (bn/en) | `z.enum(["bn","en"])` | `bn` | Rendered by `03-identity-access` onboarding/settings |
-| (feature fields) | Input/Select/etc. from §2.2 | Schemas from `packages/shared`, module-owned | — | — |
+| (feature fields) | Input/Select/etc. from §2.2 | Schemas from each app's `src/schemas`, module-owned | — | — |
 
 Submission convention this module establishes: zod issue → `validation.*` key → `t()` message;
 disable while pending; never lose input; error text announced. (The wiring itself is each
@@ -126,7 +126,7 @@ consuming module's `03`/`04` sections.)
 
 | Need | Mechanism |
 | --- | --- |
-| Tokens | Build-time import `packages/shared` → `@theme`; no runtime fetches |
+| Tokens | Build-time import each app's `src/theme` → `@theme`; no runtime fetches |
 | Strings | Static catalog import + `t()`; both locales bundled (the pair is small) |
 | Brand assets | `next/image` static imports (logo PNG until vectors arrive — `01-user-stories §9` Q1) |
 | Server data | N/A — module 02 makes no API calls; consumers use the generated OpenAPI client (`01-foundations`) |
@@ -166,14 +166,15 @@ its right-hand column (`DSN-BR-007`).
 ## 8. Design-System Compliance
 
 `docs/design-reference/README.md` usage rules hold by construction: the palette exists only in
-`packages/shared` tokens (`DSN-BR-002`/`DSN-BR-005`), the logo is reachable only through `<Logo/>`
+each app's `src/theme` tokens (`DSN-BR-002`/`DSN-BR-005`), the logo is reachable only through `<Logo/>`
 (`DSN-BR-006`), Bengali never renders in Inter (`DSN-BR-004`), and every string resolves through
 `t()` behind the CI parity gate (`DSN-BR-001`). Compliance tooling = `DSN-INT-002` lint +
 `DSN-UT-001`/`DSN-UT-003` tests; the first real-world audit is module 07's screens.
 
 ## 9. Task Checklist
 
-- [ ] `DSN-FE-001` — Semantic token module in `packages/shared` (color scale, spacing, radius, type, motion) + TS types
+- [ ] `DSN-FE-000` — Web repo scaffold in `applications/web` (own git repo, no shared package): Next.js App Router, TypeScript strict, Tailwind v4, ESLint 10 flat (boundary rule: api only via `src/api`; env only in `src/env.ts`) + Prettier, Vitest + Playwright + axe, `sync:api-spec` (copies `../api/openapi/openapi.yaml` to `openapi/openapi.yaml`) + `generate:api` (openapi-typescript → `src/api/schema.gen.ts`, openapi-fetch client), zod env module, GitHub Actions gate (lint/typecheck/test/build + client drift)
+- [ ] `DSN-FE-001` — Semantic token module in `src/theme` of web **and** app (color scale, spacing, radius, type, motion) + TS types, values pinned to `docs/design-reference/README.md` (`DSN-UT-005`)
 - [ ] `DSN-FE-002` — Tailwind v4 `@theme` bridge in `applications/web` consuming shared tokens (no other hex in `web`)
 - [ ] `DSN-FE-003` — Fonts via `next/font/google`: Hind Siliguri (`bengali`+`latin`) + Inter (`latin`), CSS variables, fallback stacks
 - [ ] `DSN-FE-004` — `LocaleProvider` + typed `t()` web binding; `<html lang>` bn default

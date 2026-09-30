@@ -317,7 +317,7 @@ defined by module 03; verification gates every participatory action (`prd.md` §
 
 ## 6. Validation Rules
 
-| Field | Rule | Message key (`packages/shared` i18n catalog) |
+| Field | Rule | Message key (per-app `src/i18n` catalog) |
 | --- | --- | --- |
 | Lead: contact name / school name | 3–120 / 3–150 chars | `validation.name.length` · `validation.school_name.length` |
 | Lead: phone | BD mobile E.164 `+8801XXXXXXXXX` | `validation.phone.bd_mobile` |
@@ -335,7 +335,7 @@ defined by module 03; verification gates every participatory action (`prd.md` §
 | Migration: fromSessionYear | int ≥ 2026; open-run guard server-side | `validation.range` · `hierarchy.migration.open_run` |
 
 Mirrored exactly by the OpenAPI contract (server validation) and the zod form schemas in
-`packages/shared`; both languages from day one.
+`applications/web/src/schemas`; both languages from day one.
 
 ## 7. Edge Cases & Negative Paths
 

@@ -56,7 +56,7 @@ content and per-student weakness rows never exist in this module.
 | 03 identity-access | `auth.RequireRole`, `users` (role teacher/school_admin; verified gate) |
 | 01 foundations | `jobs.Enqueue` + weekly worker, `audit.Record`, RFC-7807 envelope, Redis rate limiting |
 | 06 notifications (P1) | Per-user push export for the Monday teacher summary (exact export name fixed in 06's spec) |
-| shared | `analytics.*` / `validation.*` bn + en message catalogs |
+| web + app (per app) | `analytics.*` / `validation.*` bn + en message catalogs |
 
 ---
 
@@ -211,7 +211,7 @@ content and per-student weakness rows never exist in this module.
 
 ## 6. Validation Rules
 
-| Field | Rule | Message key (`packages/shared` i18n catalog) |
+| Field | Rule | Message key (per-app `src/i18n` catalog) |
 | --- | --- | --- |
 | `sectionId` | required UUID; must resolve to a section of the caller's school | `validation.required` · `validation.section_uuid` · `analytics.section_not_in_school` |
 | `week` | optional; `YYYY-MM-DD`, must be a Sunday (week window start, Asia/Dhaka); default = latest computed week | `analytics.week_invalid` |

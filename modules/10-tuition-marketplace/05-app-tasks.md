@@ -179,7 +179,7 @@ shown on rejection + "ঠিক করে আবার পাঠান / Fix & r
 
 ## 3. Forms & Input
 
-| Field | Control | zod rule (from `packages/shared`) | Default | Conditional on |
+| Field | Control | zod rule (per-app `src/schemas`) | Default | Conditional on |
 | --- | --- | --- | --- | --- |
 | `subjects` | multi-select chips | `validation.tuition.subjects_required` (1–5 catalog keys) | profile CTA pre-fill | wizard step 1 |
 | `classLevel` | select sheet | `validation.tuition.class_level_invalid` | student's own class (student poster) | wizard step 1 |

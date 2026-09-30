@@ -31,7 +31,7 @@ pipelines, log discipline, and the pilot checklist — captured in `DEPLOYMENT.m
 tier, `ap-southeast-1`), media on **Cloudflare R2**; Compose runs **api + worker + web + redis only**;
 MinIO is deliberately not used. **Language split (binding):** runbooks and `DEPLOYMENT.md` are
 English (operator-facing); user-facing ops copy (maintenance banner/page, degraded-mode strings)
-is bn + en via `ops.*` in `packages/shared` (bn default).
+is bn + en via `ops.*` in `applications/web/src/i18n` (bn default).
 
 ### 1.2 Scope
 
@@ -100,7 +100,7 @@ users ─HTTPS─► HestiaCP Nginx (TLS, LE, fail2ban, maintenance flag)       
 Dockerfile.web, docker-compose.yml, HestiaCP template notes, `.dockerignore`), `ops/` (deploy/
 rollback/backup/restore scripts, `ops/releases.log`, cron definitions, Makefile targets),
 `.env.example` per deployable, CI image-publish workflow, `eas.json`, static maintenance page,
-runbooks + `DEPLOYMENT.md`, `ops.*` keys in `packages/shared`.
+runbooks + `DEPLOYMENT.md`, `ops.*` keys in `applications/web/src/i18n`.
 
 **Reads (via exported contracts only):** 01 `/healthz` + `/readyz` (never reimplemented or
 proxied), config env names, migrate entrypoint, `jobs` metrics; 02 standalone output + assets;
@@ -260,7 +260,7 @@ Full env inventory — `.env.example` per deployable mirrors 01 config-module ke
 | `APP_ENV`, `LOG_LEVEL`, feature env values from module `.env.example`s | Healthcheck paths/intervals; `/readyz` gate timeout (120 s) |
 | Maintenance flag (Nginx file + build input) | `127.0.0.1`-only port bindings; GHCR tag scheme `main-<sha7>` |
 | Backup schedule (cron) + retention counts; uptime checker contacts | Backup artifact naming + checksum format; prune policy |
-| Ops alert routing (email/Telegram) | `ops.*` string keys (bn/en copy editable in `packages/shared` only) |
+| Ops alert routing (email/Telegram) | `ops.*` string keys (bn/en copy editable in `applications/web/src/i18n` only) |
 
 Environment matrix: dev (local — `go run`/`next dev` or a local Compose, Neon dev branch,
 `development` channel) · server (Compose project `kushol` on the KVM 2, `kusholconnect.com` +

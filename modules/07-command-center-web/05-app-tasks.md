@@ -25,7 +25,7 @@ module 05's `notices` REST/WS contract and module 06's push fan-out, both alread
 
 ## 3. Forms & Input
 
-N/A — no app forms. Shared zod schemas in `packages/shared` are reused by the web forms only here.
+N/A — no app forms. Shared zod schemas in each app's `src/schemas` are reused by the web forms only here.
 
 ## 4. Data Flow
 

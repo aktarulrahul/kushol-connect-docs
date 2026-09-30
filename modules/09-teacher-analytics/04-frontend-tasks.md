@@ -6,7 +6,7 @@
 **Last updated:** 2026-09-30
 
 `docs/design-reference/README.md` (palette, Hind Siliguri + Inter, logo rules) is binding: tokens
-only from `packages/shared`, every user-facing string in Bengali + English (`analytics.*`,
+only from each app's `src/i18n`, every user-facing string in Bengali + English (`analytics.*`,
 `validation.*` catalogs). Charts use the brand deep-teal scale; severity colours are an additive
 signal, never the only one.
 
@@ -114,7 +114,7 @@ selector narrows to one section (full teacher-style matrix).
 
 N/A — no forms on this surface. Week/section selection uses URL search params validated by the
 generated contract schemas (server re-validates); the refresh action carries only `sectionId` from
-route state, mirrored by a zod schema from `packages/shared`. Error keys: `validation.required`,
+route state, mirrored by a zod schema from each app's `src/i18n`. Error keys: `validation.required`,
 `analytics.week_invalid`, `analytics.section_not_in_school`.
 
 ## 4. Data Flow
@@ -156,7 +156,7 @@ route state, mirrored by a zod schema from `packages/shared`. Error keys: `valid
 
 ## 8. Design-System Compliance
 
-Tokens only from `packages/shared` (deep-teal primary; severity scale derived + contrast-tested);
+Tokens only from each app's `src/theme` (deep-teal primary; severity scale derived + contrast-tested);
 Hind Siliguri for all Bangla including in-chart labels and numerals (`Intl` bn); logo clear-space in
 the header; no dashboard chrome invented outside module 02 primitives + shadcn/ui. Every string
 verified in bn + en (`analytics.*`, `validation.*`); topic tags render as-is with a `bn`/`en`

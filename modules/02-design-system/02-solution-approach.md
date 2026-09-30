@@ -12,9 +12,9 @@ Written before any task list and any code (`docs/prompt/prompt-build.md` §4 ste
 
 | Entity | Description | Owned here? |
 | --- | --- | --- |
-| Design token (semantic) | Named theme value — `color.*`, `space.*`, `radius.*`, `type.*`, `motion.*`; source in `packages/shared`, compiled to Tailwind v4 `@theme` (web) and the NativeWind theme (app) | Yes |
+| Design token (semantic) | Named theme value — `color.*`, `space.*`, `radius.*`, `type.*`, `motion.*`; source in each app's `src/theme`, compiled to Tailwind v4 `@theme` (web) and the NativeWind theme (app) | Yes |
 | Color scale | 10-step tints/shades generated in code from deep teal `#095777` + paper/ink neutrals — never hand-picked per component (`design-reference` §2) | Yes |
-| String catalog | `bn.json` / `en.json` in `packages/shared`; flat dot-namespaced keys → `{bn, en}` values (schema: `03-backend-tasks §2`) | Yes |
+| String catalog | `bn.json` / `en.json` in each app's `src/i18n`; flat dot-namespaced keys → `{bn, en}` values (schema: `03-backend-tasks §2`) | Yes |
 | Translation key | Logical id `namespace.name`; namespaces (registry, one owner module each): `common`, `validation`, `errors`, `auth`, `verification`, `hierarchy`, `chat`, `notices`, `notifications`, `settings`, `landing`, `admin`, `school`, `vendor`, `ai`, `analytics`, `tuition`, `marketplace`, `commerce`, `payments`, `ads`, `events`, `sync`, `ops`. A module adding a namespace updates this registry in its Stage 3 docs sync | Yes |
 | Web primitive | shadcn-style component hand-written in `applications/web/src/components/ui/`, token-styled, a11y-complete | Yes |
 | RN primitive | NativeWind component mirroring the web inventory, on radix-primitives/zeego where useful | Yes |
@@ -27,10 +27,11 @@ Written before any task list and any code (`docs/prompt/prompt-build.md` §4 ste
 docs/design-reference (brand truth — sampled palette, fonts, logo rules)
         │ encoded as
         ▼
-packages/shared
-├─ tokens ──► web: Tailwind @theme ──► src/components/ui/* ──► screens (07+)
-│         └─► app: NativeWind theme ──► RN primitives ──► screens (03/05/08/…)
-└─ i18n bn.json / en.json ──► t(key, params) ──► every user-facing string (web + app)
+applications/web (own repo)                         applications/app (own repo)
+├─ src/theme tokens ──► Tailwind @theme             ├─ src/theme tokens ──► NativeWind theme
+│    ──► src/components/ui/* ──► screens (07+)      │    ──► RN primitives ──► screens (03/05/08/…)
+└─ src/i18n bn.json / en.json ──► t(key, params)    └─ src/i18n bn.json / en.json ──► t(key, params)
+   (no shared package — each app encodes the same reference values; namespaces per §1.1)
 ```
 
 No database sits under any of this — this module's `03-backend-tasks §1` records N/A (no database); the entities above are code and config, not rows.
@@ -47,13 +48,13 @@ No database sits under any of this — this module's `03-backend-tasks §1` reco
 
 ## 2. Module Boundary
 
-**Owns (writes):** `packages/shared` tokens + catalogs + `t()` + catalog CI tests · `applications/web` `@theme` wiring, fonts, `src/components/ui/*` · `applications/app` NativeWind config, bundled fonts, RN primitives, icon/splash EAS config. **Module 02 owns no database tables** — tokens and catalogs are code/config (`03-backend-tasks §1` is N/A by design); data-model ownership stays with `01-foundations` (audit_log, jobs), `03-identity-access`, `04-organization-hierarchy`, `05-communication-engine`, `06-notifications` per `docs/modules/README.md`.
+**Owns (writes):** each app's `src/theme` tokens + `src/i18n` catalogs + `t()` + catalog CI tests · `applications/web` `@theme` wiring, fonts, `src/components/ui/*` · `applications/app` NativeWind config, bundled fonts, RN primitives, icon/splash EAS config. **Module 02 owns no database tables** — tokens and catalogs are code/config (`03-backend-tasks §1` is N/A by design); data-model ownership stays with `01-foundations` (audit_log, jobs), `03-identity-access`, `04-organization-hierarchy`, `05-communication-engine`, `06-notifications` per `docs/modules/README.md`.
 
 **Reads from other modules (via their exported service functions only):**
 
 | Module | What | Why not duplicated |
 | --- | --- | --- |
-| `01-foundations` | Workspace/TS/CI/test scaffolding for `packages/shared` and both apps | Re-scaffolding would fork the toolchain |
+| `01-foundations` | API contract (`applications/api/openapi/openapi.yaml`) and the problem-code registry | Web/app scaffolding is this module's own work (isolated repos, no shared package) |
 
 **Cache keys / tags revalidated / consumed:** see `06-integration-tasks.md` §4 — none; everything here is static, content-hashed at build.
 
@@ -88,7 +89,7 @@ drafted (one locale) ──parity ✅──▶ shipped ──replace──▶ de
 
 ## 6. Security
 
-No entry points, no auth middleware, no tenant scope — **N/A: no server code and no tenant data exist in this module** (`03-backend-tasks §1` is all N/A). Security-relevant properties provided downstream: primitives render strings as plain text (never `dangerouslySetInnerHTML`), so feature screens inherit XSS-safe rendering; `packages/shared` ships no secrets; web fonts are fetched from Google at build time via `next/font` and self-hosted — never from a runtime endpoint.
+No entry points, no auth middleware, no tenant scope — **N/A: no server code and no tenant data exist in this module** (`03-backend-tasks §1` is all N/A). Security-relevant properties provided downstream: primitives render strings as plain text (never `dangerouslySetInnerHTML`), so feature screens inherit XSS-safe rendering; `src/theme`/`src/i18n` ship no secrets; web fonts are fetched from Google at build time via `next/font` and self-hosted — never from a runtime endpoint.
 
 ## 7. Accessibility & Motion
 
@@ -154,3 +155,4 @@ Primitives are built on Radix (web) and radix-primitives/zeego (app) so focus ma
 | 3 | Hind Siliguri covers the launch Bengali corpus incl. Bengali numerals | Rare glyphs fall back | Specimen tests (`DSN-UT-003`/`004`); fallback stack per `DSN-BR-004` |
 | 4 | bn strings stay ≤ +30% vs en | Overflow in tight controls | Primitives sized bn-first; fixture strings at +30% |
 | 5 | NativeWind stays compatible with the pinned Tailwind version | Styling breaks on upgrade | Version pins (`docs/tech-stack.md`) + `DSN-IT-002` |
+| 6 | Web and app hold separate copies of tokens and catalogs (isolated repos, owner decision 2026-09-30) | The two apps drift apart (colour, copy, namespaces) | Canonical values stay in `docs/design-reference/README.md`; each repo's token test pins its values to that table (`DSN-UT-005`); namespace registry stays in §1.1; shared namespaces (`common`, `errors`, `validation`) reviewed in both repos in the same change |

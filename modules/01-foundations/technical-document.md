@@ -10,8 +10,10 @@
 
 ### 1.1 Purpose
 
-Platform skeleton every later module builds on: the pnpm + Turborepo monorepo beside the Go `api`
-module, the OpenAPI codegen pipeline (generated contract types are the only API types anywhere),
+Platform skeleton every later module builds on, inside the `applications/api` repository only
+(each application is its own repo; no shared package — owner decision 2026-09-30): the Go `api`
+module, the OpenAPI contract it owns with Go codegen (generated contract types are the only API
+types anywhere; web/app generate their own clients from it),
 and cross-cutting runtime concerns — fail-fast config, sqlc + golang-migrate base, RFC-7807
 errors, `X-Request-Id`, redacted slog, health, append-only `audit_log`, the in-DB `jobs` worker,
 the CI gate and the testcontainers harness. Pure infrastructure for `brd.md` §8 Phase 1 (detail in
@@ -19,14 +21,14 @@ the CI gate and the testcontainers harness. Pure infrastructure for `brd.md` §8
 
 ### 1.2 Scope
 
-**In:** monorepo scaffold (pnpm/Turborepo TS workspaces, Go `api` with chi + websocket shell) ·
-OpenAPI 3.1 home + codegen + CI drift check · env/config modules (Go + zod TS) · Postgres base
+**In:** api repo scaffold (Go `api` with chi + websocket shell, `tools.mod`, Makefile) ·
+OpenAPI 3.1 contract + Go codegen + CI drift check · Go config module · Postgres base
 (pgx, sqlc, golang-migrate, testcontainers-go) · RFC-7807 envelope + code registry · `X-Request-Id`,
 security headers, redacted slog · `/healthz` + `/readyz` · `audit_log` + `audit.Record` · `jobs`
 table + worker base · CI gate.
 
 **Out:** product features/screens beyond health (03+) · auth/OTP (03) · hierarchy tables (04) ·
-tokens and bn/en catalog *content* (02 — only the workspace shell lands here) · Docker/Nginx/
+web/app repo scaffolds, their TS clients, tokens and client catalogs (02) · Docker/Nginx/
 backups/runbooks (15) · Kafka/RabbitMQ/Redis-Streams queues (rejected, `tech-stack.md`).
 
 ### 1.3 Dependencies
@@ -34,7 +36,7 @@ backups/runbooks (15) · Kafka/RabbitMQ/Redis-Streams queues (rejected, `tech-st
 | Direction | Module | What is exchanged |
 | --- | --- | --- |
 | consumes | — (root module) | Nothing. External decisions recorded 2026-09-29: Neon Postgres (ap-southeast-1), Cloudflare R2, Hostinger KVM 2 + HestiaCP |
-| consumed by | 02–15 (all later modules) | generated Go/TS contract code from `openapi.yaml` (CI drift-gated) |
+| consumed by | 02–15 (all later modules) | `applications/api/openapi/openapi.yaml` — Go code generated here (CI drift-gated); web/app sync a copy and generate their own client |
 | consumed by | 04 (migration), 08 (AI), 09 (analytics), 12 (receipts) · 11–13 first (destructive/financial routes) | `jobs.Enqueue` / `jobs.Register` worker interface · `audit.Record` helper |
 | consumed by | 15-deployment-operations | `GET /healthz`, `GET /readyz` (uptime checks, deploy gating) |
 
@@ -44,12 +46,12 @@ backups/runbooks (15) · Kafka/RabbitMQ/Redis-Streams queues (rejected, `tech-st
 
 | Layer | Technology | Why | Notes |
 | --- | --- | --- | --- |
-| api | Go 1.24+ · chi · gorilla/websocket shell · `log/slog` | single deployable for REST + future WS messaging; boring, explicit (`prd.md` §6) | `golangci-lint` + gofmt/goimports in CI |
-| api — data | PostgreSQL (Neon) · pgx/v5 · sqlc · golang-migrate | type-safe plain SQL, reviewable migrations, real-Postgres tests | testcontainers-go for integration tests |
-| contracts | OpenAPI 3.1 (`contracts/openapi/openapi.yaml`) → oapi-codegen (Go) + openapi-typescript/openapi-fetch (TS) | spec is the single source; drift checkable in CI | generated code committed; `make contracts` / `pnpm generate:api` |
-| shared | `packages/shared` workspace shell + zod env | single generated TS client home (`src/api-client/`) | content (tokens/catalogs) arrives with 02 |
-| tooling | pnpm workspaces + Turborepo · Makefile · Husky + lint-staged · GitHub Actions | cached tasks; one quality gate | TS apps: ESLint 9 flat + Prettier |
-| web / app screens | None — infrastructure module; only workspace shells + CI tasks land here (04/05 specs are N/A files) | — | EAS hooks added by 02/03 |
+| api | Go 1.26.1 · chi v5.3.2 · gorilla/websocket shell (added with 05) · `log/slog` | single deployable for REST + future WS messaging; boring, explicit (`prd.md` §6) | golangci-lint v2 + gofmt/goimports in CI, tools pinned in `tools.mod` |
+| api — data | PostgreSQL (Neon) · pgx v5.11.0 · sqlc v1.31.1 · golang-migrate v4.20.1 | type-safe plain SQL, reviewable migrations, real-Postgres tests | testcontainers-go v0.44.0 for integration tests |
+| contracts | OpenAPI 3.1 (`applications/api/openapi/openapi.yaml`, owned by api) → oapi-codegen v2.8.0 (Go types, chi server, embedded spec) · kin-openapi request validation | spec is the single source; drift checkable in CI | generated Go committed; `make contracts` / `make contracts-check`; web/app generate their own TS clients (02) |
+| i18n (api) | `internal/i18n` bn/en catalog (embedded JSON) | server-rendered copy: problem messages now; push/email text later (06/12) | client catalogs live in each client repo (02) |
+| tooling | Makefile · `tools.mod` (`go tool`) · GitHub Actions (api repo) | one quality gate for the api repo | no Node tooling in this module |
+| web / app | None — this module does not touch the web or app repos | — | 02 scaffolds both |
 
 ---
 
@@ -58,12 +60,13 @@ backups/runbooks (15) · Kafka/RabbitMQ/Redis-Streams queues (rejected, `tech-st
 ### 3.1 Component diagram
 
 ```text
-web/app/shared (pnpm+Turborepo)    GitHub Actions (gate + drift: regenerate, git diff --exit-code)
-        │ generated client only               │
-        ▼                                     ▼
-contracts/openapi/openapi.yaml ─► oapi-codegen ─► api (Go) chi chain: RequestID → Recover → Security
-        └─► openapi-typescript ─► shared/src/api-client   headers → slog (redacted) → rate-limit
-                                                          class → auth/tenant scaffolding (stubs)
+web repo · app repo (02+)          api repo GitHub Actions (gate + drift: make contracts-check)
+  sync copy of the spec,                      │
+  generate own src/api client                 ▼
+        ▲                 applications/api/openapi/openapi.yaml ─► oapi-codegen ─► api (Go) chi chain:
+        └──────────────── (owned by api)          RealIP → RequestID → Recover → Security headers →
+                                                  slog (redacted) → rate-limit class → validator →
+                                                  auth/tenant scaffolding (stubs until 03)
                               ┌────────────┼────────────┐
                               ▼            ▼            ▼
                        health service  audit service  jobs worker
@@ -75,8 +78,8 @@ contracts/openapi/openapi.yaml ─► oapi-codegen ─► api (Go) chi chain: Re
 ### 3.2 Boundary
 
 **Owns (tables / services):** `openapi.yaml` skeleton + codegen pipeline · middleware chain, error
-envelope, headers, health · `audit_log` and `jobs` tables + services/worker · config modules · CI
-workflows + testcontainers harness · empty `web`/`app`/`shared` workspace shells.
+envelope, headers, health · `audit_log` and `jobs` tables + services/worker · config module · api
+CI workflow + testcontainers harness · api bn/en problem copy. Nothing outside `applications/api`.
 
 **Reads (via exported service functions only):** none — root module; 02–15 read from this one.
 FK-free by design: `school_id`/`actor_user_id` are loose refs into 04/03 owner tables
@@ -85,7 +88,8 @@ FK-free by design: `school_id`/`actor_user_id` are loose refs into 04/03 owner t
 ### 3.3 Request / data flows
 
 ```text
-1. Contract change   spec edit → make contracts → Go types + TS client regenerated → same commit → CI drift job
+1. Contract change   spec edit → make contracts → Go types regenerated → same commit → CI drift job;
+                     then each client repo: pnpm sync:api-spec → pnpm generate:api → its own drift check
 2. Health probe      uptime → GET /readyz → Neon ping + Redis PING (1s each) → 200 per-dependency | 503 problem+json
 3. Job lifecycle     jobs.Enqueue (idempotency dedupe) → claim (SKIP LOCKED, run_at <= now()) → handler →
                      ack | retry (run_at = now + 5s×2^n + jitter) → DEAD at max_attempts → metrics
@@ -147,7 +151,7 @@ No realtime (WS) channels here — the gorilla/websocket shell lands here, messa
 
 | Export | Callers | Returns | Throws |
 | --- | --- | --- | --- |
-| `openapi.yaml` + `make contracts` / `pnpm generate:api` | 02–15, CI | regenerated Go types/`ServerInterface` + TS client in `packages/shared/src/api-client` | build error on invalid spec; CI fails on drift |
+| `openapi.yaml` + `make contracts` | 02–15, CI | regenerated Go types/`ServerInterface` (clients generate their own TS client from a synced copy) | build error on invalid spec; CI fails on drift | spec is the single source (BR-001) |
 | `GET /healthz` · `GET /readyz` | 15, HestiaCP/Nginx uptime · deploy gate | 200 `{"status":"ok"}` / per-dependency results | 503 problem+json naming the failed dependency |
 | `jobs.Enqueue(ctx, JobType, payload, opts...)` / `jobs.Register(JobType, Handler)` | 04, 08, 09, 12 | job id (existing id on idempotency-key hit) | error if type unregistered / payload invalid; DTO payloads via typed wrappers |
 | `audit.Record(ctx, Entry)` | all modules with destructive/financial actions | nil | error aborts the surrounding transaction |
@@ -163,13 +167,13 @@ Exports return DTOs (never sqlc rows); domain errors, never raw HTTP; additive-f
 
 | Route | Screen | Rendering | Access |
 | --- | --- | --- | --- |
-| N/A — no routes in this module. Delivered for web: `packages/shared` workspace shell, Turborepo task graph, generated `openapi-fetch` client (FND-BE-002). Routes `/`, `/download`, `/login`, `/admin/*`, `/school/*`, `/vendor/*` belong to 03/07+ | — | — | — |
+| N/A — no routes and no web code in this module (web repo scaffold + client generation = 02 `DSN-FE-000`). Routes `/`, `/download`, `/login`, `/admin/*`, `/school/*`, `/vendor/*` belong to 03/07+ | — | — | — |
 
 ### 6.2 Mobile (detail in `05-app-tasks.md`)
 
 | Route | Screen | Deep link | Offline behaviour |
 | --- | --- | --- | --- |
-| N/A — no app routes. Delivered for app: the `packages/shared` workspace, generated OpenAPI TS client + zod schemas, bn/en catalog convention. Expo scaffold (fonts, icon/splash) lands with 02; onboarding screens with 03 | — | — | — |
+| N/A — no app routes and no app code in this module (app repo scaffold + client generation = 02 `DSN-AP-000`; onboarding screens with 03) | — | — | — |
 
 ---
 
@@ -196,17 +200,20 @@ declare them (`06-integration-tasks.md` §5).
 | `REDIS_URL` | yes | `redis://127.0.0.1:6379/0` | go-redis (limits, caches) |
 | `APP_ENV` | yes | `development` \| `test` \| `production` | config module |
 | `LOG_LEVEL` | yes | `info` (debug/info/warn/error) | slog setup |
-| `HTTP_PORT` | yes | `8080` (1–65535) | chi server |
+| `HTTP_PORT` | yes | `8080` (1–65535) — in-container listen port; host port is 15's `API_PORT` | chi server; `healthcheck` subcommand |
+| `SHUTDOWN_TIMEOUT` | no | `20s` | graceful HTTP drain + worker in-flight jobs |
+| `TRUSTED_PROXIES` | no | `127.0.0.1/32,::1/128` — production adds the Compose network CIDR (Docker publishes ports via the bridge gateway) | RealIP: whose `X-Forwarded-For` is believed |
+| `WORKER_CONCURRENCY` | no | `2` (1–32) | jobs worker goroutines |
 
 Feature secrets (`JWT_SECRET`, `SMS_GATEWAY_*`, gateway keys, …) are parsed by this module's
-config system from module 03 onward — none defined here. `.env.example` (api + web + shared)
-covers the Neon/Redis wiring consumed later by 15's Compose (`FND-INT-005`).
+config system from module 03 onward — none defined here. The api repo's `.env.example` covers
+the Neon/Redis wiring consumed later by 15's Compose (`FND-INT-005`); web/app keep their own.
 
 ### 8.2 Runtime config — the two lists
 
 | Admin-changeable (later) | Fixed in code |
 | --- | --- |
-| `DATABASE_URL`, `REDIS_URL`, `HTTP_PORT`, `APP_ENV`, `LOG_LEVEL`, graceful-shutdown timeout (env now; admin UI later via 07/15) | backoff curve (5s × 2ⁿ + jitter, max 5 attempts) · lock timeout 5 min · rate-limit class table · RFC-7807 code registry · uuid v7 generation · health-check timeouts (1s each) · migrations directory layout · redaction field list |
+| `DATABASE_URL`, `REDIS_URL`, `HTTP_PORT`, `APP_ENV`, `LOG_LEVEL`, `SHUTDOWN_TIMEOUT`, `TRUSTED_PROXIES`, `WORKER_CONCURRENCY` (env now; admin UI later via 07/15) | backoff curve (5s × 2ⁿ + jitter, max 5 attempts) · lock timeout 5 min · rate-limit class table · RFC-7807 code registry · uuid v7 generation · health-check timeouts (1s each) · migrations directory layout · redaction field list |
 
 Nothing outside the config module reads env (BR-002, lint-enforced).
 
@@ -228,8 +235,8 @@ Nothing outside the config module reads env (BR-002, lint-enforced).
 ## 10. Error Handling
 
 All errors surface as RFC-7807 `application/problem+json` (`type`, `title`, `status`, `code`,
-localized `message` bn-default, `requestId`). Message keys `fnd.error.<code>` ship in bn + en in
-`packages/shared` catalogs; codes are an open set — clients fall back to generic bn/en copy on
+localized `message` bn-default, `requestId`). Message keys `errors.<code>` ship in bn + en in
+the api's own catalog (`internal/i18n`, namespace `errors` per 02 §1.1); codes are an open set — clients fall back to generic bn/en copy on
 unknown codes (`06-integration-tasks.md` §7).
 
 | Code | Meaning | When this module returns it | Client handling |
@@ -242,7 +249,7 @@ unknown codes (`06-integration-tasks.md` §7).
 | `UNAUTHENTICATED` / `FORBIDDEN` / `NOT_VERIFIED` / `QUOTA_EXCEEDED` / `CONFLICT` | defined in the shared registry here | returned by consumer modules (03+), not by FND's own routes | registry copy bn/en |
 
 **Module-specific codes (registered here, owned by the listed module — 2026-09-30).** The registry
-lives in one Go package + `packages/shared`; a module adding a code adds it here in its Stage 3 docs
+lives in one Go package (`internal/problem`) with its copy in `internal/i18n`; a module adding a code adds it here in its Stage 3 docs
 sync with bn/en copy. Clients treat unknown codes with generic bn/en copy (open set).
 
 | Code | Owner | HTTP | Meaning |
@@ -274,9 +281,9 @@ sync with bn/en copy. Clients treat unknown codes with generic bn/en copy (open 
 | Layer | Coverage | IDs | Gate |
 | --- | --- | --- | --- |
 | Unit | problem+json mapping per code + bn/en selection · config fail-fast · backoff/DEAD decision table · slog redaction · readyz probe fakes · Enqueue idempotency + typed payload | `FND-UT-001…006` | `go test` green in CI |
-| Integration | migrations up/down · readyz green/red shapes · worker retry/DEAD/dedupe/no-double-claim · audit in-tx + append-only + scoped reads · `X-Request-Id` echo · contract validation · generated-contract Go+TS round-trip · CI drift check | `FND-IT-001…008` (testcontainers Postgres) | required check |
+| Integration | migrations up/down · readyz green/red shapes · worker retry/DEAD/dedupe/no-double-claim · audit in-tx + append-only + scoped reads · `X-Request-Id` echo · contract validation · generated-contract Go round-trip + spec validity · CI drift check | `FND-IT-001…008` (testcontainers Postgres) | required check |
 | E2E | None — no user-facing surfaces; Playwright golden paths start with 07, Maestro with 03 | — | — |
-| CI | per-app quality gate | — | api: gofmt/goimports, golangci-lint, `go vet`, unit + testcontainers integration · TS: `pnpm lint/typecheck/test/build` per workspace · codegen drift job · required checks, no skip flags |
+| CI | per-app quality gate | — | api: gofmt/goimports, golangci-lint, `go vet`, unit + testcontainers integration · codegen drift job (`make contracts-check`) · (web/app gates live in their own repos) · required checks, no skip flags |
 
 Mandatory set: unauthenticated calls denied for every protected entry point — none exist here
 (health is public by design; the auth/tenant chain is proven with stub claims, for real by 03);
@@ -291,7 +298,7 @@ no seed → the publish guard lands with the first content module (04).
 | Expected volumes | hundreds of jobs/day; audit rows only on destructive/financial actions (low hundreds/day); health polled every 30–60s |
 | Hot paths + indexes | jobs claim: partial `(run_at) WHERE QUEUED` + `SKIP LOCKED`; reaper: `(status, locked_at) WHERE RUNNING`; audit list: `(school_id, created_at DESC)` and `(entity_type, entity_id)` |
 | Latency targets | polling latency ~1s acceptable for the job queue; health checks 1s timeouts per dependency; Neon cold start → fast 503s, never hangs |
-| Bundle / payload impact | generated TS client is type-only until used (tree-shakeable); Turborepo cache keeps CI minutes flat; Go binary footprint unchanged by tooling deps |
+| Bundle / payload impact | none for clients; codegen/lint tools live in `tools.mod`, so the Go binary footprint is unchanged by tooling deps |
 | Caching | none — no cached reads; `/healthz` `/readyz` are `no-store` (`06-integration-tasks.md` §4) |
 
 ---
@@ -303,10 +310,10 @@ keep their `TODO: Confirm` marker.
 
 | # | Item | Impact | Owner | Status | Default if unanswered |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Monorepo + toolchain | — | Rahul | Resolved 2026-09-29 | Go module for api (chi + gorilla/websocket + sqlc + pgx + golang-migrate); pnpm+Turborepo TS; OpenAPI 3.1 codegen; Neon Postgres free (ap-southeast-1); R2 media; Hostinger KVM 2 + HestiaCP |
-| 2 | Where do generated TS clients live? | consumer import paths | Rahul | Open | `packages/shared/src/api-client/` (single generated package for web + app) |
+| 1 | Repositories + toolchain | — | Rahul | Resolved 2026-09-29; layout revised 2026-09-30 | One git repo per app, no shared package; Go module for api (chi + gorilla/websocket + sqlc + pgx + golang-migrate); OpenAPI 3.1 owned by api; web/app generate their own clients (02); Neon Postgres (region per plan F1); R2 media; Hostinger KVM 2 + HestiaCP |
+| 2 | Where do generated TS clients live? | consumer import paths | Rahul | Resolved 2026-09-30 | Each client repo generates its own: `applications/web/src/api/`, `applications/app/src/api/` |
 | 3 | `/readyz` public or loopback-only in production? | exposure of dependency detail | Rahul | Open | Public; Nginx/IP restriction applied later by 15 if needed |
-| 4 | oapi-codegen covers the OpenAPI 3.1 subset used (`TODO: Confirm` exact pins at build) · testcontainers (Docker) available in CI | generated code lags spec; integration tests can't run | Rahul | Open / Assumption | restrict spec to supported subset, pin versions; ubuntu runners ship Docker, fallback Postgres service container |
+| 4 | oapi-codegen covers the OpenAPI 3.1 subset used · testcontainers (Docker) available in CI | generated code lags spec; integration tests can't run | Rahul | Resolved / Assumption | oapi-codegen v2.8.0 supports 3.1 (verified 2026-09-30, pinned in `tools.mod`); ubuntu runners ship Docker, fallback Postgres service container |
 | 5 | Neon free tier pauses/cold-starts · shared KVM 2 tolerates api+web+Redis later | first request after idle 503s; memory pressure | Rahul | Accepted / Deferred | fine for dev/pilot, readyz communicates; exercised at module 15 with memory caps |
 | 6 | Committed generated code stays fresh | drift merges | Rahul | Mitigated | CI regenerates + diffs, blocks merge (INV-005) |
 | 7 | CI budget: full gate ≤ 10 min (`TODO: Confirm` after first runs) | CI minutes / merge latency | Rahul | Open | revisit after first runs |
@@ -333,3 +340,4 @@ keep their `TODO: Confirm` marker.
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
 | 2026-09-30 | Deployment alignment (`docs/infra/architecture-and-deployment.md`): one binary with `serve`/`worker`/`migrate`/`migrate-status`/`healthcheck` (`FND-BE-014`); `serve` never migrates; worker idle back-off to 30 s; RealIP trusts only the local proxy; golang-migrate pinned | Claude |
 | 2026-09-30 | Consistency pass: module-specific error codes registered (§10); migration version rule (monotonic in build order, see `docs/modules/README.md`) | Claude |
+| 2026-09-30 | Isolated applications (owner): module 01 works only in the api repo — spec moved to `applications/api/openapi/openapi.yaml`, no `packages/shared`/Turborepo, TS client generation and web/app tooling moved to 02 (`DSN-FE-000`/`DSN-AP-000`); problem copy owned by api `internal/i18n` (`errors.*`); env adds `SHUTDOWN_TIMEOUT`, `TRUSTED_PROXIES`, `WORKER_CONCURRENCY`; verified pins recorded (§2) | Claude |

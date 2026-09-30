@@ -170,7 +170,7 @@ screen-reader labelling. Animated surfaces (if any) are owned by 07's motion tab
 - **Volumes:** 2 launch cities → 10+ schools (year 1, `brd.md` Goal 1) → ~100–300 sections/school-year → ~2,000 enrollments/school. Hierarchy metadata stays in the low thousands of rows; `enrollments` in the tens of thousands.
 - **Hot queries + indexes:** picker reads (cached, tag-invalidated); enrollment-by-user+session (`(user_id, session_year)`, auto-grouping); roster by section (`(section_id, role, status)`, paged); migration candidate scan (`(school_id, session_year, status)`); unique `sections(school_id, class_level, name, session_year)`; unique `fcm_topic_bindings(topic_name)`.
 - **Migration apply:** batches of 500 items per transaction; a 2,000-student school completes in 4 transactions — well inside the `jobs` worker budget.
-- **Bundle impact:** none for apps (API-only module); `packages/shared` gains the `hierarchy.*` catalog (~1 KB gzip).
+- **Bundle impact:** none for apps (API-only module); each app's `src/i18n` gains the `hierarchy.*` catalog (~1 KB gzip).
 
 ## 10. Alternatives Considered
 

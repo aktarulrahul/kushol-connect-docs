@@ -2,7 +2,7 @@
 
 **Module:** `13-b2b-ads-events`
 **Status:** 📝 Spec drafted 2026-09-30 · **Owner:** Rahul (product owner)
-**Stack (api):** Go · chi REST handlers + gorilla/websocket gateway · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `contracts/openapi/openapi.yaml` · slog logging
+**Stack (api):** Go · chi REST handlers + gorilla/websocket gateway · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `applications/api/openapi/openapi.yaml` · slog logging
 **Stack (web):** Next.js Route Handlers / Server Actions · zod forms · generated `openapi-fetch` client → api
 **Last updated:** 2026-09-30
 
@@ -269,7 +269,7 @@ Same auth + input (zod) + result rows as above.
 - [ ] `ADS-BE-001` Migrations 1–2 (`ad_campaigns`, `ad_creatives`, `ad_events`, `events`, `event_tickets`, `ads_daily`) + sqlc models
 - [ ] `ADS-BE-002` OpenAPI paths/schemas for all §2 endpoints; Go + TS clients regenerated
 - [ ] `ADS-BE-003` CHECK constraints + indexes per §1.1
-- [ ] `ADS-BE-004` i18n catalogs `ads.*`, `events.*`, `validation.ads.*`, `validation.events.*` in `packages/shared` (bn + en parity)
+- [ ] `ADS-BE-004` i18n catalogs `ads.*`, `events.*`, `validation.ads.*`, `validation.events.*` in each app's `src/i18n` (bn + en parity)
 - [ ] `ADS-BE-005` Fictional seed (draft campaign + draft event, marked, blocked)
 
 ### Repository · Service · Entry points · Seed · Tests

@@ -323,7 +323,7 @@ the §7 campus-commerce revenue stream.
 
 ## 6. Validation Rules
 
-| Field | Rule | Message key (`packages/shared` i18n catalog) |
+| Field | Rule | Message key (per-app `src/i18n` catalog) |
 | --- | --- | --- |
 | `nameBn` (storefront & product) | Required, 2–120 chars after trim | `validation.commerce.name_bn_required` · `name_length` |
 | `nameEn` (storefront & product) | Optional, 2–120 chars | `validation.commerce.name_length` |

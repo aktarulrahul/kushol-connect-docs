@@ -201,7 +201,7 @@ Form: name (3–60) + optional description → `POST /chat/groups` → success s
 
 ## 3. Forms & Input
 
-| Field | Control | zod rule (from `packages/shared`) | Default | Conditional on |
+| Field | Control | zod rule (per-app `src/schemas`) | Default | Conditional on |
 | --- | --- | --- | --- | --- |
 | Message body | auto-growing text input | `validation.chat.body_length` (1–4000) | last draft (per group, persisted) | — |
 | `client_msg_id` | generated uuid v4 per send | `validation.chat.client_msg_id` | new per message | — |

@@ -196,7 +196,7 @@ scale is this module's reason to exist.
 
 ## 6. Validation Rules
 
-| Field | Rule | Message key (`packages/shared` i18n catalog) |
+| Field | Rule | Message key (per-app `src/i18n` catalog) |
 | --- | --- | --- |
 | Device `token` | Required, 1–4096 chars, no whitespace; `ExponentPushToken[…]` or FCM format | `validation.notifications.token_invalid` |
 | Device `platform` | `ios` \| `android` (exact) | `validation.notifications.platform_invalid` |

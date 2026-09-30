@@ -240,7 +240,7 @@ channel (`notices`/`chat` HIGH, `campaigns` DEFAULT). Every directed tap fires `
 | Provider token errors (server-side) | Invalid/unregistered token | Not surfaced to clients — token pruned, delivery `failed`, batch continues (`NTF-IT-003`) | Re-register on next app open resumes delivery |
 
 All errors surface as RFC-7807 `application/problem+json`. User-visible strings resolve via
-`packages/shared` catalogs — every key ships in **bn + en** (Bengali default); push payloads render
+the per-app catalogs (`applications/{web,app}/src/i18n`) and, for server-rendered push/email text, the api's catalog (`applications/api/internal/i18n`) — every key ships in **bn + en** (Bengali default); push payloads render
 via the on-device `notifications.*` catalog with the bn/en `strings` pair as fallback, so raw key
 text is never shown.
 

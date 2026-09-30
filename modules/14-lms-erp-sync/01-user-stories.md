@@ -219,7 +219,7 @@ Gives School Admins two self-serve ways to keep the platform roster in step with
 
 ## 6. Validation Rules
 
-| Field | Rule | Message key (`packages/shared` i18n catalog) |
+| Field | Rule | Message key (per-app `src/i18n` catalog) |
 | --- | --- | --- |
 | upload `file` | required; csv/xlsx magic bytes; ≤ 20 MB; ≤ 10,000 data rows | `validation.required` · `sync.import.format_invalid` · `sync.import.too_large` · `sync.import.rows_exceeded` |
 | CSV header row | exact fixed set + order (`full_name,phone,role,class_level,section_name,session_year`) | `sync.import.headers_invalid` |

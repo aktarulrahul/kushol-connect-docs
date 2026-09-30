@@ -39,10 +39,10 @@ Turns fee collection from cash-in-an-envelope into a trust-first digital flow: S
 | Layer | Technology | Why | Notes |
 | --- | --- | --- | --- |
 | api | Go 1.24+ · chi · `PaymentGateway` interface + SSLCommerz/bKash/Nagad adapters · sqlc + pgx · PostgreSQL (Neon) · Redis (idempotency fast-path) · in-DB job table + 01 worker | Server-side HTTP to gateways — no SDKs in clients; webhook signature pipeline; append-only ledger | `tech-stack.md` Payments row: server-side HTTP integrations, webhook signature verification, idempotent ledger |
-| contracts | OpenAPI 3.1 (`contracts/openapi/`) | single source for Go server types + TS clients; webhook route flagged `security: []` + webhook marker | gateway payload shapes versioned **internally** per adapter (stable event model v1) |
+| contracts | OpenAPI 3.1 (`applications/api/openapi/`) | single source for Go server types + TS clients; webhook route flagged `security: []` + webhook marker | gateway payload shapes versioned **internally** per adapter (stable event model v1) |
 | web | Next.js App Router · Server Components/Actions · TanStack Table + Query · RHF + zod | `/school/ledger` + invoice forms + reconciliation — all money reads `no-store` | fills 07's stub |
 | app | Expo · expo-router · TanStack Query · `expo-web-browser` (in-app gateway view) | invoice list, pay screen, status poll, receipt view/share | `expo-web-browser` is the only new dep — small, EAS-compatible |
-| shared | `packages/shared` bn/en catalogs + zod schemas | `payments.*` / `validation.payments.*` keys ("বকেয়া ফি", "পেমেন্ট সফল", "ফি পরিশোধ রসিদ") | bn default |
+| web + app (per app) | each app's `src/i18n` bn/en catalogs + zod schemas | `payments.*` / `validation.payments.*` keys ("বকেয়া ফি", "পেমেন্ট সফল", "ফি পরিশোধ রসিদ") | bn default |
 | security stance | Gateway-hosted checkout only | **No card/wallet data ever touches our servers** — no PAN/CVV/token storage anywhere; SAQ-A-level scope (`02` §6/§10) | gateways own fraud/liability |
 
 ---
@@ -249,7 +249,7 @@ From `02-solution-approach.md` §5.
 
 ## 10. Error Handling
 
-All errors surface as RFC-7807 `application/problem+json`. User-visible messages resolve via `packages/shared` catalogs — every message key ships in **bn + en** (Bengali default), e.g. "পেমেন্ট গেটওয়ে সাময়িকভাবে অচল / Payment gateway temporarily unavailable".
+All errors surface as RFC-7807 `application/problem+json`. User-visible messages resolve via each app's `src/i18n` catalogs — every message key ships in **bn + en** (Bengali default), e.g. "পেমেন্ট গেটওয়ে সাময়িকভাবে অচল / Payment gateway temporarily unavailable".
 
 | Code | Meaning | When this module returns it | Client handling |
 | --- | --- | --- | --- |

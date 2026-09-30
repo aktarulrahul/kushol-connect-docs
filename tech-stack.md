@@ -1,21 +1,23 @@
 # Tech Stack — Kushol Connect (কুশল)
 
-Monorepo layout (pnpm workspaces + Turborepo for web/app/shared; Go module for the API):
+Layout — **four isolated applications, each its own git repository** with its own toolchain,
+lockfile and CI. There is **no shared package and no root workspace** (owner decision 2026-09-30):
 
 ```text
 applications/
 ├── api/    # Backend — Go: REST + WebSocket messaging, multi-tenant PostgreSQL, Redis, FCM, DeepSeek
+│   └── openapi/openapi.yaml   # API contract (OpenAPI 3.1) — owned by api; single source of truth for API types
 ├── ai/     # (later, Phase 2+) — Python FastAPI AI service (DeepSeek orchestration) behind an internal HTTP interface
-├── web/    # Next.js — public landing page (B2B funnel) + Command Center (Super Admin / School Admin / Vendor)
-└── app/    # React Native (Expo) — mobile app for Students, Teachers, Guardians
-packages/
-└── shared/ # bn/en i18n message catalogs, design tokens; TS-side API clients generated from the OpenAPI spec
-contracts/
-└── openapi/ # API contract: OpenAPI 3.1 spec — generates Go server types (oapi-codegen)
-             # and TS clients (openapi-typescript/openapi-fetch) for web/app — single source of truth
+├── web/    # Next.js — landing page + Command Center; own src/api (generated client), src/i18n, src/theme, src/schemas
+└── app/    # React Native (Expo) — Students, Teachers, Guardians; own src/api, src/i18n, src/theme, src/schemas
 ```
 
-Exact versions are pinned in each app's lockfile (`pnpm` with `save-exact`; `go.mod` for the API).
+Nothing is imported across application folders. `web` and `app` keep a synced copy of
+`applications/api/openapi/openapi.yaml` and generate their own typed client from it; bn/en copy and
+design tokens are encoded per app from the canonical values in `docs/design-reference/README.md`;
+the api owns server-rendered copy (problem messages, push, email) in `applications/api/internal/i18n`.
+
+Exact versions are pinned in each app's own lockfile (`pnpm` with `save-exact` in `web` and `app`; `go.mod` + `tools.mod` for the API).
 Rows marked `verify` belong to modules not yet built. Aligned with `prd.md` §6 and `brd.md` §6
 (cost efficiency), with the backend decision resolved: **Go** for `api` (messaging included),
 **Python FastAPI** for the AI service later.
@@ -28,7 +30,7 @@ Rows marked `verify` belong to modules not yet built. Aligned with `prd.md` §6 
 | UI runtime | React Native + React | latest stable `verify` | Hermes engine |
 | Navigation | **expo-router** (file-based) | latest `verify` | Typed routes; deep links for payment/notification payloads |
 | Language | TypeScript (strict) | latest `verify` | |
-| Styling | **NativeWind** (Tailwind for RN) + shared tokens | latest `verify` | Tokens from `packages/shared` mapped to the brand system (`design-reference/README.md`) |
+| Styling | **NativeWind** (Tailwind for RN) + shared tokens | latest `verify` | Tokens from each app's `src/theme` mapped to the brand system (`design-reference/README.md`) |
 | Components | shadcn-style hand-written RN primitives on **zeego**/radix-primitives where useful | `verify` | |
 | Icons | lucide-react-native | latest | |
 | Fonts | **Hind Siliguri** (Bengali UI + display) · **Inter** (Latin) via @expo-google-fonts | bundled | Bangla glyphs are a launch requirement, not an add-on |
@@ -36,7 +38,7 @@ Rows marked `verify` belong to modules not yet built. Aligned with `prd.md` §6 
 | State (client) | zustand | latest `verify` | Session, settings, cached roster |
 | Local persistence | **react-native-mmkv** (zustand persist: offline chat queue per 05 §8, settings, cached roster) · expo-sqlite only if message caching outgrows MMKV | latest `verify` | Offline queue must survive app restarts (05 §8); tokens in **expo-secure-store** |
 | Media capture | **expo-image-manipulator** (resize/compress to ~1 MB before upload) · **expo-audio** (voice notes record/play) | latest `verify` | 05 media caps: image ≤ 10 MB, voice ≤ 5 min |
-| Forms | react-hook-form + zod resolver | 7.x / **zod 4.x** | Schemas imported from `packages/shared` |
+| Forms | react-hook-form + zod resolver | 7.x / **zod 4.x** | Schemas imported from each app's `src/schemas` |
 | Chat | Plain **WebSocket** client to the Go gateway + optimistic UI | stdlib `verify` | Offline queue, media (image/voice) compression before upload |
 | Push | **@react-native-firebase/messaging** (native FCM token, Expo config plugin, EAS builds) + **expo-notifications** (permission, channels, display, taps) | latest `verify` | One FCM token serves topic subscriptions (city/school/section — `brd.md` §6) and directed sends; Expo push tokens/APNs tokens cannot join FCM topics on iOS (decision 2026-09-30, module 06 `02` §10) |
 | AI capture | expo-camera / expo-image-picker | latest `verify` | Notes Scanner input for DeepSeek vision |
@@ -49,12 +51,12 @@ Rows marked `verify` belong to modules not yet built. Aligned with `prd.md` §6 
 | --- | --- | --- | --- |
 | Framework | **Next.js** (App Router) | latest stable `verify` | `output: "standalone"` for Docker |
 | Language | TypeScript (strict) | latest `verify` | |
-| Styling | **Tailwind CSS** + CSS-first `@theme` tokens | v4 `verify` | Semantic tokens from `packages/shared`; light theme first, dark optional |
+| Styling | **Tailwind CSS** + CSS-first `@theme` tokens | v4 `verify` | Semantic tokens from each app's `src/theme`; light theme first, dark optional |
 | Components | shadcn/ui on radix-ui | latest `verify` | Hand-written into `src/components/ui/` to keep token control |
 | Icons | lucide-react | latest | |
 | Fonts | Hind Siliguri · Inter (via `next/font/google`) | bundled | `latin` + `bengali` subsets |
 | Data tables | **TanStack Table** + TanStack Query | latest `verify` | Rosters, ledgers, campaign builders (School Admin / Super Admin / Vendor portals) |
-| Forms | react-hook-form + zod | 7.x / 4.x | Shared schemas from `packages/shared` |
+| Forms | react-hook-form + zod | 7.x / 4.x | Shared schemas from each app's `src/schemas` |
 | Charts | Recharts | latest `verify` | Pain Point Matrix heatmap, revenue dashboards — only where useful |
 | Markdown | Not needed at launch `verify` | — | Notices are plain text + attachments |
 | Testing | Vitest + Testing Library · **Playwright** (+ axe) | latest `verify` | Web golden paths: landing funnel, admin login, CSV roster upload, campaign creation |
@@ -64,13 +66,13 @@ Rows marked `verify` belong to modules not yet built. Aligned with `prd.md` §6 
 
 | Layer | Technology | Version | Notes |
 | --- | --- | --- | --- |
-| Language | **Go** | 1.24+ (`.go-version`) | Decision resolved: Go for the whole API, including the messaging hot path (`prd.md` §6); Docker `golang` multi-stage → `distroless/static` (or alpine) runtime |
-| HTTP framework | **chi** (net/http compatible) | latest `verify` | Small, explicit, idiomatic; REST endpoints |
-| Contracts | **OpenAPI 3.1** spec in `contracts/openapi/` → `oapi-codegen` (Go types/handlers) + `openapi-typescript`/`openapi-fetch` (TS clients for web/app) | latest `verify` | Spec is written first; request/response validation generated from it |
+| Language | **Go** | 1.26.1 (`go.mod`; 1.27.1 available — upgrade by ADR) | Decision resolved: Go for the whole API, including the messaging hot path (`prd.md` §6); Docker `golang` multi-stage → `distroless/static` (or alpine) runtime |
+| HTTP framework | **chi** (net/http compatible) | v5.3.2 (pinned 01, 2026-09-30) | Small, explicit, idiomatic; REST endpoints |
+| Contracts | **OpenAPI 3.1** spec in `applications/api/openapi/` → `oapi-codegen` (Go types/handlers) + `openapi-typescript`/`openapi-fetch` (TS clients, generated inside web and app) | oapi-codegen v2.8.0 (OpenAPI 3.1 supported) · kin-openapi v0.149.0 · nethttp-middleware v1.2.0 (pinned 01) · TS side pinned by 02/03 | Spec is written first; request validation via the spec (`httpx.Validator`) |
 | Realtime / messaging | **gorilla/websocket** (+ Redis pub/sub fan-out across instances) | latest `verify` | **Messaging lives in Go**: rooms mirror City → School → Section and custom groups; presence in Redis |
 | Database | **PostgreSQL** (multi-tenant, shared-schema + tenant scoping) — hosted on **Neon** free tier (Singapore `ap-southeast-1`) for quick start | 16+ `verify` | Decision recorded 2026-09-29: Neon over Supabase (pure Postgres, DB branches fit the migration workflow; Supabase free pauses after 1 week idle). Free tier scales to zero (cold start ~hundreds of ms) — fine for dev/pilot, upgrade (Launch ~$19/mo) or move back to a Compose container when real school traffic starts. Tenant columns enforced in the repository layer; `pg_trgm` for search |
-| Data access | **sqlc** (type-safe generated queries) + **pgx/v5** driver | latest `verify` | Migrations as plain SQL files — **golang-migrate** (pinned 2026-09-30), expand/contract; applied manually by the owner (Gate 2), never at deploy/boot |
-| Cache / presence | **Redis** (go-redis) | 7 `verify` | Chat cache, online presence, rate limits, idempotency keys (`prd.md` §6) |
+| Data access | **sqlc** (type-safe generated queries) + **pgx/v5** driver | sqlc v1.31.1 (`tools.mod`) · pgx v5.11.0 · golang-migrate v4.20.1 (pinned 01) | Migrations as plain SQL files — **golang-migrate** (pinned 2026-09-30), expand/contract; applied manually by the owner (Gate 2), never at deploy/boot |
+| Cache / presence | **Redis** (go-redis) | server 7 `verify` · go-redis v9.22.0 (pinned 01) | Chat cache, online presence, rate limits, idempotency keys (`prd.md` §6) |
 | Push | **Firebase Admin Go SDK** → **FCM topic subscriptions** | latest `verify` | Topic-per-node fan-out for mass notices (`brd.md` §6) |
 | AI | **DeepSeek API** behind an internal `AIService` Go interface | latest `verify` | Phase 2: Go calls DeepSeek directly (vision for Notes Scanner, Auto-CT MCQs, Pain Point Matrix analytics); output validated against the OpenAPI/JSON-Schema shapes; per-user quota. **Later: extracted to `applications/ai` (Python FastAPI)** behind the same interface — clients never change |
 | Auth | **Custom Go auth** — argon2id (x/crypto) · access + refresh JWTs (mobile) · http-only sessions (web) · **phone OTP via a local SMS gateway** (e.g. SSLWireless) · **social SSO: Google + GitHub** (`golang.org/x/oauth2` / `coreos/go-oidc`) | latest `verify` | Decision recorded 2026-09-29 (Clerk evaluated and rejected — see "Deliberately not used"). Five roles: Super Admin, School Admin, Teacher, Student, Guardian; tenancy + verification claims in the JWT |
@@ -79,7 +81,7 @@ Rows marked `verify` belong to modules not yet built. Aligned with `prd.md` §6 
 | Notifications content | Firebase Admin Go SDK per-token send (FCM HTTP v1) | — | Expo push API not used (2026-09-30) |
 | Validation | Generated OpenAPI validators + per-field rules in services | — | Every entry point; same shapes as the TS clients |
 | Logging | `log/slog` (JSON stdout, redacted) | stdlib | |
-| Testing | `go test` unit (services) + integration against a real Postgres (testcontainers-go) | stdlib `verify` | Tenant-isolation and webhook tests are mandatory |
+| Testing | `go test` unit (services) + integration against a real Postgres (testcontainers-go) | testcontainers-go v0.44.0 · golangci-lint v2.14.0 (`tools.mod`) | Tenant-isolation and webhook tests are mandatory |
 | Queueing | In-DB job table + Go worker (same binary, `worker` subcommand, own container) | — | Year-end migration, AI batch analytics, receipts, email — no Kafka/RabbitMQ until measured need. Evaluate **River** (Postgres job queue for Go) in 01's Stage 1 plan before hand-building |
 | Email (app) | SMTP submission to **HestiaCP Exim** as `noreply@kusholconnect.com` (Go SMTP client, 587 STARTTLS) | — | OTP codes, password reset, vendor invites, opted-in notifications (06 channel). Upgrade path: transactional provider API if deliverability suffers |
 | PDF (receipts) | `verify` — chosen by module 12's Bengali-shaping spike | — | Must shape Bengali conjuncts correctly |
@@ -93,17 +95,17 @@ Rows marked `verify` belong to modules not yet built. Aligned with `prd.md` §6 
 | AI | DeepSeek SDK, prompt versioning in code, structured-output validation (pydantic) | latest `verify` | Quotas enforced at the `api` boundary |
 | Deploy | Own container in the Compose stack | — | Module 08 builds the Go-side interface first; the FastAPI swap is an infra change, not a client change |
 
-## Shared & tooling
+## Tooling (per application — nothing shared)
 
 | Layer | Technology | Notes |
 | --- | --- | --- |
-| Monorepo | pnpm workspaces + **Turborepo** (web/app/shared) · Go module for `api` | One lockfile discipline per app; shared tasks cached; `Makefile`/`task` entry points per app |
-| API contracts | `contracts/openapi/` OpenAPI 3.1 spec | Generates Go server types + validators (oapi-codegen) and TS clients (openapi-typescript/openapi-fetch) — web/app never hand-write API types |
-| Shared package | `packages/shared` | bn/en message catalogs, design tokens — the single source for TS-side non-API concerns; **Zod schemas stay for web/app forms**, mirroring the OpenAPI shapes |
-| i18n | JSON catalogs in `packages/shared` (bn default, en) | RTL not needed; date/number via `Intl` with `bn`/`en` locales |
-| Env validation | zod-parsed env (TS apps) · one struct-tag env parser for Go (`caarlos0/env`-class; final pick at 01) — no viper | Never read env outside a config module |
-| Lint/format | ESLint 9 (flat, type-checked) + Prettier · golangci-lint + gofmt/goimports · Husky + lint-staged | Boundary rule: app/web → api only through the generated OpenAPI client |
-| CI | GitHub Actions | Quality gate per app (`go test/vet/lint` for api; `pnpm lint/typecheck/test/build` for web/app); EAS build on `app` changes |
+| Repositories | One git repo per application (`api`, `web`, `app`, `ai`) · no root workspace, no shared package | Each app has its own `Makefile`/`package.json` scripts, lockfile and CI workflow |
+| API contracts | `applications/api/openapi/openapi.yaml` (OpenAPI 3.1, owned by api) | Generates Go server types + validators in api (oapi-codegen, `make contracts`); `web`/`app` sync a copy (`pnpm sync:api-spec`) and generate their own client (`pnpm generate:api`, openapi-typescript/openapi-fetch) into `src/api/` — never hand-write API types. A spec change in api is followed by a sync PR in each client repo |
+| Per-app shared code | `src/i18n` · `src/theme` · `src/schemas` · `src/api` inside `web` and inside `app` | bn/en catalogs, design tokens (from `docs/design-reference/README.md`), zod form schemas mirroring the OpenAPI shapes, generated client — each app owns its copy |
+| i18n | JSON catalogs per app: `applications/{web,app}/src/i18n` (bn default, en); server-rendered copy in `applications/api/internal/i18n` | RTL not needed; date/number via `Intl` with `bn`/`en` locales; namespace registry in 02 `02` §1.1 |
+| Env validation | zod-parsed env (TS apps) · **caarlos0/env v11.4.1** for Go (picked at 01) — no viper | Never read env outside a config module |
+| Lint/format | ESLint 10 (flat, type-checked; ESLint 9 is out of support as of 2026-09-30) + Prettier · golangci-lint v2 + gofmt/goimports | Per-app config. Boundary rule in web/app: the api is reached only through the app's generated client in `src/api` |
+| CI | GitHub Actions — one workflow per app repo | api: gofmt/goimports, golangci-lint, `go vet`, unit + testcontainers integration, codegen drift; web/app: `pnpm lint/typecheck/test/build` + client drift; EAS build on `app` changes |
 
 ## Infrastructure
 

@@ -5,7 +5,7 @@ by hand).
 
 ```text
 MODULE   = 01-foundations          # folder name under docs/modules/
-APP      = api                     # api · web · app · shared — comma-separate if several (e.g. api,web,app)
+APP      = web                     # api · web · app · shared — comma-separate if several (e.g. api,web,app)
 TODAY    = 2026-09-30              # ISO date used when ticking checklist items and in progress notes
 APPROVAL = required                # required → stop after the Stage 1 plan · pre-approved → continue after planning
 ```
@@ -27,20 +27,20 @@ manual, whatever `APPROVAL` says — `pre-approved` only skips the stop after St
 
 Read the named sections, not whole documents, unless the ✅ column says "all".
 
-| ✅ | Document | Read |
-| --- | --- | --- |
-| always | `prompt.txt` (workspace root) | all — the binding brief |
-| always | `docs/persona.md` | all (short) |
-| always | `docs/brd.md` | §4 (scope) · §5 (BR-01…BR-05) · §6 (isolation) · §7 (business model) · §8 (phasing) |
-| always | `docs/prd.md` | the sections your module implements (note the "Superseded" call-outs in §3 and §7) |
-| always | `docs/modules/<MODULE>/01…06` + `technical-document.md` | **all** — this is the work |
-| always | `docs/modules/README.md` | the module's row, dependencies, blocked-before-build defaults, **Cross-module registries** |
-| always | `docs/tech-stack.md` | the rows for the app(s) in `<APP>` |
-| always | every dependency's `06-integration-tasks.md` §2 | the exact export signatures you will call |
-| UI work | `docs/design-reference/README.md` | all — palette, typography, logo rules, **§6 mobile (CircleUp + WhatsApp)**, **§7 web (professional)**; look at `docs/design-reference/mobile-circleup/*.png` for app screens |
-| schema / data | the module's `03-backend-tasks.md` §1 (Database Design) | tenant scoping is mandatory for every table |
-| payments / AI | `docs/prd.md` §5.2 / §5.4 + the module's `02` §6 | quota, cost and payment-confirmation rules |
-| module 15 | `docs/tech-stack.md` §Infrastructure | all |
+| ✅            | Document                                                | Read                                                                                                                                                                         |
+| ------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| always        | `prompt.txt` (workspace root)                           | all — the binding brief                                                                                                                                                      |
+| always        | `docs/persona.md`                                       | all (short)                                                                                                                                                                  |
+| always        | `docs/brd.md`                                           | §4 (scope) · §5 (BR-01…BR-05) · §6 (isolation) · §7 (business model) · §8 (phasing)                                                                                          |
+| always        | `docs/prd.md`                                           | the sections your module implements (note the "Superseded" call-outs in §3 and §7)                                                                                           |
+| always        | `docs/modules/<MODULE>/01…06` + `technical-document.md` | **all** — this is the work                                                                                                                                                   |
+| always        | `docs/modules/README.md`                                | the module's row, dependencies, blocked-before-build defaults, **Cross-module registries**                                                                                   |
+| always        | `docs/tech-stack.md`                                    | the rows for the app(s) in `<APP>`                                                                                                                                           |
+| always        | every dependency's `06-integration-tasks.md` §2         | the exact export signatures you will call                                                                                                                                    |
+| UI work       | `docs/design-reference/README.md`                       | all — palette, typography, logo rules, **§6 mobile (CircleUp + WhatsApp)**, **§7 web (professional)**; look at `docs/design-reference/mobile-circleup/*.png` for app screens |
+| schema / data | the module's `03-backend-tasks.md` §1 (Database Design) | tenant scoping is mandatory for every table                                                                                                                                  |
+| payments / AI | `docs/prd.md` §5.2 / §5.4 + the module's `02` §6        | quota, cost and payment-confirmation rules                                                                                                                                   |
+| module 15     | `docs/tech-stack.md` §Infrastructure                    | all                                                                                                                                                                          |
 
 **If a file this prompt names is missing or a section is empty, writing that specification is the
 task — stop and say so. Do not infer requirements.**
@@ -71,9 +71,11 @@ reported; do not edit another module's code.
 - [ ] Every name you will introduce is checked against the README **Cross-module registries**:
       migration version block, error codes, i18n namespaces, Go export packages, web routes,
       API paths, env variables. Anything new is added to the registry in Stage 3.
-- [ ] Repository state is known: the code repo root, current branch, clean working tree. Work on
-      a branch `module/<MODULE>`; never commit to `main` directly. (Commit only when the owner has
-      asked for commits in this session.)
+- [ ] Repository state is known **for every app in `<APP>`**: each of `applications/api`,
+      `applications/web`, `applications/app`, `applications/ai` is its **own git repository** — no
+      root repo, no shared package, nothing imported across app folders. In each touched repo:
+      current branch, clean working tree, work on a branch `module/<MODULE>`; never commit to
+      `main` directly. (Commit only when the owner has asked for commits in this session.)
 - [ ] For UI modules: brand assets exist in `docs/design-reference/brand/` — otherwise use a
       typographic fallback ("কুশল CONNECT" in Hind Siliguri + Inter) and record it as a gap.
 - [ ] Library versions marked `latest verify` in `docs/tech-stack.md` are checked against the
@@ -87,8 +89,10 @@ Complete **every unticked checklist item** of `<MODULE>`, in this **UI-first** o
    data flow → motion → responsive → a11y; app screens → states incl. offline → media flow →
    device behaviour). **No real API calls**: every screen runs on in-repo fixtures that mirror the
    contract shapes from `03-backend-tasks.md` §2, typed from the OpenAPI spec (add the paths to
-   `contracts/openapi/openapi.yaml` first and generate types — never hand-roll DTO types). Keep
-   fixtures in one place per surface so swapping to the generated client is a one-file change.
+   `applications/api/openapi/openapi.yaml` first, sync the spec copy into web/app
+   (`pnpm sync:api-spec`) and generate each app's `src/api` types — never hand-roll DTO types).
+   Keep fixtures in one place per surface (`src/fixtures/`) so swapping to the generated client is
+   a one-file change.
 2. `03-backend-tasks.md` — **backend** (schema → SQL migration files → tenant-scoped
    repositories → services → entry points → jobs → tests). Migrations ship as plain-SQL
    `up`/`down` files that the **owner runs manually** against the shared database (Neon) — Gate 2.
@@ -112,8 +116,8 @@ Complete **every unticked checklist item** of `<MODULE>`, in this **UI-first** o
 Objective      one paragraph in your own words
 Defaults used  open-question defaults + any precedence decisions (§1.1)
 Conflicts      anything you must ask the owner about (or "none")
-Files          create/change list per workspace: applications/api · applications/web ·
-               applications/app · packages/shared · contracts/openapi
+Files          create/change list per app repo: applications/api (incl. openapi/openapi.yaml) ·
+               applications/web · applications/app — nothing outside the app folders
 Contracts      exports you implement (06 §2) · exports you consume (with the owner module)
 Data           tables + migration file names/versions (from the README registry)
 Impact         tenant isolation · security · bn/en · quota/cost · a11y · performance
@@ -166,9 +170,10 @@ isolation).
 
 **Stage 5 — Integration (`06`).** Replace the Stage-2 fixtures with the generated OpenAPI client
 (`openapi-fetch` / typed WS), wire cache invalidation (`06` §4) and externals, run E2E
-(Playwright / Maestro). Regenerate contract code after any `contracts/openapi/` change and confirm
-zero drift (`make contracts && git diff --exit-code`). Run the full check suite across
-api + web + app.
+(Playwright / Maestro). Regenerate contract code after any `applications/api/openapi/` change and confirm
+zero drift: api `make contracts-check`; in web and app `pnpm sync:api-spec && pnpm generate:api`
+then `git diff --exit-code` (each client's spec copy must match the api's). Run the full check
+suite in each touched repo (api + web + app).
 🚦 **GATE 3 — manual approval of the integrated flows.** Stop and give the owner a numbered list
 of the module's golden paths (from `01` user stories) to click through end-to-end on real data,
 with the seed accounts to use.
@@ -179,7 +184,7 @@ owner for final verification** before marking the module `🟢 Delivered`.
 
 **Working rules (every stage):**
 
-1. **Respect the layers:** handler (REST/WS, generated from `contracts/openapi`) → service →
+1. **Respect the layers:** handler (REST/WS, generated from `applications/api/openapi/openapi.yaml`) → service →
    tenant-scoped repository → sqlc queries. SQL only in repositories/migrations. Contract
    validation on every input. Authenticate + tenant-scope before any business logic.
 2. **Respect module boundaries:** call other modules only through the exports in their `06` §2;
@@ -207,7 +212,7 @@ owner for final verification** before marking the module `🟢 Delivered`.
 - [ ] **Gate 3 passed** — integrated flows approved by the owner
 - [ ] No fixture data paths remain — every screen talks to the real API through the generated
       client (fixtures deleted or moved behind test-only flags)
-- [ ] Contract drift check clean (generated Go + TS match `contracts/openapi/openapi.yaml`)
+- [ ] Contract drift check clean (api's generated Go matches `applications/api/openapi/openapi.yaml`; each client's spec copy and generated TS client match it)
 - [ ] Unit, integration and E2E tests pass; **cross-tenant isolation tests pass** for any data
       module
 - [ ] i18n parity check passes (identical bn/en key sets; namespaces from the 02 registry)

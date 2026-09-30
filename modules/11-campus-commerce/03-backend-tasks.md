@@ -3,7 +3,7 @@
 **Module:** `11-campus-commerce`
 **Status:** 📝 Spec drafted 2026-09-30
 **Owner:** Rahul (product owner)
-**Stack (api):** Go · chi REST handlers · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `contracts/openapi/openapi.yaml` · slog logging · jobs via module 01 worker
+**Stack (api):** Go · chi REST handlers · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `applications/api/openapi/openapi.yaml` · slog logging · jobs via module 01 worker
 **Stack (web):** Next.js Route Handlers / Server Actions · zod forms · generated `openapi-fetch` client → api (fills module 07's `/vendor` shell + `/admin/commission` stub)
 **Last updated:** 2026-09-30
 
@@ -334,6 +334,6 @@ schools' stores.
 - [ ] `CMP-BE-014`–`CMP-BE-019` vendor board + lifecycle actions + endpoints #14–#20 (pushes via 06)
 - [ ] `CMP-BE-020`/`CMP-BE-032` auto-cancel job; `CMP-BE-021`/`CMP-BE-033` low-stock digest
 - [ ] `CMP-BE-022`–`CMP-BE-024` exports: `OrderAmount`, `AttachPaymentTransaction` (12 seam), `OrdersForVendor`, `StorefrontsForSchool`
-- [ ] OpenAPI paths #1–#20 in `contracts/openapi/` + regenerate Go + TS clients (+ `OUT_OF_STOCK` problem code)
+- [ ] OpenAPI paths #1–#20 in `applications/api/openapi/` + regenerate Go + TS clients (+ `OUT_OF_STOCK` problem code)
 - [ ] Seed: Demo Store dataset (fictional, marked)
 - [ ] Tests: `CMP-UT-001`–`006`, `CMP-IT-001`–`010` green in CI

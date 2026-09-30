@@ -49,7 +49,7 @@
 | --- | --- | --- |
 | `LanguageToggle` | Client | bn default; persists via `PATCH /me` post-login, cookie pre-login |
 | `LoginTabs` | Client | Phone OTP (default) / Password (staff) |
-| `PhoneOtpForm` / `PasswordForm` | Client | RHF + zod from `packages/shared`; OTP boxes auto-advance |
+| `PhoneOtpForm` / `PasswordForm` | Client | RHF + zod from each app's `src/schemas`; OTP boxes auto-advance |
 | `SsoButtons` | Client | open `/api/v1/auth/google/start` · `/auth/github/start`; on return, `/auth/sso/return` calls `GET /me` then routes `PENDING` → `/verification-pending`, `VERIFIED` staff → role shell, error → `/login` with `auth.ssoFailed` |
 | `PendingNotice` | Client | inline notice when a fresh login is `PENDING` → routes to `/verification-pending` |
 
@@ -159,6 +159,6 @@ clear-space); every string ships in bn + en from the `auth.*` / `verification.*`
 - [ ] `IDT-FE-001` `/login` route shell + `LanguageToggle` · `IDT-FE-002` `PhoneOtpForm` with all §2.1 states
 - [ ] `IDT-FE-003` `PasswordForm` (staff) with generic-error handling · `IDT-FE-004` `SsoButtons` + `/auth/sso/return` routing
 - [ ] `IDT-FE-005` `/verification-pending` screen incl. rejected state · `IDT-FE-006` csrf + credentials-inclusive client; cookie-presence middleware
-- [ ] `IDT-FE-007` problem+json → field errors + `RATE_LIMITED` countdown mapping · `IDT-FE-008` bn/en keys wired from `packages/shared`
+- [ ] `IDT-FE-007` problem+json → field errors + `RATE_LIMITED` countdown mapping · `IDT-FE-008` bn/en keys wired from each app's `src/i18n`
 - [ ] `IDT-FE-009` axe pass + reduced-motion verification on both screens
 - [ ] `IDT-FE-010` hand-off note + contract reference for 07's `/school/users` queue (no layout duplicated)

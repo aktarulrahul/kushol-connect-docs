@@ -30,8 +30,8 @@ The five roles plus Vendors are defined by `03-identity-access §2`; verificatio
 
 **In scope**
 
-- Semantic design tokens in `packages/shared` — color (deep-teal 10-step scale, paper/ink neutrals), spacing, radius, type scale, motion — consumed by Tailwind v4 `@theme` (web) and NativeWind (app); fonts Hind Siliguri + Inter via `next/font/google` (web) and bundled `@expo-google-fonts` (app)
-- bn/en string catalogs in `packages/shared` (**this module OWNS the catalogs**): dot-namespaced keys, `t(key, params)` helper, CI key-parity gate
+- Semantic design tokens in each app's `src/theme` — color (deep-teal 10-step scale, paper/ink neutrals), spacing, radius, type scale, motion — consumed by Tailwind v4 `@theme` (web) and NativeWind (app); fonts Hind Siliguri + Inter via `next/font/google` (web) and bundled `@expo-google-fonts` (app)
+- bn/en string catalogs in each app's `src/i18n` (**this module OWNS the catalogs**): dot-namespaced keys, `t(key, params)` helper, CI key-parity gate
 - Web primitives (shadcn-style, hand-written in `src/components/ui/`): Button, Input, Textarea, Select, Checkbox/Radio/Switch, Card, Dialog/Sheet, Toast, Tabs, Badge, Table shell, Skeleton, EmptyState, Avatar (verified-badge variant); RN mirrors (NativeWind + radix-primitives/zeego where useful)
 - App icon (adaptive), splash and notification small icon from brand assets (EAS config); light theme first (WCAG 2.2 AA, both languages), dark optional later
 
@@ -45,7 +45,7 @@ The five roles plus Vendors are defined by `03-identity-access §2`; verificatio
 
 | Module | What this module needs from it |
 | --- | --- |
-| `01-foundations` | pnpm/Turborepo workspace for `packages/shared`, TS strict config, CI quality gate + test harness |
+| `01-foundations` | api contract + problem code registry only (`applications/api/openapi/openapi.yaml`). 01 ships **no** web/app scaffolding — 02 scaffolds web and app tooling itself (TS strict, ESLint 10, Vitest/jest-expo, per-repo CI) |
 
 ---
 
@@ -75,8 +75,8 @@ The five roles plus Vendors are defined by `03-identity-access §2`; verificatio
 
 **Acceptance criteria**
 
-- **Given** a PR adding a colour, **when** the token-only lint rule runs in CI, **then** raw hex/px/font-family outside `packages/shared` and the primitive folders fail the build.
-- **Given** a token adjustment in `packages/shared` (e.g. re-verifying the palette against the SVG when supplied), **when** apps rebuild, **then** every consuming screen updates and no feature file changes.
+- **Given** a PR adding a colour, **when** the token-only lint rule runs in CI, **then** raw hex/px/font-family outside each app's `src/theme` and the primitive folders fail the build.
+- **Given** a token adjustment in each app's `src/theme` (e.g. re-verifying the palette against the SVG when supplied), **when** apps rebuild, **then** every consuming screen updates and no feature file changes.
 
 **Notes**
 
@@ -167,7 +167,7 @@ The five roles plus Vendors are defined by `03-identity-access §2`; verificatio
 | ID | Rule | Enforced where |
 | --- | --- | --- |
 | `DSN-BR-001` | Every user-facing string exists in bn AND en under a dot-namespaced key; a missing bn or en key fails CI | CI catalog parity test (`DSN-UT-001`) |
-| `DSN-BR-002` | App/web feature code uses semantic tokens only — no raw hex/px/font-family outside `packages/shared` and the primitive folders | ESLint token-only rule (`DSN-INT-002`) + review |
+| `DSN-BR-002` | App/web feature code uses semantic tokens only — no raw hex/px/font-family outside each app's `src/theme` and the primitive folders | ESLint token-only rule (`DSN-INT-002`) + review |
 | `DSN-BR-003` | Bengali is the default locale; English is user-selectable; the selection persists per user | `t()` default (`bn`) here; persistence owned by `03-identity-access` |
 | `DSN-BR-004` | Bengali text renders in Hind Siliguri, never Inter; `lang="bn"`/`lang="en"` tags set correctly | Type tokens + locale provider; render fixtures |
 | `DSN-BR-005` | Palette comes only from the sampled brand tokens — deep teal `#095777`, slate teal `#386070`, swoosh gray `#707070` (brand graphic only, never UI text), paper, ink; verify against the SVG when supplied | Tokens module; `DSN-BR-002` lint |
@@ -178,13 +178,13 @@ Content accuracy (`prompt.txt` §12): palette/typography facts here are sampled 
 
 ## 6. Validation Rules
 
-| Field | Rule | Message key (`packages/shared` i18n catalog) |
+| Field | Rule | Message key (per-app `src/i18n` catalog) |
 | --- | --- | --- |
 | Catalog key name | Matches `^(common\|validation\|errors\|auth\|verification\|hierarchy\|chat\|notices\|notifications\|settings\|landing\|admin\|school\|vendor\|ai\|analytics\|tuition\|marketplace\|commerce\|payments\|ads\|events\|sync\|ops)\.[a-z0-9_]+(\.[a-z0-9_-]+)*$` (registry: `02-solution-approach.md` §1.1; `snake_case` segments allowed — other modules already use e.g. `hierarchy.city_empty`) | N/A — build-time CI error (never user-facing) |
 | Catalog key parity | Key in both `bn.json` and `en.json`; non-empty; identical `{param}` placeholders | N/A — build-time CI error (`DSN-UT-001`) |
 | Locale value | Must be `bn` or `en`; anything else resolves to `bn` | `common.language.unsupported` (dev-facing warning) |
 | Language selection (onboarding/settings, `03`) | One of `bn` / `en`; default `bn` | `common.language.bn` / `common.language.en` labels |
-| Token values | Hex/px/duration literals only inside `packages/shared` token definitions | N/A — lint error (`DSN-INT-002`) |
+| Token values | Hex/px/duration literals only inside each app's `src/theme` token definitions | N/A — lint error (`DSN-INT-002`) |
 
 Mirrored exactly by the zod form schemas (`03-identity-access` onwards), which reference `validation.*` keys so server contract errors and client messages stay identical in both languages.
 

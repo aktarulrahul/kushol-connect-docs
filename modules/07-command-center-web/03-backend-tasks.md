@@ -3,7 +3,7 @@
 **Module:** `07-command-center-web`
 **Status:** 📝 Spec drafted 2026-09-30
 **Owner:** Rahul (product owner)
-**Stack (api):** Go · chi REST handlers · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `contracts/openapi/openapi.yaml` · slog logging
+**Stack (api):** Go · chi REST handlers · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `applications/api/openapi/openapi.yaml` · slog logging
 **Stack (web):** Next.js Route Handlers / Server Actions · zod forms (shared schemas) · generated `openapi-fetch` client → api — web never touches the DB
 **Last updated:** 2026-09-30
 
@@ -140,7 +140,7 @@ default class; #3/#5/#7/#8/#9 default class.
 
 Every web mutation is a Route Handler/Server Action in `applications/web` that calls the Go API
 through the generated `openapi-fetch` client with `credentials: include` (session cookie,
-`X-CSRF-Token` on mutations) — never the database directly. Same zod schemas from `packages/shared`
+`X-CSRF-Token` on mutations) — never the database directly. Same zod schemas from each app's `src/theme`
 re-validate on the server; RFC-7807 codes map to `validation.*`/`errors.*` catalog keys before
 reaching the client. Middleware reads cookie **presence** for redirects only (`WEB-BR-001`); portal
 layouts re-check role claims server-side per route group.
@@ -160,7 +160,7 @@ layouts re-check role claims server-side per route group.
 | `WEB-BE-007` | `stats.AdminStats` | Super Admin; own counts + additive 04 export `hierarchy.PlatformCounts()`; revenue placeholder constant | — | No |
 | `WEB-BE-008` | `stats.SchoolStats` | School Admin, claim-scoped; additive exports: 04 `hierarchy.SchoolCounts(schoolID)`, 03 `verification.PendingCount(schoolID)`, 05 `chat.NoticeStats(schoolID)`; partial-payload flags on upstream failure | — | No |
 | `WEB-BE-009` | `auditlog.List` (read endpoint over 01) | Super Admin; filters `entityType`/`entityId`/`schoolId`; pages 50; read-only (no write path exists) | — | No |
-| `WEB-BE-010` | OpenAPI paths #1–#9 + schemas (`LeadCreate`, `VendorDecision`, `StatsDTOs`) added to `contracts/openapi/`; Go + TS clients regenerated | Spec-first; CI drift gate | — | — |
+| `WEB-BE-010` | OpenAPI paths #1–#9 + schemas (`LeadCreate`, `VendorDecision`, `StatsDTOs`) added to `applications/api/openapi/`; Go + TS clients regenerated | Spec-first; CI drift gate | — | — |
 
 ## 4. Repository Tasks
 

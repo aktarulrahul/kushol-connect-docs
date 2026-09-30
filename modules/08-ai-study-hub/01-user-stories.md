@@ -205,7 +205,7 @@ Provides the DeepSeek-powered study layer of Kushol Connect: the **Notes Scanner
 
 ## 6. Validation Rules
 
-| Field | Rule | Message key (`packages/shared` i18n catalog) |
+| Field | Rule | Message key (per-app `src/i18n` catalog) |
 | --- | --- | --- |
 | Scan `imageAssetId` | Required; asset `confirmed` (05 sniff), `kind=image`, owned by caller | `validation.ai.media_required` |
 | Search `q` | 0–100 chars after trim (empty = tag-filter browse) | `validation.ai.query_length` |

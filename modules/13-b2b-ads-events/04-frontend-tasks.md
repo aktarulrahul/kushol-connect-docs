@@ -6,7 +6,7 @@
 **Last updated:** 2026-09-30
 
 > `docs/design-reference/README.md` (palette, Hind Siliguri + Inter, logo rules) is binding:
-> tokens only from `packages/shared`, every user-facing string in Bengali + English. This module
+> tokens only from each app's `src/theme`, every user-facing string in Bengali + English. This module
 > **fills module 07's stubs**: the `/admin/campaigns` "ships in module 13" placeholder is replaced
 > by the moderation queue below, and the vendor portal gains its ads/events sections.
 
@@ -190,7 +190,7 @@ input · unsaved-changes guard (vendor + admin).
 `docs/design-reference/README.md` usage rules hold (tokens, typography, logo clear-space); every
 string verified in both languages. Namespaces `ads.*` (builder, queue, statuses, sponsored label),
 `events.*` (listing, detail, tickets), `validation.ads.*` / `validation.events.*` added to
-`packages/shared` with module 02's parity gate. Bengali copy reviewed by Rahul before build sign-off;
+each app's `src/i18n` with module 02's parity gate. Bengali copy reviewed by Rahul before build sign-off;
 honest-state copy everywhere (payment pending, estimate unknown, sold out) — no dark patterns.
 
 ## 9. Task Checklist

@@ -25,7 +25,7 @@
 | Domain DNS today | **Parked**: NS `horizon.dns-parking.com` / `orbit.dns-parking.com`; `@` and `www` → `2.57.91.91` (Hostinger parking); no MX; no `api` record | `dig` |
 | Other subscriptions | Premium Web Hosting (in trial, renews 2026-11-09) — not used for Kushol | Hostinger billing API |
 | Email | **Owner decision 2026-09-30: mail for `kusholconnect.com` is managed by HestiaCP's mail server on the KVM 2** (Exim + Dovecot, webmail) | owner |
-| Code | `applications/` empty; nothing deployable until modules 01 + 02 are built | repo |
+| Code | Each application is its own git repo (`applications/api`, `web`, `app`, `ai`; no shared package — owner 2026-09-30). The api repo is being built (module 01); web/app scaffolds arrive with 02; nothing deployable yet | workspace |
 | Tooling access | Hostinger VPS/domains/billing connectors work; `hostinger-dns` and `hostinger-reach` disconnected (owner reconnects via `/mcp`); no SSH access for the agent | session |
 
 ## 2. Findings (architecture, deployment, tech-stack review)
@@ -49,8 +49,10 @@ Severity: **H** = would break or cause an outage/security issue · **M** = real 
 | F13 | L | Unpinned choices: "golang-migrate **or** goose", "envconfig/viper-style" | golang-migrate (all specs assume it) · one config lib chosen at 01 build | golang-migrate pinned; Go env parser picked at 01 |
 | F14 | L | App stack gaps: no persistent offline store (chat queue), image compression, audio | react-native-mmkv or expo-sqlite · expo-image-manipulator · expo-audio | Applied (§9) |
 | F15 | L | `@react-native-firebase` means EAS development builds (no Expo Go) | State in tech-stack | Applied (§9) |
-| F16 | L | Consider River (Postgres job queue for Go) instead of hand-building 01's `jobs` | Evaluate in 01 Stage 1 plan | Open |
+| F16 | L | Consider River (Postgres job queue for Go) instead of hand-building 01's `jobs` | Evaluated in 01 Stage 1: keep the spec'd hand-built queue (River brings its own schema/migration tooling and maintenance loops that clash with owner-run migrations and Neon idle) | Decided (01, 2026-09-30) |
 | F17 | M | Self-hosted mail on a shared VPS: deliverability depends on reverse DNS, SPF/DKIM/DMARC and the IP's reputation; ClamAV/SpamAssassin use RAM on the same 8 GB box | §7.2 checklist (PTR = `mail.kusholconnect.com`, DKIM from HestiaCP, DMARC), include the mail stack in the memory budget, verify outbound port 25 is open on the VPS | Owner actions §8 |
+| F18 | M | With one repo per application there is no monorepo home for `docker-compose.yml`, `deploy/hestia/` templates, `ops/` scripts and the release log | Options: keep them in the api repo under `deploy/` (simplest), or a small separate `ops` repo; each app repo's CI builds and pushes only its own image | Owner decision (§8 #9) |
+| F19 | M | Behind Docker port publishing the api sees the bridge gateway (not 127.0.0.1) as the TCP peer, so a loopback-only proxy trust list would ignore Nginx's `X-Forwarded-For` and rate-limit everyone as one IP | 01 adds `TRUSTED_PROXIES` (IPs/CIDRs, default loopback); 15's Compose sets it to the project network CIDR (fixed subnet in `docker-compose.yml`) | Applied in 01; 15 to set |
 
 ## 3. Target architecture
 
@@ -195,7 +197,7 @@ services:
 - Add web domains in HestiaCP: `kusholconnect.com` (alias `www.kusholconnect.com`) and
   `api.kusholconnect.com`; issue Let's Encrypt certificates there.
 - Custom **proxy templates** (versioned in repo under `deploy/hestia/`; re-applied after HestiaCP
-  upgrades):
+  upgrades; repo home per F18):
   - `kusholconnect.com`: `/` → `127.0.0.1:3100`; `/api/` → `127.0.0.1:8180`; `www` → 301 to apex;
     immutable caching for `/_next/static/`; security headers + CSP; `client_max_body_size 2m`
     (uploads go to R2 directly).
@@ -211,7 +213,7 @@ services:
 | Step | Where | Detail |
 | --- | --- | --- |
 | Quality gate | GitHub Actions | api: `gofmt`, `golangci-lint`, `go vet`, `go test`, testcontainers ITs · web/app: lint, typecheck, test, build · contract drift check · gitleaks |
-| Images | GitHub Actions → GHCR | `kushol-api`, `kushol-web`; tag `main-<sha7>` (immutable); multi-arch not needed (amd64); base images pinned by digest |
+| Images | GitHub Actions → GHCR, one workflow per app repo | `kushol-api` (api repo), `kushol-web` (web repo); tag `main-<sha7>` (immutable); multi-arch not needed (amd64); base images pinned by digest |
 | Deploy | Operator runs `ops/deploy.sh <tag>` over SSH (manual, pilot) | Optional later: GitHub Actions job with an SSH key restricted to that script |
 | Mobile | EAS Build/Submit | profiles development/preview/production; `EXPO_PUBLIC_API_URL=https://api.kusholconnect.com` for preview/production |
 
@@ -371,6 +373,7 @@ for mail as well as the app.
 | 6 | Neon plan for pilot (F6) | Before pilot |
 | 7 | Error-tracking vendor (F12) and uptime checker | Before pilot |
 | 8 | Reconnect `hostinger-dns` via `/mcp` if you want DNS changes prepared through the connector | Optional |
+| 9 | Where deploy files live now that each app is its own repo (F18) | Before module 15 Part A |
 
 ## 9. Spec edits (applied 2026-09-30)
 
@@ -392,3 +395,4 @@ for mail as well as the app.
 | 2026-09-30 | §9 spec edits applied to 01, 03, 06, 12, 15, `tech-stack.md`, `prompt.txt` | Claude |
 | 2026-09-30 | `noreply@` confirmed as the sender for OTP codes and notifications (§7.3 rules, volume guard) | Claude |
 | 2026-09-30 | Email switched to HestiaCP's mail server per owner (§7.2 checklist, SMTP-based app mail, F17, mail DNS/PTR records) | Claude |
+| 2026-09-30 | Isolated application repos (owner): per-repo image builds, F18 (home for deploy files), F19 (`TRUSTED_PROXIES` behind Docker), F16 decided | Claude |

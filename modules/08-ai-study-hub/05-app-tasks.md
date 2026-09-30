@@ -247,7 +247,7 @@ archive browsing and taking already-generated tests still work.
 
 ## 3. Forms & Input
 
-| Field | Control | zod rule (from `packages/shared`) | Default | Conditional on |
+| Field | Control | zod rule (per-app `src/schemas`) | Default | Conditional on |
 | --- | --- | --- | --- | --- |
 | Search `q` | search bar (submit-on-search) | `validation.ai.query_length` (0–100) | empty (browse mode) | — |
 | Tag filters | chip multi-select | `validation.ai.tags_invalid` (≤ 10) | none | — |
@@ -341,5 +341,5 @@ silent loss:
 - [ ] `AIH-AP-015` Offline contract (§8): capture queue, test-taking block, cached reads
 - [ ] `AIH-AP-016` Push deep links: `scan_ready` → detail, `class_test` → test (06 payload contract)
 - [ ] `AIH-AP-017` Reduced-motion variants for all §5 animations
-- [ ] `AIH-AP-018` bn/en `ai.*` + `validation.ai.*` catalogs complete in `packages/shared`
+- [ ] `AIH-AP-018` bn/en `ai.*` + `validation.ai.*` catalogs complete in each app's `src/i18n`
 - [ ] `AIH-AP-019` Maestro specs for `06` §9 E2E flows (scan → tags ready; practice test → graded result)

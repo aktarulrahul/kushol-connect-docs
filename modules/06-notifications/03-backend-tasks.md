@@ -2,7 +2,7 @@
 
 **Module:** `06-notifications`
 **Status:** 📝 Spec drafted 2026-09-30 · **Owner:** Rahul (product owner)
-**Stack (api):** Go · chi REST handlers + gorilla/websocket gateway · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `contracts/openapi/openapi.yaml` · slog logging
+**Stack (api):** Go · chi REST handlers + gorilla/websocket gateway · services · tenant-scoped repositories · sqlc + pgx · PostgreSQL (testcontainers-go for integration) · contracts generated from `applications/api/openapi/openapi.yaml` · slog logging
 **Stack (web):** Next.js Route Handlers / Server Actions · zod forms · generated `openapi-fetch` client → api
 **Last updated:** 2026-09-30
 
@@ -191,7 +191,7 @@ FCM SDK directly.
 | `NTF-BE-008` | `notify.SendToUser(userId, payload)` | Prefs gate — skip muted class (`NTF-BR-004`); resolve active devices; delivery row per device `queued`; chunked Expo send (100/req); invalid token → prune + `failed`; SUSPENDED user → skip (`NTF-BR-001`) | `notifications:devices:{userId}` (prunes) | no |
 | `NTF-BE-009` | `notify.RecordOpened(userId, deliveryID)` | Export wrapper over `NTF-BE-006` for the REST endpoint | — | no |
 | `NTF-BE-010` | `SendTestPush` | Role + in-tenant target guard; `type=test` payload via `NTF-BE-011`; `audit.Record`; rate-limited (`NTF-BR-007`) | — | yes |
-| `NTF-BE-011` | `BuildPushPayload` | Pure function: class + type + `notifications.*` key + ids-args + deep link + bn/en string pairs from `packages/shared`; schema v1 (`NTF-BR-003`, INV-3) | — | no |
+| `NTF-BE-011` | `BuildPushPayload` | Pure function: class + type + `notifications.*` key + ids-args + deep link + bn/en string pairs from the api's catalog (`applications/api/internal/i18n`); schema v1 (`NTF-BR-003`, INV-3) | — | no |
 | `NTF-BE-012` | `RefreshTopicSubscriptions(userId)` | Idempotent subscribe/unsubscribe to exactly the bound topics (verification, migration, suspension paths) | `notifications:devices:{userId}` | no |
 
 ## 4. Repository Tasks
@@ -260,5 +260,5 @@ no payload ever carries message bodies (`NTF-UT-001` guards the privacy invarian
 - [ ] Entry points: 7 endpoints per §2 (handlers over the services) + OpenAPI spec entries + contract regen — ____
 - [ ] `NTF-BE-020`–`022` jobs: `fanout.send` + `tokens.prune` + `topics.backfill` registered with 01 runner — ____
 - [ ] FCM Admin Go SDK client (topic subscribe/unsubscribe, topic send, per-token send) (timeouts, retries, redacted logging, env-parsed secrets) — ____
-- [ ] `NTF-BE-023` email channel: `notify.SendEmail`, `email.send` job (OTP priority lane, never persists OTP content), bn/en templates under `notifications.email.*`, `List-Unsubscribe` → `email_enabled=false`, SMTP client (STARTTLS 587, 10 s timeout) — ____
+- [ ] `NTF-BE-023` email channel: `notify.SendEmail`, `email.send` job (OTP priority lane, never persists OTP content), bn/en templates under `notifications.email.*` in the api's catalog (`applications/api/internal/i18n`), `List-Unsubscribe` → `email_enabled=false`, SMTP client (STARTTLS 587, 10 s timeout) — ____
 - [ ] Tests: `NTF-UT-001`–`005` · `NTF-IT-001`–`008` green in CI — ____
