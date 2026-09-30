@@ -5,11 +5,9 @@
 **Stack:** Expo SDK · expo-router · React Native · NativeWind tokens · TanStack Query · zustand · react-hook-form + zod
 **Last updated:** 2026-09-30
 
-N/A file — this module ships **no app screens**. The Expo app scaffold (project shell, expo-router
-setup, EAS config, fonts) lands with 02-design-system (primitives shell, icon/splash) and
-03-identity-access (onboarding screens). This module works only in `applications/api`; the only
-thing it hands the app is the api contract (`applications/api/openapi/openapi.yaml`). The app repo
-scaffold and its generated client are 02's `DSN-AP-000`.
+This module ships **no app screens** — only the app repo foundation (`FND-AP-001`, owner
+instruction 2026-09-30). Fonts, tokens, icon/splash and primitives land with 02-design-system;
+onboarding screens with 03-identity-access; EAS profiles with 15.
 
 ---
 
@@ -50,5 +48,4 @@ specified per feature module (e.g. 05-communication-engine chat queue).
 
 ## 9. Task Checklist
 
-- None — no AP tasks. The app repo scaffold, client generation and app CI are 02's `DSN-AP-000`
-  (EAS hooks added by 02/03).
+- [x] `FND-AP-001` — App repo scaffold in `applications/app` (own git repo, branch `module/01-foundations`): Expo SDK 57 + expo-router (`src/app`), React Native 0.86, TypeScript 6 strict, ESLint 10 flat with boundary rules + Prettier, jest-expo + Testing Library, `sync:api-spec` + `generate:api` (same client shape as web), `contracts:check`, zod env module (`EXPO_PUBLIC_API_URL`), expo-doctor, GitHub Actions gate (incl. Android bundle export); CNG — no committed `ios/`/`android/`; placeholder `/` (brand name only) — was 02 `DSN-AP-000` — 2026-09-30

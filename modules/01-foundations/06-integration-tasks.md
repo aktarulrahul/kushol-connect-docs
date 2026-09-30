@@ -75,7 +75,7 @@ owning modules declare them (05/06: FCM · 05/08: R2 · 08: DeepSeek · 12: gate
 
 | UI element | Calls | Contract |
 | --- | --- | --- |
-| N/A — no screens in this module. The seam artifact is the api's spec; web/app generate their `openapi-fetch` client and mirror shapes in their own `src/schemas` (02 `DSN-FE-000`/`DSN-AP-000`); first consumers are 03 (app/web login) and 07 (web portals) | — | — |
+| N/A — no screens in this module. The seam artifact is the api's spec; web/app generate their `openapi-fetch` client and mirror shapes in their own `src/schemas` (client scaffold `FND-FE-001`/`FND-AP-001`; schemas from 03); first consumers are 03 (app/web login) and 07 (web portals) | — | — |
 
 ## 7. Contract Stability
 
@@ -105,16 +105,16 @@ owning modules declare them (05/06: FCM · 05/08: R2 · 08: DeepSeek · 12: gate
 
 | ID | Test | Layer | Proves |
 | --- | --- | --- | --- |
-| `FND-IT-007` | Generated-contract round-trip: `openapi.yaml` validates as OpenAPI 3.1 (kin-openapi loader) and oapi-codegen output compiles into the api build; the TS side is proven in the client repos (02 `DSN-FE-000`/`DSN-AP-000`) | Integration (CI) | one spec serves Go and the client generators (I-1) |
+| `FND-IT-007` | Generated-contract round-trip: `openapi.yaml` validates as OpenAPI 3.1 (kin-openapi loader) and oapi-codegen output compiles into the api build (`internal/gen/api/spec_test.go`); the TS side is proven in the web and app repos (`FND-FE-001`/`FND-AP-001`) | Integration (CI) | one spec serves Go and the client generators (I-1) |
 | `FND-IT-008` | Drift check: CI regenerates contract code → `git diff --exit-code` passes | Integration (CI) | no hand-edited generated code (BR-001) |
 | `FND-UT-006` | `jobs.Enqueue` idempotency-key dedupe + typed payload wrapper validation | Unit | exported jobs API contract |
 | `FND-E2E-*` | None — no user-facing surfaces; Playwright golden paths start with 07-command-center-web, Maestro with 03-identity-access onboarding | — | — |
 
 ## 10. Task Checklist
 
-- [ ] `FND-INT-001` — codegen pipeline wired into Make targets + CI drift job (FND-IT-007/008 green)
-- [ ] `FND-INT-002` — health endpoints exposed and documented as the 15-deployment-operations seam (uptime + deploy gate)
-- [ ] `FND-INT-003` — `jobs.Enqueue`/`Register` interface published; consumer stubs (04/08/09/12 shapes) compile against it
-- [ ] `FND-INT-004` — `audit.Record` helper exported; example call from a generated server stub verified
-- [ ] `FND-INT-005` — api `.env.example` covers Neon/Redis wiring consumed later by 15 Compose
-- [x] `FND-INT-006` — ~~generated TS client consumable~~ — moved to 02 (`DSN-FE-000` / `DSN-AP-000`) by the owner's isolated-apps decision — 2026-09-30
+- [x] `FND-INT-001` — codegen pipeline wired into Make targets + CI drift job (FND-IT-007/008 green) — 2026-09-30
+- [x] `FND-INT-002` — health endpoints exposed and documented as the 15-deployment-operations seam (uptime + deploy gate) — 2026-09-30
+- [x] `FND-INT-003` — `jobs.Enqueue`/`Register` interface published; consumer stubs (04/08/09/12 shapes) compile against it (`internal/jobs/example_test.go`) — 2026-09-30
+- [x] `FND-INT-004` — `audit.Record` helper exported; example call from a generated server stub verified (`internal/audit/example_test.go`) — 2026-09-30
+- [x] `FND-INT-005` — api `.env.example` covers Neon/Redis wiring consumed later by 15 Compose — 2026-09-30
+- [x] `FND-INT-006` — generated TS client consumable in web and app: each repo syncs the spec, generates `src/api/schema.gen.ts` and calls `/healthz`·`/readyz` through `createApiClient` in unit tests; client drift check green (back in 01 per the owner's 2026-09-30 instruction) — 2026-09-30

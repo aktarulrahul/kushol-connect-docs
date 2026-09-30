@@ -118,7 +118,7 @@ are never edited.
 ### Web Server Action / Route Handler (Next.js)
 
 N/A — this module ships no web routes. Web and app generate their own `openapi-fetch` client from
-the api's spec in their own repos (02 `DSN-FE-000`/`DSN-AP-000`); first consumers are
+the api's spec in their own repos (`FND-FE-001`/`FND-AP-001`); first consumers are
 03-identity-access (login) and 07-command-center-web.
 
 ---
@@ -184,22 +184,22 @@ guard here; guard lands with the first content module (04).
 
 ### Schema
 
-- [ ] `FND-BE-004` — pgx pool + sqlc + golang-migrate base + testcontainers fixture
-- [ ] `FND-BE-008` — `audit_log` table + append-only rule + indexes + helper
-- [ ] `FND-BE-009` — `jobs` table + indexes + worker base
-- [ ] `FND-BE-012` — jobs repository queries (enqueue/claim/ack/retry/reaper)
+- [x] `FND-BE-004` — pgx pool + sqlc + golang-migrate base + testcontainers fixture — 2026-09-30
+- [x] `FND-BE-008` — `audit_log` table + append-only rule + indexes + helper — 2026-09-30
+- [x] `FND-BE-009` — `jobs` table + indexes + worker base — 2026-09-30
+- [x] `FND-BE-012` — jobs repository queries (enqueue/claim/ack/retry/reaper) — 2026-09-30
 
 ### Repository · Service · Entry points · Seed · Tests
 
-- [ ] `FND-BE-001` — api repo + Go module scaffold
-- [ ] `FND-BE-002` — OpenAPI codegen pipeline (Go) + skeleton spec
-- [ ] `FND-BE-003` — config module (Go)
-- [ ] `FND-BE-005` — RFC-7807 error envelope + code registry + bn/en copy
-- [ ] `FND-BE-006` — middleware chain (request-id, recover, headers, slog redaction, rate-limit classes, auth scaffolding)
-- [ ] `FND-BE-007` — `/healthz` + `/readyz`
-- [ ] `FND-BE-010` — CI quality gate + drift check
-- [ ] `FND-BE-011` — audit repository queries
-- [ ] `FND-BE-013` — noop handler + queue metrics
-- [ ] `FND-BE-014` — `serve` / `worker` / `migrate` / `migrate-status` / `healthcheck` subcommands
-- [ ] Seed — None — infrastructure module
-- [ ] `FND-UT-001` … `FND-UT-005`, `FND-IT-001` … `FND-IT-006` — test plan above
+- [x] `FND-BE-001` — api repo + Go module scaffold — 2026-09-30
+- [x] `FND-BE-002` — OpenAPI codegen pipeline (Go) + skeleton spec — 2026-09-30
+- [x] `FND-BE-003` — config module (Go) — 2026-09-30
+- [x] `FND-BE-005` — RFC-7807 error envelope + code registry + bn/en copy — 2026-09-30
+- [x] `FND-BE-006` — middleware chain (request-id, recover, headers, slog redaction, rate-limit classes, auth scaffolding) — 2026-09-30
+- [x] `FND-BE-007` — `/healthz` + `/readyz` — 2026-09-30
+- [x] `FND-BE-010` — CI quality gate + drift check — 2026-09-30
+- [x] `FND-BE-011` — audit repository queries — 2026-09-30
+- [x] `FND-BE-013` — noop handler + queue metrics — 2026-09-30
+- [x] `FND-BE-014` — `serve` / `worker` / `migrate` / `migrate-status` / `healthcheck` subcommands — 2026-09-30
+- [x] Seed — None — infrastructure module — 2026-09-30
+- [x] `FND-UT-001` … `FND-UT-005`, `FND-IT-001` … `FND-IT-006` — test plan above — 2026-09-30

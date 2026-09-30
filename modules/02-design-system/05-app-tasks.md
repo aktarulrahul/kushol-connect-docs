@@ -188,7 +188,7 @@ Bangla. There is no offline queue surface in this module (queues belong to
 
 ## 9. Task Checklist
 
-- [ ] `DSN-AP-000` — App repo scaffold in `applications/app` (own git repo, no shared package): Expo + expo-router, TypeScript strict, ESLint 10 flat (boundary rule: api only via `src/api`; env only in `src/env.ts`) + Prettier, jest-expo, `sync:api-spec` (copies `../api/openapi/openapi.yaml` to `openapi/openapi.yaml`) + `generate:api` (openapi-typescript → `src/api/schema.gen.ts`, openapi-fetch client), zod env module, GitHub Actions gate (lint/typecheck/test + client drift)
+- [x] `DSN-AP-000` — ~~App repo scaffold~~ — delivered by 01 as `FND-AP-001` (owner, 2026-09-30); 02 starts from that repo — 2026-09-30
 - [ ] `DSN-AP-001` — NativeWind configured from the app's `src/theme` tokens (pinned versions)
 - [ ] `DSN-AP-002` — @expo-google-fonts Hind Siliguri + Inter bundled; root font gate; splash held until loaded
 - [ ] `DSN-AP-003` — `LocaleProvider` + typed `t()` RN binding (bn default)

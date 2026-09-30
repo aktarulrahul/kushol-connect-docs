@@ -303,3 +303,4 @@ readiness checks; unconfirmed items keep their `TODO: Confirm` marker.
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
 | 2026-09-30 | Namespace whitelist replaced by a 24-namespace registry (`02` §1.1) — later modules already used namespaces outside the original eight; CircleUp mobile primitives (`DSN-AP-018`) and professional web primitives (`DSN-FE-019`) added per owner UI direction (`docs/design-reference/README.md` §6–§7) | Claude |
 | 2026-09-30 | Isolated applications (owner): no `packages/shared` — web and app each own `src/theme`, `src/i18n`, `src/schemas`, `src/api`; 02 now scaffolds both repos (`DSN-FE-000`, `DSN-AP-000`); token reference pin `DSN-UT-005`; drift risk recorded | Claude |
+| 2026-09-30 | Web/app repo scaffolds (`DSN-FE-000`, `DSN-AP-000`) delivered by 01 as `FND-FE-001`/`FND-AP-001` (owner instruction); 02 starts from those repos: tokens, fonts, catalogs, primitives, icon/splash | Claude |

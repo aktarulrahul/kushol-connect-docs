@@ -5,11 +5,10 @@
 **Stack:** Next.js App Router · TypeScript strict · Tailwind v4 tokens · shadcn/ui · Motion · Embla · RHF + Zod
 **Last updated:** 2026-09-30
 
-N/A file — this module ships **no web screens**. `docs/design-reference/README.md` becomes binding
-from 02-design-system onward. This module works only in `applications/api`; the only thing it
-hands the web side is the api contract (`applications/api/openapi/openapi.yaml`). The web repo
-scaffold, its generated `openapi-fetch` client, tokens and bn/en catalogs belong to
-02-design-system (`DSN-FE-000`); landing and Command Center screens to 07-command-center-web.
+This module ships **no web screens** — only the web repo foundation (`FND-FE-001`, owner
+instruction 2026-09-30: "complete 01-foundations for api, web and app"). `docs/design-reference/README.md`
+becomes binding from 02-design-system onward: tokens, fonts, bn/en catalogs and primitives belong to
+02; landing and Command Center screens to 07-command-center-web.
 
 ---
 
@@ -52,4 +51,4 @@ N/A — tokens, Hind Siliguri/Inter and catalogs arrive with 02-design-system in
 
 ## 9. Task Checklist
 
-- None — no FE tasks. The web repo scaffold, client generation and web CI are 02's `DSN-FE-000`.
+- [x] `FND-FE-001` — Web repo scaffold in `applications/web` (own git repo, branch `module/01-foundations`): Next.js 16 App Router (`output: "standalone"`), TypeScript 6 strict, Tailwind v4 (plain `@import`, no tokens), ESLint 10 flat with boundary rules (`process.env` only in `src/env.ts`; `fetch`/`openapi-fetch` only in `src/api`) + Prettier, Vitest + Playwright + axe (1280/768), `sync:api-spec` + `generate:api` (openapi-typescript → `src/api/schema.gen.ts`, `createApiClient` on openapi-fetch with `Accept-Language`), `contracts:check`, zod env module, GitHub Actions gate; placeholder `/` (brand name only) — was 02 `DSN-FE-000` — 2026-09-30

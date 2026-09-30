@@ -25,7 +25,7 @@
 | Domain DNS today | **Parked**: NS `horizon.dns-parking.com` / `orbit.dns-parking.com`; `@` and `www` → `2.57.91.91` (Hostinger parking); no MX; no `api` record | `dig` |
 | Other subscriptions | Premium Web Hosting (in trial, renews 2026-11-09) — not used for Kushol | Hostinger billing API |
 | Email | **Owner decision 2026-09-30: mail for `kusholconnect.com` is managed by HestiaCP's mail server on the KVM 2** (Exim + Dovecot, webmail) | owner |
-| Code | Each application is its own git repo (`applications/api`, `web`, `app`, `ai`; no shared package — owner 2026-09-30). The api repo is being built (module 01); web/app scaffolds arrive with 02; nothing deployable yet | workspace |
+| Code | Each application is its own git repo (`applications/api`, `web`, `app`, `ai`; no shared package — owner 2026-09-30). The api, web and app repos are scaffolded by module 01 (nothing committed yet); nothing deployable yet | workspace |
 | Tooling access | Hostinger VPS/domains/billing connectors work; `hostinger-dns` and `hostinger-reach` disconnected (owner reconnects via `/mcp`); no SSH access for the agent | session |
 
 ## 2. Findings (architecture, deployment, tech-stack review)

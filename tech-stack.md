@@ -45,6 +45,14 @@ Rows marked `verify` belong to modules not yet built. Aligned with `prd.md` §6 
 | Testing | **Maestro** (E2E flows) + jest-expo (unit) | latest `verify` | Onboarding → verify → join section group is the golden path |
 | Build/CI | **EAS Build & Submit** | cloud | APK/TestFlight distribution per `brd.md` §8 Phase 1 |
 
+**Pinned at 01 (2026-09-30, `applications/app`):** Expo SDK 57 (`expo` 57.0.26, `expo-router` 57.0.24) ·
+React Native 0.86.3 · React 19.2.3 · TypeScript 6.0.3 · jest-expo 57.0.5 + jest 29.7.0 +
+@testing-library/react-native 14.0.1 · ESLint 10.11.0 + typescript-eslint 8.71.0 +
+eslint-plugin-react-hooks 7.1.1 · Prettier 3.9.9 · openapi-typescript 7.13.0 · openapi-fetch 0.17.0 ·
+zod 4.6.5 · pnpm 11.8.0 (`node-linker=hoisted`). Expo-managed packages follow the SDK
+(`expo install --check`). `eslint-config-expo` is not used: its react/import plugins don't declare
+ESLint 10 support yet. TypeScript 7.0 is out, but typescript-eslint 8.71 supports `<6.1`.
+
 ## applications/web — Landing + Command Center
 
 | Layer | Technology | Version | Notes |
@@ -62,13 +70,20 @@ Rows marked `verify` belong to modules not yet built. Aligned with `prd.md` §6 
 | Testing | Vitest + Testing Library · **Playwright** (+ axe) | latest `verify` | Web golden paths: landing funnel, admin login, CSV roster upload, campaign creation |
 | SEO | Metadata API, OG images, JSON-LD (Organization), sitemap | bundled | Landing page is the B2B acquisition funnel (`prd.md` §4A) |
 
+**Pinned at 01 (2026-09-30, `applications/web`):** Next.js 16.3.7 · React 19.3.0 · TypeScript 6.0.3 ·
+Tailwind CSS 4.3.3 · ESLint 10.11.0 + typescript-eslint 8.71.0 + @next/eslint-plugin-next 16.3.7 +
+eslint-plugin-react-hooks 7.1.1 · Prettier 3.9.9 · Vitest 5.0.2 · Playwright 1.63.0 +
+@axe-core/playwright 4.13.0 · openapi-typescript 7.13.0 · openapi-fetch 0.17.0 · zod 4.6.5 ·
+pnpm 11.8.0. `eslint-config-next` is not used (its bundled plugins don't declare ESLint 10 support
+yet). Vitest 5.0.3 was published on 2026-09-30, inside pnpm's minimum release age, so 5.0.2 is pinned.
+
 ## applications/api — Backend (Go)
 
 | Layer | Technology | Version | Notes |
 | --- | --- | --- | --- |
 | Language | **Go** | 1.26.1 (`go.mod`; 1.27.1 available — upgrade by ADR) | Decision resolved: Go for the whole API, including the messaging hot path (`prd.md` §6); Docker `golang` multi-stage → `distroless/static` (or alpine) runtime |
 | HTTP framework | **chi** (net/http compatible) | v5.3.2 (pinned 01, 2026-09-30) | Small, explicit, idiomatic; REST endpoints |
-| Contracts | **OpenAPI 3.1** spec in `applications/api/openapi/` → `oapi-codegen` (Go types/handlers) + `openapi-typescript`/`openapi-fetch` (TS clients, generated inside web and app) | oapi-codegen v2.8.0 (OpenAPI 3.1 supported) · kin-openapi v0.149.0 · nethttp-middleware v1.2.0 (pinned 01) · TS side pinned by 02/03 | Spec is written first; request validation via the spec (`httpx.Validator`) |
+| Contracts | **OpenAPI 3.1** spec in `applications/api/openapi/` → `oapi-codegen` (Go types/handlers) + `openapi-typescript`/`openapi-fetch` (TS clients, generated inside web and app) | oapi-codegen v2.8.0 (OpenAPI 3.1 supported) · kin-openapi v0.149.0 · nethttp-middleware v1.2.0 (pinned 01) · TS side: openapi-typescript 7.13.0 + openapi-fetch 0.17.0 (pinned 01) | Spec is written first; request validation via the spec (`httpx.Validator`) |
 | Realtime / messaging | **gorilla/websocket** (+ Redis pub/sub fan-out across instances) | latest `verify` | **Messaging lives in Go**: rooms mirror City → School → Section and custom groups; presence in Redis |
 | Database | **PostgreSQL** (multi-tenant, shared-schema + tenant scoping) — hosted on **Neon** free tier (Singapore `ap-southeast-1`) for quick start | 16+ `verify` | Decision recorded 2026-09-29: Neon over Supabase (pure Postgres, DB branches fit the migration workflow; Supabase free pauses after 1 week idle). Free tier scales to zero (cold start ~hundreds of ms) — fine for dev/pilot, upgrade (Launch ~$19/mo) or move back to a Compose container when real school traffic starts. Tenant columns enforced in the repository layer; `pg_trgm` for search |
 | Data access | **sqlc** (type-safe generated queries) + **pgx/v5** driver | sqlc v1.31.1 (`tools.mod`) · pgx v5.11.0 · golang-migrate v4.20.1 (pinned 01) | Migrations as plain SQL files — **golang-migrate** (pinned 2026-09-30), expand/contract; applied manually by the owner (Gate 2), never at deploy/boot |

@@ -45,7 +45,7 @@ The five roles plus Vendors are defined by `03-identity-access §2`; verificatio
 
 | Module | What this module needs from it |
 | --- | --- |
-| `01-foundations` | api contract + problem code registry only (`applications/api/openapi/openapi.yaml`). 01 ships **no** web/app scaffolding — 02 scaffolds web and app tooling itself (TS strict, ESLint 10, Vitest/jest-expo, per-repo CI) |
+| `01-foundations` | api contract + problem code registry (`applications/api/openapi/openapi.yaml`) and the web/app repo scaffolds (`FND-FE-001`/`FND-AP-001`: TS strict, ESLint 10, Vitest/jest-expo, generated client, per-repo CI — owner 2026-09-30) |
 
 ---
 

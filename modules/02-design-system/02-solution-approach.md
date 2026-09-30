@@ -54,7 +54,7 @@ No database sits under any of this — this module's `03-backend-tasks §1` reco
 
 | Module | What | Why not duplicated |
 | --- | --- | --- |
-| `01-foundations` | API contract (`applications/api/openapi/openapi.yaml`) and the problem-code registry | Web/app scaffolding is this module's own work (isolated repos, no shared package) |
+| `01-foundations` | API contract (`applications/api/openapi/openapi.yaml`) and the problem-code registry | Web/app repo scaffolds (tooling, generated client, env, CI) come from 01 (`FND-FE-001`/`FND-AP-001`, owner 2026-09-30); 02 adds tokens, fonts, catalogs and primitives on top |
 
 **Cache keys / tags revalidated / consumed:** see `06-integration-tasks.md` §4 — none; everything here is static, content-hashed at build.
 

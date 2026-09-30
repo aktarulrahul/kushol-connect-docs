@@ -173,7 +173,7 @@ each app's `src/theme` tokens (`DSN-BR-002`/`DSN-BR-005`), the logo is reachable
 
 ## 9. Task Checklist
 
-- [ ] `DSN-FE-000` — Web repo scaffold in `applications/web` (own git repo, no shared package): Next.js App Router, TypeScript strict, Tailwind v4, ESLint 10 flat (boundary rule: api only via `src/api`; env only in `src/env.ts`) + Prettier, Vitest + Playwright + axe, `sync:api-spec` (copies `../api/openapi/openapi.yaml` to `openapi/openapi.yaml`) + `generate:api` (openapi-typescript → `src/api/schema.gen.ts`, openapi-fetch client), zod env module, GitHub Actions gate (lint/typecheck/test/build + client drift)
+- [x] `DSN-FE-000` — ~~Web repo scaffold~~ — delivered by 01 as `FND-FE-001` (owner, 2026-09-30); 02 starts from that repo — 2026-09-30
 - [ ] `DSN-FE-001` — Semantic token module in `src/theme` of web **and** app (color scale, spacing, radius, type, motion) + TS types, values pinned to `docs/design-reference/README.md` (`DSN-UT-005`)
 - [ ] `DSN-FE-002` — Tailwind v4 `@theme` bridge in `applications/web` consuming shared tokens (no other hex in `web`)
 - [ ] `DSN-FE-003` — Fonts via `next/font/google`: Hind Siliguri (`bengali`+`latin`) + Inter (`latin`), CSS variables, fallback stacks

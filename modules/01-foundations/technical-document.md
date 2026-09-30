@@ -167,13 +167,13 @@ Exports return DTOs (never sqlc rows); domain errors, never raw HTTP; additive-f
 
 | Route | Screen | Rendering | Access |
 | --- | --- | --- | --- |
-| N/A — no routes and no web code in this module (web repo scaffold + client generation = 02 `DSN-FE-000`). Routes `/`, `/download`, `/login`, `/admin/*`, `/school/*`, `/vendor/*` belong to 03/07+ | — | — | — |
+| N/A — no product routes; the web repo scaffold + generated client is `FND-FE-001` (placeholder `/`, brand name only). Routes `/`, `/download`, `/login`, `/admin/*`, `/school/*`, `/vendor/*` belong to 03/07+ | — | — | — |
 
 ### 6.2 Mobile (detail in `05-app-tasks.md`)
 
 | Route | Screen | Deep link | Offline behaviour |
 | --- | --- | --- | --- |
-| N/A — no app routes and no app code in this module (app repo scaffold + client generation = 02 `DSN-AP-000`; onboarding screens with 03) | — | — | — |
+| N/A — no product routes; the app repo scaffold + generated client is `FND-AP-001` (placeholder `/`); onboarding screens with 03 | — | — | — |
 
 ---
 
@@ -207,7 +207,14 @@ declare them (`06-integration-tasks.md` §5).
 
 Feature secrets (`JWT_SECRET`, `SMS_GATEWAY_*`, gateway keys, …) are parsed by this module's
 config system from module 03 onward — none defined here. The api repo's `.env.example` covers
-the Neon/Redis wiring consumed later by 15's Compose (`FND-INT-005`); web/app keep their own.
+the Neon/Redis wiring consumed later by 15's Compose (`FND-INT-005`); web/app keep their own,
+each parsed only by its zod `src/env.ts`:
+
+| Variable | Repo | Required | Example | Notes |
+| --- | --- | --- | --- | --- |
+| `NEXT_PUBLIC_API_URL` | web | yes | `http://localhost:8080` | public (inlined at build) — never a secret |
+| `NEXT_PUBLIC_SITE_URL` | web | yes | `http://localhost:3000` | `metadataBase`; public |
+| `EXPO_PUBLIC_API_URL` | app | yes | `http://<lan-ip>:8080` | inlined in the bundle; per-channel values in EAS profiles (15 `OPS-AP-004`) |
 
 ### 8.2 Runtime config — the two lists
 
@@ -341,3 +348,4 @@ keep their `TODO: Confirm` marker.
 | 2026-09-30 | Deployment alignment (`docs/infra/architecture-and-deployment.md`): one binary with `serve`/`worker`/`migrate`/`migrate-status`/`healthcheck` (`FND-BE-014`); `serve` never migrates; worker idle back-off to 30 s; RealIP trusts only the local proxy; golang-migrate pinned | Claude |
 | 2026-09-30 | Consistency pass: module-specific error codes registered (§10); migration version rule (monotonic in build order, see `docs/modules/README.md`) | Claude |
 | 2026-09-30 | Isolated applications (owner): module 01 works only in the api repo — spec moved to `applications/api/openapi/openapi.yaml`, no `packages/shared`/Turborepo, TS client generation and web/app tooling moved to 02 (`DSN-FE-000`/`DSN-AP-000`); problem copy owned by api `internal/i18n` (`errors.*`); env adds `SHUTDOWN_TIMEOUT`, `TRUSTED_PROXIES`, `WORKER_CONCURRENCY`; verified pins recorded (§2) | Claude |
+| 2026-09-30 | Owner: "complete 01-foundations for api, web and app" — web and app repo scaffolds return to 01 (`FND-FE-001`, `FND-AP-001`; were 02 `DSN-FE-000`/`DSN-AP-000`), `FND-INT-006` back in 01; web/app env vars added to §8.1; jobs `run_at` now uses the database clock (bug found by `FND-IT-003`) | Claude |
