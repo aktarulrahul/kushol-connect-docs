@@ -9,7 +9,7 @@
 ### 1.1 Purpose
 
 Kushol Connect's push backbone: FCM topic fan-out mirroring City → School → Section for mass
-messages (notices, city events, campaigns), per-device directed push via the Expo push API for
+messages (notices, city events, campaigns), per-device directed push via FCM token sends for
 personal messages (DMs, tuition matches, payment/test results), deep links that land every tap on
 the right screen, and a delivery log. The delivery half of the Phase-1 exit criterion ("a verified
 student … receives a notice by push"), serving `brd.md` §6 Scalability — FCM topic fan-out at scale
@@ -19,7 +19,7 @@ is this module's reason to exist.
 
 **In:** `device_tokens` registration (idempotent upsert), refresh (`last_seen_at`), logout cleanup,
 pruning · mass fan-out via FCM topics (`city-{id}` / `school-{id}` / `section-{id}`, bindings owned
-by 04) · directed per-device push via the Expo push API with tracking (queued → sent → delivered →
+by 04) · directed per-device push via FCM token sends with tracking (queued → sent → delivered →
 opened) · deep-link payload contract (message KEY + ids only, never bodies; resolved on-device, bn
 default / en) · `notification_preferences` — one muted flag per class, 1:1 with the three Android
 channels · delivery log + open reporting (own list + tenant-scoped admin aggregates) · test-push
@@ -46,7 +46,7 @@ targeting (13 consumes 04 segments).
 | --- | --- | --- | --- |
 | API runtime / contracts | Go 1.24+ · chi REST · OpenAPI 3.1 → oapi-codegen | Resolved stack (`docs/tech-stack.md`); payload schema v1 frozen for Phase 1 | 7 endpoints per `03` §2; unknown types → home-tab fallback |
 | Push (mass) | Firebase Admin Go SDK → FCM topic subscriptions | One topic message fans out to any audience size (`brd.md` §6) | `FCM_SERVER_KEY` held by 06 only; topics from 04 bindings |
-| Push (directed) + app | expo-server-sdk push client (HTTPS + receipts) · expo-notifications in-app | One API for iOS + Android, receipt tracking built-in; already the app stack | `EXPO_ACCESS_TOKEN`; chunk 100/request; 3 Android channels |
+| Push (directed) + app | Firebase Admin Go SDK per-token send · `@react-native-firebase/messaging` (native FCM token) + expo-notifications (display/channels/taps) | One provider + one token for topics and directed on iOS and Android; `delivered` = client ack (revised 2026-09-30, `02` §10) | `FCM_SERVER_KEY` only; APNs auth key uploaded to Firebase; EAS builds (no Expo Go); 3 Android channels |
 | Data access | sqlc + pgx/v5 · PostgreSQL 16 on Neon | testcontainers-go for ITs; tenant scope via user | `pruned_at` soft state; rows never deleted (audit) |
 | Cache / queueing | Redis (go-redis) · In-DB `jobs` table + 01 worker | Fan-out hot path: `notify:devices:{userId}` TTL 5 min, `notify:bindings:{topicName}` TTL 10 min · jobs `fanout.send`, `tokens.prune` (nightly), `topics.backfill` | Deliveries/preferences never cached; jobs status-scoped, idempotent |
 | Web | None — no web surfaces in this module | 07 dashboards consume the admin endpoints; `NTF-FE-*` items do not exist | `04-frontend-tasks.md` is N/A |
@@ -66,7 +66,7 @@ targeting (13 consumes 04 segments).
         MASS: notify.BroadcastTopic ── topic validated vs 04 bindings (INV-4)
               ──► FCM Admin SDK topic message (fire-and-forget)
         DIRECTED: notify.SendToUser ── prefs gate → active devices (pruned_at IS NULL)
-              ──► Expo push API (chunks of 100) ── receipts ▶ delivered
+              ──► FCM per-token send ── client ack ▶ delivered
                           │
   01 jobs: fanout.send (batching) · tokens.prune (nightly) · topics.backfill
   notification_deliveries (Postgres; tenant-scoped reads)   Redis: notify:devices / notify:bindings
@@ -78,7 +78,7 @@ app renders on the class channel → tap → deep link → `POST …/opened` (di
 ### 3.2 Boundary
 
 **Owns (tables / services):** `device_tokens`, `notification_deliveries`, `notification_preferences`
-— and both provider clients (FCM Admin SDK, Expo push API), which **no other module may touch**
+— and the provider client (FCM Admin SDK), which **no other module may touch**
 (04 holds no FCM credentials; 05 only calls `notify.BroadcastTopic`). **Reads (via exported service
 functions only):** 03 auth chain + `users.locale`/status · 04 `fcm_topic_bindings` +
 `hierarchy.ResolveUserNodes` · 05 trigger context (notice ids for deep links) · 01 `jobs.Enqueue`,
@@ -91,7 +91,7 @@ functions only):** 03 auth chain + `users.locale`/status · 04 `fcm_topic_bindin
    → binding check → FCM topic message → one delivery row sent|failed (no per-recipient tracking)
 2. Directed: notify.SendToUser(userId, payload) → prefs gate (muted class skipped server-side)
    → resolve active devices → delivery row per device queued → chunked Expo send → sent
-   → receipt poller → delivered → user tap → RecordOpened (write-once opened_at)
+   → client ack → delivered → user tap → RecordOpened (write-once opened_at)
 3. Device lifecycle: login → primer → POST /notifications/devices (upsert on unique token)
    → VERIFIED: subscribe exactly city-/school-/section-{id} from bindings; PENDING: stored,
    subscribed later by topics.backfill · logout: DELETE → pruned + best-effort unsubscribe
@@ -103,7 +103,7 @@ functions only):** 03 auth chain + `users.locale`/status · 04 `fcm_topic_bindin
 
 | Entity | States | Transitions (from → to, guard) |
 | --- | --- | --- |
-| `notification_deliveries.status` | queued → sent → delivered → opened | provider 2xx → sent (`sent_at` set); Expo receipt ok → delivered (directed rows only); user tap → opened (write-once `opened_at`, INV-6); any → failed (terminal; retry budget exhausted; token pruned if invalid). Topic sends only ever `sent`/`failed` (`NTF-BR-005`) |
+| `notification_deliveries.status` | queued → sent → delivered → opened | provider 2xx → sent (`sent_at` set); client ack → delivered (directed rows only); user tap → opened (write-once `opened_at`, INV-6); any → failed (terminal; retry budget exhausted; token pruned if invalid). Topic sends only ever `sent`/`failed` (`NTF-BR-005`) |
 | `device_tokens` (prune) | active → pruned | provider rejection or `last_seen_at` > 90 d (nightly job); `pruned_at` set; never re-targeted (`NTF-BR-006`) |
 
 ---
@@ -141,7 +141,7 @@ No WebSocket in this module (the WS `notice.new` path belongs to 05). Jobs run o
 
 | Channel / Job | Trigger | Payload / Work | Consumers | Failure handling |
 | --- | --- | --- | --- | --- |
-| `fanout.send` (`NTF-BE-020`) | `SendToUser` (directed batches) + `BroadcastTopic` (topic dispatches) via 01 `jobs.Enqueue` | Claim only `queued` rows; FCM 500/batch, Expo 100/request pacing; per-chunk results update rows individually; receipt polling → delivered | delivery log; provider clients | ×3 backoff → `failed` + dead-letter report; invalid tokens pruned mid-batch; queue drains on provider recovery |
+| `fanout.send` (`NTF-BE-020`) | `SendToUser` (directed batches) + `BroadcastTopic` (topic dispatches) via 01 `jobs.Enqueue` | Claim only `queued` rows; FCM 500/batch pacing; per-chunk results update rows individually; receipt polling → delivered | delivery log; provider clients | ×3 backoff → `failed` + dead-letter report; invalid tokens pruned mid-batch; queue drains on provider recovery |
 | `tokens.prune` (`NTF-BE-021`) | Nightly schedule | `pruned_at IS NULL ∧ last_seen_at < cutoff (90 d)` → pruned | provider quota hygiene; honest stats | Idempotent; missed runs self-heal; alert after 3 consecutive failures |
 | `topics.backfill` (`NTF-BE-022`) | Device registered while PENDING, or subscribe failure during verification | Idempotent subscribe to the exact bound topic set | `NTF-US-002` post-verification path | ×5 backoff → dead-letter + admin report; user experience unaffected (in-app always works) |
 
@@ -189,7 +189,6 @@ channel (`notices`/`chat` HIGH, `campaigns` DEFAULT). Every directed tap fires `
 | System | Purpose | Protocol | Secret | Timeout / retry | Degradation |
 | --- | --- | --- | --- | --- | --- |
 | FCM (Firebase Admin Go SDK, HTTP v1) | Mass topic fan-out (`city-/school-/section-{id}`); per-token subscribe/unsubscribe | HTTPS | Service account `FCM_SERVER_KEY` (envconfig; held by 06 only) | 10 s; ×3 exponential backoff via `fanout.send` → dead-letter | Topic dispatches queue in `jobs`; notices remain in-app + WS (05); never fatal |
-| Expo push API | Directed per-device push + receipts (DMs, matches, payment/test results) | HTTPS push API, chunk 100/request (expo-server-sdk client) | `EXPO_ACCESS_TOKEN` (token auth) | 10 s; ×3 exponential backoff; invalid-token responses prune immediately | Directed sends stay `queued`, drain on recovery; senders unaffected |
 | (R2, DeepSeek, payment gateways, SMS) | None — this module touches none of them (`06-integration-tasks.md` §5) | n/a | n/a | n/a | — |
 
 ---
@@ -200,8 +199,10 @@ channel (`notices`/`chat` HIGH, `campaigns` DEFAULT). Every directed tap fires `
 
 | Variable | Required | Example / default | Used by |
 | --- | --- | --- | --- |
+| `SMTP_HOST` / `SMTP_PORT` | Yes | `mail.kusholconnect.com` / `587` | email channel (HestiaCP Exim) |
+| `SMTP_USERNAME` / `SMTP_PASSWORD` | Yes | `noreply@kusholconnect.com` / mailbox password (host `.env` only) | SMTP auth |
+| `EMAIL_FROM` / `EMAIL_REPLY_TO` | Yes | `Kushol Connect <noreply@kusholconnect.com>` / `hello@kusholconnect.com` | message headers |
 | `FCM_SERVER_KEY` | Yes | Firebase service account (envconfig-parsed; held by 06 only — never 04, never 05) | FCM topic send + subscribe/unsubscribe |
-| `EXPO_ACCESS_TOKEN` | Yes | Expo push API access token (config-parsed) | Directed sends + receipt polling |
 
 ### 8.2 Runtime config — the two lists
 
@@ -278,7 +279,7 @@ attempts return `TENANT_MISMATCH`/404; **no payload ever carries message bodies*
 | Expected volumes | Pilot 3 schools × ~2,000 users ≈ 6k devices; a school notice is **one** FCM topic message regardless of audience size (FCM performs the per-device fan-out); directed volume modest (tens/min) |
 | Hot paths + indexes | `device_tokens (user_id, pruned_at)` → directed fan-out · unique `(token)` → registration upsert · `notification_deliveries (user_id, created_at DESC)` → history · `(status, created_at)` → worker scans · admin aggregates join 04 enrollments (indexed there) |
 | Latency targets | Topic dispatch accepted p95 ≤ 500 ms server-side; end-to-end push render p95 ≤ 5 s at pilot scale; directed send→`sent` p95 ≤ 2 s |
-| Batching / payload impact | FCM batch limit 500 tokens/message, Expo 100 receipts/request — `fanout.send` chunks and paces inside provider quotas; retries carry only the un-sent remainder; no payload prefetch on receive (ids only — that is the design); history paginated 20/page; no new app dependency |
+| Batching / payload impact | FCM batch limit 500 tokens/message (topic subscribe + multicast) — `fanout.send` chunks and paces inside provider quotas; retries carry only the un-sent remainder; no payload prefetch on receive (ids only — that is the design); history paginated 20/page; no new app dependency |
 | Caching | Redis `notify:devices:{userId}` TTL 5 min (invalidate on register/prune) · `notify:bindings:{topicName}` TTL 10 min (authoritative source is 04's table) · deliveries/preferences lists never cached server-side |
 
 ---
@@ -315,3 +316,5 @@ Consolidated from `01` §9 + `02` §11 — the readiness-check table; unconfirme
 | Date | Change | Author |
 | --- | --- | --- |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
+| 2026-09-30 | Email channel added: `notify.SendEmail` (OTP / account / notification kinds) over SMTP to HestiaCP as `noreply@kusholconnect.com`; OTP emails never persisted; `notification_deliveries.channel` + provider `fcm_topic`/`fcm_token`/`smtp` (stale `expo` value removed); `notification_preferences.email_enabled` + `List-Unsubscribe`; class `account` | Claude |
+| 2026-09-30 | Push provider revised: FCM for topics **and** directed sends with one native FCM token per device (`@react-native-firebase/messaging`); Expo push API + `EXPO_ACCESS_TOKEN` dropped — Expo/APNs tokens cannot subscribe to FCM topics on iOS (`02` §10) | Claude |

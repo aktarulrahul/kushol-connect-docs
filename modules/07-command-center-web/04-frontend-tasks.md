@@ -9,6 +9,10 @@
 > `docs/design-reference/README.md` (palette, Hind Siliguri + Inter, logo rules) is binding:
 > tokens only from `packages/shared`, every user-facing string in Bengali + English, bn default.
 
+> **Visual direction (owner, 2026-09-30):** professional. Landing = modern B2B SaaS marketing site;
+> `/admin`, `/school`, `/vendor` = dense admin console on 02's `AdminShell`/`PageHeader`/`StatCard`/`DataTable`.
+> Binding rules: `docs/design-reference/README.md` §7. No fabricated logos, testimonials or numbers.
+
 ---
 
 ## 1. Screen Inventory
@@ -32,11 +36,12 @@
 | 15 | `/school/notices/new` | Notice composer (bn+en, scope, pin, attachment, preview) | Dynamic | School Admin |
 | 16 | `/school/clubs` | Club (custom group) approval queue | Dynamic | School Admin |
 | 17 | `/school/sections` | Sections manager (create/archive) | Dynamic | School Admin |
+| 17a | `/school/sections/[sectionId]` | Section detail + roster + class-teacher assignment (04 `04-frontend-tasks` screen 5) | Dynamic | School Admin |
 | 18 | `/school/migrations` | Migration runs list | Dynamic | School Admin |
 | 19 | `/school/migrations/new` | Migration wizard (select → dry-run → review → commit) | Dynamic | School Admin |
 | 20 | `/school/migrations/[id]` | Migration status page (poll while COMMITTING) | Dynamic | School Admin |
 | 21 | `/school/roster` | Stub → module 14 | Dynamic | School Admin |
-| 22 | `/school/ledger` · `/school/matrix` · `/school/tutors` · `/school/webhooks` | Stubs → modules 12/09/10/14 | Dynamic | School Admin |
+| 22 | `/school/ledger` · `/school/ai-matrix` · `/school/tutors` · `/school/integrations` | Stubs → modules 12/09/10/14 (route names owned by those modules) | Dynamic | School Admin (`/school/ai-matrix` also Teacher — own sections only, 09) |
 | 23 | `/vendor` | Vendor shell (pending/approved state) | Dynamic | Vendor |
 | 24 | `*` | Branded 404 + role-aware FORBIDDEN pages | Dynamic | All |
 

@@ -87,7 +87,7 @@
 
 | Component | Client/Server-driven | Notes |
 | --- | --- | --- |
-| `AmountBreakdown` | Client | fee + convenience fee (BDT 15, `PAY-BR-008`) = total; bn/en labels |
+| `AmountBreakdown` | Client | fee [+ convenience fee only when config > 0, default 0, `PAY-BR-008`] = total; bn/en labels |
 | `GatewayChooser` | Client | radios; down gateway hidden (health flag from initiate errors); logos-as-text placeholders until brand assets exist |
 | `PayNow` | Client | calls `POST /payments/initiate` → opens `redirectUrl` via `expo-web-browser` (in-app browser) |
 
@@ -184,7 +184,7 @@ Payments require connectivity by design — money actions are never queued silen
 ## 9. Task Checklist
 
 - [ ] `PAY-AP-001` Marketplace "ফি পরিশোধ / Pay fees" entry + `/payments` invoice list (due/paid tabs, ৳ bn digits)
-- [ ] `PAY-AP-002` `/payments/[invoiceId]` pay screen — amount breakdown (fee + BDT 15 convenience fee) + gateway chooser (logos-as-text)
+- [ ] `PAY-AP-002` `/payments/[invoiceId]` pay screen — amount breakdown (fee [+ convenience fee when enabled; default none]) + gateway chooser (logos-as-text)
 - [ ] `PAY-AP-003` `expo-web-browser` redirect flow + return handling into `/payments/status/[txnId]`
 - [ ] `PAY-AP-004` Status screen — poll ×20 → success/failure/pending states (bn+en copy above)
 - [ ] `PAY-AP-005` `/receipts/[txnId]` — summary card + PDF view/share; "generating" state

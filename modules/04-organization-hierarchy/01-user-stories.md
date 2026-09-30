@@ -105,7 +105,7 @@ year-end migration that promotes or graduates students.
 **Acceptance criteria**
 
 - **Given** module 03 verifies a student whose registration selected section S, **when** `hierarchy.OnUserVerified(userId)` runs, **then** an ACTIVE STUDENT enrollment for the current session is created for S in one transaction.
-- **Given** the enrollment is committed, **when** the same call proceeds, **then** module 05 `chat.JoinSectionGroups(userId)` runs and `fcm_topic_bindings` exist for `section-{id}`, `school-{id}`, `city-{id}` (module 06 subscribes devices).
+- **Given** the enrollment is committed, **when** the same call proceeds, **then** module 05 `chat.JoinSectionGroups(userID, enrollment)` runs and `fcm_topic_bindings` exist for `section-{id}`, `school-{id}`, `city-{id}` (module 06 subscribes devices).
 - **Given** the verify event is delivered twice, **when** the call runs again, **then** the existing enrollment is returned — no duplicate groups, joins or bindings (`ORG-BR-006`).
 - **Given** module 05 is down, **when** the call runs, **then** the user stays VERIFIED with the enrollment persisted and the join queued to `jobs` and back-filled.
 

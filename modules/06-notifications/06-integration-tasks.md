@@ -18,7 +18,6 @@
 | I-4 | `01-foundations` | we call them | `jobs.Enqueue`/worker registration (`fanout.send`, `tokens.prune`, `topics.backfill`), `audit.Record`, RFC-7807 envelope | degraded — deliveries stay `queued`; alert |
 | I-5 | `03-identity-access` | we call them | auth middleware chain (authenticate → role claims → tenant-scope); `users.locale`, verification/status | fatal to entry points by design (`UNAUTHENTICATED`) |
 | I-6 | FCM (external) | outbound | Firebase Admin Go SDK — topic send + per-token subscribe/unsubscribe | degraded, never fatal — jobs queue and retry |
-| I-7 | Expo push API (external) | outbound | HTTPS push API (expo-server-sdk push client), access-token auth, chunked + receipts | degraded, never fatal — directed sends queue |
 | I-8 | app (expo-notifications) | calls us | REST: `POST/DELETE /notifications/devices`, `GET/PATCH /notifications/preferences`, `GET /notifications/deliveries`, `POST /notifications/deliveries/{id}/opened` | degraded — app queues registration/prefs (05 §8); in-app unaffected |
 
 ## 2. Exported Contract
@@ -27,6 +26,14 @@
 notify.BroadcastTopic(ctx, topic string, payload PushPayload) (DeliveryDTO, error)
 notify.SendToUser(ctx, userID uuid, payload PushPayload) ([]DeliveryDTO, error)
 notify.RecordOpened(ctx, userID uuid, deliveryID uuid) error
+notify.SendEmail(ctx, msg EmailMessage) (EmailResult, error)
+```
+
+```text
+EmailMessage{ kind: otp|account|notification, to: address (otp/account) | userID (notification),
+              templateKey: "notifications.email.*", params: {string args only}, locale: bn|en }
+// From: "Kushol Connect <noreply@kusholconnect.com>", Reply-To: hello@kusholconnect.com
+// Sent over SMTP 587 STARTTLS to HestiaCP Exim (mail.kusholconnect.com), authenticated as noreply@
 ```
 
 ```text
@@ -39,14 +46,15 @@ PushPayload{ v:1, class: notices|chat|campaigns,
 
 | Export | Callers | Returns | Throws | Notes |
 | --- | --- | --- | --- | --- |
-| `notify.BroadcastTopic(topic, payload)` | 05 (notice publish) · 13 (campaign broadcast) · 07 (admin composer, server-side) | `DeliveryDTO` — one row, `sent`/`failed` (fire-and-forget, `NTF-BR-005`) | `NOT_FOUND` (topic absent from 04 bindings, `NTF-BR-009`), `VALIDATION_FAILED` (payload) | Package is `notify`; 05's docs reference this seam as `notifications.BroadcastTopic(topic, payload)` — same contract, naming settled here |
+| `notify.BroadcastTopic(topic, payload)` | 05 (notice publish) · 13 (campaign broadcast) · 07 (admin composer, server-side) | `DeliveryDTO` — one row, `sent`/`failed` (fire-and-forget, `NTF-BR-005`) | `NOT_FOUND` (topic absent from 04 bindings, `NTF-BR-009`), `VALIDATION_FAILED` (payload) | Package is `notify`; 05's docs reference this seam as `notify.BroadcastTopic(topic, payload)` — same contract, naming settled here |
 | `notify.SendToUser(userID, payload)` | 10 (match) · 12 (payment result) · 13 (targeted push) · 03 (SLA reminders) | `[]DeliveryDTO` per active device | `NOT_FOUND` (no user), `VALIDATION_FAILED` | Prefs gate server-side (`NTF-BR-004`); SUSPENDED user skipped; zero devices → empty slice, not an error |
+| `notify.SendEmail(msg)` | 03 (OTP codes, password reset/first-password) · 07 (vendor approval via 03) · 06 itself (email copy of notifications when `email_enabled`) · 12 (receipts, later) | `EmailResult{queued, deliveryId?}` | `VALIDATION_FAILED` (template/params), `RATE_LIMITED` (per-recipient cap) | `otp`: sent immediately (priority lane of the `email.send` job, 10 s SMTP timeout, 1 retry) and **never persisted** — no delivery row, code only in the rendered message; `account`/`notification`: delivery row (`channel=email`), retries ×3 via `jobs`; bn default + en in one message |
 | `notify.RecordOpened(userID, deliveryID)` | REST `POST /notifications/deliveries/{id}/opened` (app) | `error` only | `NOT_FOUND`/`TENANT_MISMATCH` (not caller's row), `CONFLICT` (topic rows, terminal `failed`) | Idempotent — write-once `opened_at` (INV-6) |
 
 Rules: exports return DTOs (never sqlc row structs); admin-only exports require role claims in the
 context; services return domain errors (mapped to the problem envelope at the handler), never raw
 HTTP; signature changes are additive first. **No module other than 06 imports the FCM Admin SDK or
-the Expo push client** (`tech-stack.md` — 04 holds no FCM credentials; 05 only calls the export).
+the FCM client** (`tech-stack.md` — 04 holds no FCM credentials; 05 only calls the export).
 
 ## 3. Consumed Contracts
 
@@ -77,8 +85,8 @@ the Expo push client** (`tech-stack.md` — 04 holds no FCM credentials; 05 only
 
 | System | Protocol | Auth / secret | Timeout | Retry | Degradation |
 | --- | --- | --- | --- | --- | --- |
+| HestiaCP mail (Exim) on the KVM 2 | SMTP submission 587, STARTTLS, `mail.kusholconnect.com` | `SMTP_USERNAME=noreply@kusholconnect.com` / `SMTP_PASSWORD` (config module) | 10 s | otp ×1, others ×3 backoff | OTP: UI offers SMS/resend; notifications stay in-app/push. Deliverability watch (bounces, spam placement) — switch to a transactional provider's API if OTP mail is late or spam-foldered (`docs/infra/architecture-and-deployment.md` §7.3) |
 | FCM (Firebase Admin Go SDK, HTTP v1) | HTTPS — topic send; per-token subscribe/unsubscribe | Service account `FCM_SERVER_KEY` (envconfig-parsed; held by 06 only) | 10 s | ×3 exponential backoff via `fanout.send` → dead-letter | Topic dispatches queue in `jobs`; notices remain in-app + WS (05); never fatal |
-| Expo push API | HTTPS push API + push receipts (expo-server-sdk push client), chunk 100/request | `EXPO_ACCESS_TOKEN` (token auth; config-parsed) | 10 s | ×3 exponential backoff; invalid-token responses prune immediately | Directed sends stay `queued` and drain on recovery; senders unaffected |
 | (R2, DeepSeek, payment gateways, SMS) | n/a | n/a | n/a | n/a | This module touches none of them |
 
 ## 6. UI ↔ Server Seam
@@ -107,7 +115,7 @@ verbatim. Exported Go signatures above are frozen for Phase 1 consumers (05/10/1
 | Dependency down | What still works | User sees | Recovery |
 | --- | --- | --- | --- |
 | FCM down / degraded | Everything in-app: notices tab + WS (05), chat, preferences, device registration | No push banners; topic deliveries queue | `fanout.send` retries; drain on restore; push is an enhancement layer, never the source of truth (`NTF-IT-001` proven with fake) |
-| Expo push API down | Topic pushes (FCM path), all REST surfaces | Directed pushes (DMs, matches, receipts) delayed | Queue drains ×3 backoff; receipts reconcile after |
+| FCM per-token path down | Topic pushes (FCM path), all REST surfaces | Directed pushes (DMs, matches, receipts) delayed | Queue drains ×3 backoff; receipts reconcile after |
 | 01 jobs worker down | All REST reads/writes; providers reachable | Deliveries stuck `queued` | Status-scoped workers drain on restart; lag alarm per 01/15 runbooks |
 | 04 bindings missing (user PENDING) | Directed pushes; token storage | No hierarchy-topic pushes yet | `topics.backfill` subscribes on verification (`NTF-IT-006`) |
 | Provider rejects tokens (uninstall) | Everything else | That device silently skipped | Prune + `failed` row; re-register resumes (`NTF-IT-003`) |
@@ -137,6 +145,6 @@ in `03-backend-tasks.md` §6; rows here are the cross-module/integration set.)
 - [ ] `NTF-INT-003` Implement + export `notify.RecordOpened` + wire `POST /notifications/deliveries/{id}/opened` — ____
 - [ ] `NTF-INT-004` Consume 04 `fcm_topic_bindings` + `ResolveUserNodes`; register `topics.backfill` with 01 worker — ____
 - [ ] `NTF-INT-005` Register `fanout.send` + `tokens.prune` jobs with 01 runner (status-scoped, idempotent) — ____
-- [ ] `NTF-INT-006` FCM + Expo clients: timeouts (10 s), ×3 backoff, redacted logs, env-parsed secrets (`FCM_SERVER_KEY`, `EXPO_ACCESS_TOKEN`) — ____
+- [ ] `NTF-INT-006` FCM client: timeouts (10 s), ×3 backoff, redacted logs, env-parsed secrets (`FCM_SERVER_KEY`) — ____
 - [ ] `NTF-INT-007` Freeze payload schema v1 + deep-link route map with 05/10/12/13 review; unknown-type fallback verified — ____
 - [ ] `NTF-INT-008` Tests `NTF-UT-001`, `NTF-IT-001`–`004`, `NTF-IT-006`, `NTF-E2E-001`–`002` green in CI — ____

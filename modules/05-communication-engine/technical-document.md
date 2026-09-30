@@ -163,6 +163,10 @@ From `06-integration-tasks.md` §2 — frozen for Phase 1; DTOs only; callers mu
 | `chat.PostNotice(actor, NoticeInput)` | 07 (School Admin composer) | `NoticeDTO`; busts tags + triggers `BroadcastTopic` | `FORBIDDEN`, `VALIDATION_FAILED`, `NOT_VERIFIED` |
 | `media.PresignUpload(owner, in)` · `media.ConfirmUpload(owner, assetID, in)` | 08 notes · 11 product images · 12 receipts | `PresignResult{assetID, uploadURL, expiresAt}` (15-min TTL; asset `pending`) · `MediaAssetDTO` (sniffed mime, status) — the security boundary | `VALIDATION_FAILED` kind/size · magic-byte mismatch / expired / non-owner |
 | `chat.GroupMembers(groupID)` | 09 (analytics sampling) | `[]MemberDTO{userID, role, sectionID}` — aggregates only, never message bodies | `NOT_FOUND` |
+| `chat.ArchiveSectionGroups(schoolID, sessionYear)` | 04 year-end migration | archived count; idempotent | domain errors |
+| `chat.NoticeStats(schoolID)` | 07 dashboard | aggregate notice counts | `TENANT_MISMATCH` |
+| `chat.SectionQuestionSamples(sectionID, from, to, limit≤200)` | 09 | anonymized, PII-masked text samples from the official section group; never persisted by caller | `FORBIDDEN`, `VALIDATION_FAILED` |
+| `media.PutObject(in)` | 12 receipts | `MediaAssetDTO` (`confirmed`); server-side put, kind `receipt_pdf` | `VALIDATION_FAILED` |
 
 ---
 
@@ -320,3 +324,4 @@ Consolidated from `01` §9 + `02` §11 — the readiness-check table; unconfirme
 | Date | Change | Author |
 | --- | --- | --- |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
+| 2026-09-30 | Consistency pass: migrations re-versioned `20261003…`; exports `ArchiveSectionGroups` (already called by 04), `NoticeStats` (07), `SectionQuestionSamples` (09), `media.PutObject` (12) declared; `notify.BroadcastTopic` naming; UI direction = CircleUp layout + WhatsApp chat (`docs/design-reference/README.md` §6) | Claude |

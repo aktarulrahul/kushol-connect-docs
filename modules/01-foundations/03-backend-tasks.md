@@ -111,7 +111,7 @@ are never edited.
 | | |
 | --- | --- |
 | **`X-Request-Id`** | accepted (≤ 64 chars, sanitized) or generated uuid v7; echoed on every response; attached to all slog fields |
-| **Error format** | RFC-7807 `application/problem+json`: `type`, `title`, `status`, `code` ∈ {UNAUTHENTICATED, FORBIDDEN, VALIDATION_FAILED, TENANT_MISMATCH, NOT_FOUND, NOT_VERIFIED, RATE_LIMITED, QUOTA_EXCEEDED, CONFLICT, INTERNAL}, localized `message` (bn default / en), `requestId`; open-set codes — clients fall back to generic bn/en copy |
+| **Error format** | RFC-7807 `application/problem+json`: `type`, `title`, `status`, `code` ∈ {UNAUTHENTICATED, FORBIDDEN, VALIDATION_FAILED, TENANT_MISMATCH, NOT_FOUND, NOT_VERIFIED, RATE_LIMITED, QUOTA_EXCEEDED, CONFLICT, INTERNAL} + module-specific codes registered in `technical-document.md` §10 (OUT_OF_STOCK, PAYMENT_FAILED, INVALID_SIGNATURE, STALE_TIMESTAMP, DUPLICATE_WEBHOOK, UNKNOWN_EVENT, CAMPAIGN_REJECTED), localized `message` (bn default / en), `requestId`; open-set codes — clients fall back to generic bn/en copy |
 | **Rate-limit classes** | auth / ai / payments / messaging / default — table fixed here, enforced per-route by consumer modules |
 | **Audit** | destructive/financial routes (modules 11–13) must call `audit.Record` in-tx |
 
@@ -130,12 +130,13 @@ scaffolded in `packages/shared` (FND-BE-002) and first consumed by 03-identity-a
 | `FND-BE-001` | Monorepo + Go module scaffold: pnpm workspaces (`web`/`app`/`shared`), `turbo.json` tasks, `go.mod`, Makefile, handler→service→repository layout, husky + lint-staged | ESLint boundary rule: web/app import api only via generated client | — | — |
 | `FND-BE-002` | Codegen pipeline: `contracts/openapi/openapi.yaml` skeleton (Problem schema, health paths, error shape) → oapi-codegen (Go types + `ServerInterface`) → openapi-typescript + openapi-fetch into `packages/shared/src/api-client` | `make contracts` / `pnpm generate:api`; generated code committed; drift = defect (BR-001) | — | — |
 | `FND-BE-003` | Config modules: Go typed struct parser (required/optional, enums) + TS zod env; single accessor; fail-fast `Validate()` at boot | No `os.Getenv`/`process.env` outside config (BR-002); names every offending var | — | — |
-| `FND-BE-004` | DB base: pgx pool (Neon-compatible TLS), sqlc config + `queries/` dir, golang-migrate embedded wiring, testcontainers-go fixture (per-test Postgres + migrations up) | Pool ping with backoff for Neon cold start; context timeouts | — | — |
+| `FND-BE-004` | DB base: pgx pool (Neon-compatible TLS), sqlc config + `queries/` dir, golang-migrate (pinned choice — not goose) embedded wiring, testcontainers-go fixture (per-test Postgres + migrations up) | Pool ping with backoff for Neon cold start; context timeouts | — | — |
 | `FND-BE-005` | Error envelope service: domain error type + RFC-7807 writer; code registry; bn/en message selection (`Accept-Language`, bn default); `requestId` injection | Never leaks stacks/internal errors; unknown codes render generic copy | — | — |
-| `FND-BE-006` | Middleware chain: RequestID, Recover, security headers, slog request logger (method/path/status/duration/request_id), redaction list, rate-limit class registry, auth/tenant-scope scaffolding (stub claims until 03) | Order fixed per 02 §6; panics → `INTERNAL`, no stack leak; secrets redacted (BR-006) | — | — |
+| `FND-BE-006` | Middleware chain: RealIP (trust `X-Forwarded-For` **only** when the peer is `127.0.0.1`/the configured proxy list — never from arbitrary clients; rate limits and audit use this IP), RequestID, Recover, security headers, slog request logger (method/path/status/duration/request_id), redaction list, rate-limit class registry, auth/tenant-scope scaffolding (stub claims until 03) | Order fixed per 02 §6; panics → `INTERNAL`, no stack leak; secrets redacted (BR-006) | — | — |
 | `FND-BE-007` | Health service: `/healthz` + `/readyz` with Neon ping + Redis PING (1s timeouts), per-dependency detail, degraded messages bn/en | readyz red on any dependency failure; no caching | — | — |
 | `FND-BE-008` | `audit.Record(ctx, Entry)` tx-aware helper + sqlc queries (insert; scoped lists); DB append-only rule/trigger | Same-tx atomicity: audit failure aborts the action; no UPDATE/DELETE path exists (BR-005) | — | writes here |
 | `FND-BE-009` | `jobs.Enqueue` / `jobs.Register` + worker loop: claim (`SKIP LOCKED`, `run_at <= now()`), execute, ack/retry, graceful drain on SIGTERM | At-least-once; handlers idempotent (BR-004); unregistered type → enqueue error | — | — |
+| `FND-BE-014` | Single binary, subcommands: `serve` (HTTP + WS), `worker` (jobs loop + reaper + schedules — run as its own container), `migrate` (applies embedded migrations — **owner-run only**, Gate 2), `migrate-status` (read-only: current DB version vs the image's expected version, exit ≠ 0 if behind — used by 15's deploy check), `healthcheck` (probes local `/healthz`; distroless has no curl) | Same config module for all; `serve` never runs migrations at boot; `migrate` refuses without an explicit `--confirm` | — | — |
 | `FND-BE-010` | CI quality gate: GitHub Actions — api (gofmt/goimports, golangci-lint, `go vet`, unit + testcontainers integration), TS (`pnpm lint/typecheck/test/build` per workspace), codegen drift job | Required checks block merge; no skip flags | — | — |
 
 ## 4. Repository Tasks
@@ -149,7 +150,7 @@ scaffolded in `packages/shared` (FND-BE-002) and first consumed by 03-identity-a
 
 | ID | Job | Trigger | Idempotent? | Failure handling |
 | --- | --- | --- | --- | --- |
-| `FND-BE-009` | Worker runtime (claim → run → ack/retry), 1s poll, graceful shutdown | process start; queue non-empty | handlers must be (BR-004) | backoff 5s × 2^n + jitter → DEAD at max_attempts |
+| `FND-BE-009` | Worker runtime (claim → run → ack/retry), poll 1 s while jobs are found, backing off to 30 s when idle (fewer DB wake-ups on Neon), graceful shutdown | process start; queue non-empty | handlers must be (BR-004) | backoff 5s × 2^n + jitter → DEAD at max_attempts |
 | `FND-BE-012` | Reaper: stale RUNNING (lock > 5 min) → QUEUED | in-process ticker, 60s | yes — pure status transition | logged + metric; never fatal |
 | `FND-BE-013` | Harness noop handler + queue metrics (depth, DEAD count) for `15-deployment-operations` | registered at boot | yes | — |
 
@@ -199,5 +200,6 @@ guard here; guard lands with the first content module (04).
 - [ ] `FND-BE-010` — CI quality gate + drift check
 - [ ] `FND-BE-011` — audit repository queries
 - [ ] `FND-BE-013` — noop handler + queue metrics
+- [ ] `FND-BE-014` — `serve` / `worker` / `migrate` / `migrate-status` / `healthcheck` subcommands
 - [ ] Seed — None — infrastructure module
 - [ ] `FND-UT-001` … `FND-UT-005`, `FND-IT-001` … `FND-IT-006` — test plan above

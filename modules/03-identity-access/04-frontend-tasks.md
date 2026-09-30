@@ -14,7 +14,7 @@
 | 1 | `/login` | Login (bn-default) | Server shell + Client island | Public |
 | 2 | `/verification-pending` | Pending-verification status | Client Component | Authenticated (`PENDING`) |
 | 3 | `/auth/sso/return` | SSO return landing | Client Component | Public — routing flow lives in `SsoButtons` (§2.1) |
-| 4 | `/school/verifications` | Verification queue | — | **Built by 07-command-center-web** (consumes this module's APIs; layout is specified there, not here) |
+| 4 | `/school/users` | Verification queue | — | **Built by 07-command-center-web** (consumes this module's APIs; layout is specified there, not here) |
 
 ## 2. Screen Breakdown
 
@@ -161,4 +161,4 @@ clear-space); every string ships in bn + en from the `auth.*` / `verification.*`
 - [ ] `IDT-FE-005` `/verification-pending` screen incl. rejected state · `IDT-FE-006` csrf + credentials-inclusive client; cookie-presence middleware
 - [ ] `IDT-FE-007` problem+json → field errors + `RATE_LIMITED` countdown mapping · `IDT-FE-008` bn/en keys wired from `packages/shared`
 - [ ] `IDT-FE-009` axe pass + reduced-motion verification on both screens
-- [ ] `IDT-FE-010` hand-off note + contract reference for 07's `/school/verifications` queue (no layout duplicated)
+- [ ] `IDT-FE-010` hand-off note + contract reference for 07's `/school/users` queue (no layout duplicated)

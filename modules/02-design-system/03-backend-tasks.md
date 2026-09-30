@@ -43,7 +43,7 @@ No endpoints exist (`DSN-BE` items: none). The module's real contract is the **c
 | Rule | Value |
 | --- | --- |
 | Shape | flat map: `key → { bn: string, en: string }` — no nesting, no extra locale fields |
-| Keys | dot-namespaced under `common · validation · auth · chat · notices · ai · marketplace · admin` |
+| Keys | dot-namespaced under the registry in `02-solution-approach.md` §1.1: `common · validation · errors · auth · verification · hierarchy · chat · notices · notifications · settings · landing · admin · school · vendor · ai · analytics · tuition · marketplace · commerce · payments · ads · events · sync · ops` (source of truth in code: `packages/shared/i18n/namespaces.ts`) |
 | Parity | identical key sets in both files; non-empty values; identical `{param}` placeholders |
 | Params | `{name}` placeholders, interpolated by `t(key, params)` |
 | Helper | `t(key: CatalogKey, params?: Record<string, string \| number>): string` — `CatalogKey` typed from the catalog; fallback requested locale → `bn` → key literal (dev warning); never throws |
@@ -56,7 +56,7 @@ No endpoints exist (`DSN-BE` items: none). The module's real contract is the **c
 | JSON parse + schema | malformed entry or unknown locale field | `DSN-UT-001` |
 | Key parity | bn/en key sets differ | `DSN-UT-001` |
 | Placeholder parity | `{params}` differ between locales | `DSN-UT-001` |
-| Namespace whitelist | key outside the eight namespaces | `DSN-UT-001` |
+| Namespace whitelist | key outside the registered namespaces | `DSN-UT-001` |
 | Fallback safety | `t()` throws or returns an empty string | `DSN-UT-002` |
 
 ### Web Server Action / Route Handler (Next.js)

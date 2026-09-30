@@ -45,7 +45,7 @@ client or Go exports — never the database directly):
 | Consumer | Consumes | Mechanism |
 | --- | --- | --- |
 | 07 cost cards | `GET /api/v1/ai/admin/cost-report?month=` (`03` §2 #16) | role-gated: Super = platform, School Admin = own tenant |
-| 09 matrix | `analytics.AttemptStats(sectionId, week)` + `ai.ClassifyChatQueries` (`06` §2) | Go service exports; 09 exposes its own API routes |
+| 09 matrix | `ai.AttemptStats(sectionID, from, to)` + `ai.ClassifyChatQueries` (`06` §2) | Go service exports; 09 exposes its own API routes |
 | Both | cache tags `ai:usage:{userId}`, `ai:breaker:state` (`06` §4) | revalidation headers through the generated client |
 
 ## 5. Motion Spec
@@ -73,4 +73,4 @@ parallel strings.
 ## 9. Task Checklist
 
 - [ ] `AIH-FE-001` — Contract handoff to module 07: endpoint #16 (`cost-report`) present in the generated `openapi-fetch` client with role-gated payloads; cache tags of `06` §4 importable by 07's Server Components
-- [ ] `AIH-FE-002` — Contract handoff to module 09: `analytics.AttemptStats` / `ai.ClassifyChatQueries` exports match 09's expected DTOs (`06` §2); no dashboard work duplicates this module's data model
+- [ ] `AIH-FE-002` — Contract handoff to module 09: `ai.AttemptStats` / `ai.ClassifyChatQueries` exports match 09's expected DTOs (`06` §2); no dashboard work duplicates this module's data model

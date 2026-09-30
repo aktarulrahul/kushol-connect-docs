@@ -7,7 +7,7 @@
 ## 1. Purpose
 
 Module 03 is the trust gateway of Kushol Connect. It registers and authenticates every user across
-the five roles (Super Admin, School Admin, Teacher, Student, Guardian) via phone OTP (local SMS
+the five end-user roles (Super Admin, School Admin, Teacher, Student, Guardian) plus the platform-scoped `vendor` portal login (created only by 07 vendor approval) via phone OTP (local SMS
 gateway), email+password (staff, argon2id) and Google/GitHub SSO, then runs the verification
 workflow (`PENDING → VERIFIED`) that `prd.md` §5.1 makes mandatory before anyone participates. It
 serves `brd.md` §2 Goal 1 (20,000+ onboard users in year 1): no post, message, purchase or AI call
@@ -42,7 +42,7 @@ Student Ambassador is **a flag on a verified student** (`users.is_ambassador`), 
 **Out of scope** (explicit — prevents scope drift)
 
 - City/school/class/section data and tenant CRUD; `OnUserVerified` provisioning internals — module 04
-- School Admin verification **queue UI** (`/school/verifications`) — built in 07-command-center-web
+- School Admin verification **queue UI** (`/school/users`) — built in 07-command-center-web
 - Push delivery infrastructure (06) · roster CSV upload/matching (14) · participation features (05/08/10/11)
 
 **Depends on**
@@ -212,6 +212,20 @@ Student Ambassador is **a flag on a verified student** (`users.is_ambassador`), 
 - **Given** a request `PENDING` >48 h, **when** the hourly SLA job runs, **then** the school's verifiers get a push/email via module 06 and `reminder_count` increments.
 - **Given** a still-undecided request, **when** 24 h pass after a reminder, **then** it repeats daily until decided.
 
+### `IDT-US-015` — Staff/vendor password reset and email OTP
+
+**Priority:** P0 · **Traces:** prompt.txt §5 (auth) · owner decision 2026-09-30 (`noreply@kusholconnect.com` sends OTPs) · **Depends on:** `IDT-US-004`, 06 email channel
+
+**Story** — As a **School Admin, Teacher, Super Admin or vendor**, I want to reset a forgotten password with a code sent to my email, so that I can get back in without calling support.
+
+**Acceptance criteria**
+
+- **Given** any email, **when** I submit "forgot password", **then** I always see the same "if this account exists, we sent a code" message (bn + en) — no account enumeration.
+- **Given** a staff/vendor account, **when** the code arrives from `noreply@kusholconnect.com` (bn default + en, subject without personal data, 5-minute validity) and I enter it with a new password, **then** the password changes, every session and refresh token is revoked, and `user.password_reset` is audited.
+- **Given** a newly approved vendor, **when** 07 approval calls `users.CreateVendorLogin`, **then** the vendor receives the same email code to set a first password.
+- **Given** SMS is delayed and my account has a verified email, **when** I choose "send code by email", **then** a login OTP is emailed with the same limits as SMS (60 s cooldown, 5/hour, 3 attempts).
+- **Given** 5 reset requests in an hour for one email, **when** I request again, **then** `RATE_LIMITED` with a countdown.
+
 ---
 
 ## 5. Business Rules
@@ -219,7 +233,7 @@ Student Ambassador is **a flag on a verified student** (`users.is_ambassador`), 
 | ID | Rule | Enforced where |
 | --- | --- | --- |
 | `IDT-BR-001` | Unverified (`PENDING`) users participate in nothing — server-side `NOT_VERIFIED` gate on every participatory route (`prd.md` §5.1) | Service/middleware (`RequireVerified`), never UI-only |
-| `IDT-BR-002` | `role` ∈ super_admin/school_admin/teacher/student/guardian; `status` ∈ PENDING/VERIFIED/SUSPENDED; `locale` ∈ bn/en (bn default) | DB CHECK constraints + service |
+| `IDT-BR-002` | `role` ∈ super_admin/school_admin/teacher/student/guardian/vendor (vendor: platform scope, `school_id` NULL, never self-registered); `plan` ∈ free/pro; `status` ∈ PENDING/VERIFIED/SUSPENDED; `locale` ∈ bn/en (bn default) | DB CHECK constraints + service |
 | `IDT-BR-003` | OTP: 6 digits, 5-min expiry, max 3 attempts per code, 60 s resend cooldown, 5 codes/hour/phone; hashed at rest | Service + Redis/DB counters |
 | `IDT-BR-004` | Phone is the primary identity for students/guardians; E.164-normalized (`+880…`) and unique; email unique; email optional for consumers, required for staff | DB partial unique indexes + service |
 | `IDT-BR-005` | Verifier matrix: School Admin → everything in own school; Student Ambassador → same-school student/guardian requests, approve-only; Super Admin → everything | Service (queue + decide guards) |
@@ -284,4 +298,4 @@ Example copy (bn default + en) for the two most important strings:
 | 1 | Student Ambassador criteria and verification SLA? | Rahul | Open | Any verified Student Ambassador of the same school may verify same-school join requests; SLA 48 h with auto-reminder (via 06-notifications) |
 | 2 | SMS gateway vendor for OTP delivery? | Rahul | Open | SSLWireless-class local gateway (`TODO: Confirm` vendor + contract); integrated behind `SMS_GATEWAY_*` env vars |
 | 3 | How is guardian↔student linking proven? | Rahul | Open | Guardian enters student's school + class + student ID; School Admin approves in the verification queue; module 14 roster upload enables automatic matching later |
-| 4 | Registrable domain shared by web + api (session cookie scope)? | Rahul | Open | One domain, e.g. `web.kushol.com.bd` / `api.kushol.com.bd`, cookie scoped to `.kushol.com.bd` (`TODO: Confirm` final domain) |
+| 4 | Registrable domain shared by web + api (session cookie scope)? | Rahul | **Resolved 2026-09-30** | Domain `kusholconnect.com`. Web on the apex; browser API calls go same-origin via `kusholconnect.com/api/*` (Nginx → api), so the web session cookie is a host-only `__Host-` cookie on the apex (no Domain attribute, no CORS). Mobile uses `api.kusholconnect.com` with bearer JWT + refresh tokens (no cookies) |

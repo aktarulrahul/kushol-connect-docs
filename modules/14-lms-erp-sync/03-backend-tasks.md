@@ -63,8 +63,8 @@ tenant-scope column/rule — unscoped tables are a defect (`prompt.txt` §9).
 | `name` | `text` | no | — | Display name, e.g. "Leading EDU ERP" |
 | `url` | `text` | no | — | HTTPS callback for test events (`LMS-US-006`) |
 | `secret_version` | `int` | no | `1` | Increments on rotate |
-| `secret_hash` | `text` | no | — | Hash of the current HMAC secret — raw never stored (`LMS-INV-005`) |
-| `previous_secret_hash` | `text` | yes | — | Valid until `overlap_until` (graceful rotation) |
+| `secret_ciphertext` | `bytea` | no | — | AES-256-GCM(nonce‖ciphertext) of the current HMAC secret under `ERP_SECRET_KEY`; decrypted in memory only to verify signatures (`LMS-INV-005`) |
+| `previous_secret_ciphertext` | `bytea` | yes | — | Valid until `overlap_until` (graceful rotation) |
 | `overlap_until` | `timestamptz` | yes | — | Expiry of the previous secret version |
 | `status` | `text` | no | `'active'` | `active\|revoked` (`LMS-BR-013`) |
 | `last_success_at` | `timestamptz` | yes | — | Bumped on each `applied` event |
@@ -96,10 +96,10 @@ tenant-scope column/rule — unscoped tables are a defect (`prompt.txt` §9).
 
 | # | Migration | Reversible? |
 | --- | --- | --- |
-| 1 | `20270110090001_create_roster_imports` | ✅ |
-| 2 | `20270110090002_create_roster_import_rows` | ✅ |
-| 3 | `20270110090003_create_erp_endpoints` | ✅ |
-| 4 | `20270110090004_create_erp_sync_events` | ✅ |
+| 1 | `20270301090001_create_roster_imports` | ✅ |
+| 2 | `20270301090002_create_roster_import_rows` | ✅ |
+| 3 | `20270301090003_create_erp_endpoints` | ✅ |
+| 4 | `20270301090004_create_erp_sync_events` | ✅ |
 
 ### 1.3 Seed
 
@@ -171,7 +171,7 @@ endpoint row, never from client-claimable data alone.
 | --- | --- |
 | **Auth** | authenticate → `SCHOOL_ADMIN` → tenant-scope |
 | **Input** | POST `{ name, url }` — HTTPS-only URL; GET `page`, `pageSize` |
-| **Result** | POST 201 `{ "data": { endpoint, secret, secretVersion: 1 } }` — **raw secret in this one response only** (hash stored, `LMS-INV-005`) · GET `{ "data": [ { id, name, url, status, secretVersion, overlapUntil?, lastSuccessAt } ] }` — never the secret |
+| **Result** | POST 201 `{ "data": { endpoint, secret, secretVersion: 1 } }` — **raw secret in this one response only** (ciphertext stored, `LMS-INV-005`) · GET `{ "data": [ { id, name, url, status, secretVersion, overlapUntil?, lastSuccessAt } ] }` — never the secret |
 | **Errors** | `UNAUTHENTICATED` · `FORBIDDEN` (licence) · `VALIDATION_FAILED` · `INTERNAL` |
 | **Rate limit** | POST 5/hour/school · GET default |
 | **Audit** | yes — endpoint registered / (GET none) |
@@ -213,7 +213,7 @@ endpoint row, never from client-claimable data alone.
 | **Audit** | yes — every rejection (`audit.Record`, security log); `erp_sync_events` row always written |
 | **Stories** | `LMS-US-007`–`LMS-US-009` |
 
-### `GET /api/v1/school/reconciliation`
+### `GET /api/v1/school/roster/reconciliation`
 
 | | |
 | --- | --- |
@@ -242,10 +242,10 @@ api-only (ERP systems POST to `api.` directly; web is never in that path).
 | `LMS-BE-002` | `CreateImport(schoolId, uploadedBy, mediaId, format, dryRun)` | sha256 probe first (`LMS-BR-002` — return existing); licence guard (`LMS-BR-014`); row ceiling ≤ 10,000 (`LMS-BR-007`); enqueue process job | `school:{id}:roster` | yes |
 | `LMS-BE-003` | `ProcessImport(importId)` (job body) | Stream parse → per-row validation (phone, section via 04, duplicates-in-file) → row rows written; totals set; status `ready`/`validated_with_errors`/`failed` | `school:{id}:roster` | no |
 | `LMS-BE-004` | `CommitImport(importId, actor)` | Status guard `ready` (`LMS-BR-003`); enqueue commit job; idempotent on re-click via status `committing` | `school:{id}:roster` | yes |
-| `LMS-BE-005` | `runImportCommit(importId)` (job body) | Chunks of 500; per-row tx: `auth.UpsertRosterUser` (03) + `hierarchy.CreateEnrollments` (04, `source=ROSTER`); per-row result immutable (`LMS-BR-004`); created users PENDING (`LMS-BR-005`); phone match (`LMS-BR-006`); resume by `processed_at` cursor | `school:{id}:roster` | yes (final totals) |
+| `LMS-BE-005` | `runImportCommit(importId)` (job body) | Chunks of 500; per-row tx: `users.UpsertRosterUser` (03) + `hierarchy.CreateEnrollments` (04, `source=ROSTER`); per-row result immutable (`LMS-BR-004`); created users PENDING (`LMS-BR-005`); phone match (`LMS-BR-006`); resume by `processed_at` cursor | `school:{id}:roster` | yes (final totals) |
 | `LMS-BE-006` | `ListImports` / `GetImport` / `ListImportRows` | Claim-scoped; error-report projection (`result=error`); CSV rendering of the error report | — | no |
-| `LMS-BE-007` | `CreateEndpoint(schoolId, actor, name, url)` | Licence guard; HTTPS-only URL; generate 32-byte secret → return raw once, store hash v1 (`LMS-INV-005`) | `school:{id}:roster` | yes |
-| `LMS-BE-008` | `RotateSecret(endpointId, actor, overlapHours)` | ACTIVE only; v+1 hash stored, previous kept until `overlapUntil`; raw returned once | `school:{id}:roster` | yes |
+| `LMS-BE-007` | `CreateEndpoint(schoolId, actor, name, url)` | Licence guard; HTTPS-only URL; generate 32-byte secret → return raw once, store encrypted v1 (`LMS-INV-005`) | `school:{id}:roster` | yes |
+| `LMS-BE-008` | `RotateSecret(endpointId, actor, overlapHours)` | ACTIVE only; v+1 encrypted secret stored, previous kept until `overlapUntil`; raw returned once | `school:{id}:roster` | yes |
 | `LMS-BE-009` | `RevokeEndpoint(endpointId, actor)` | ACTIVE → REVOKED (terminal); events thereafter rejected | `school:{id}:roster` | yes |
 | `LMS-BE-010` | `SendTestEvent(endpointId, actor)` | ACTIVE only; sign `test` payload with current secret; POST to `endpoint.url` (5 s timeout); return outcome | — | yes |
 | `LMS-BE-011` | `VerifyWebhookRequest(schoolId, headers, rawBody)` | Resolve ACTIVE endpoint by schoolId (fail closed); constant-time HMAC compare (current, then previous within overlap) — `INVALID_SIGNATURE`; ±5 min window — `STALE_TIMESTAMP`; 60/min/school limiter — `RATE_LIMITED` | — | yes (rejections) |

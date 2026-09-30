@@ -180,7 +180,7 @@ Content accuracy (`prompt.txt` §12): palette/typography facts here are sampled 
 
 | Field | Rule | Message key (`packages/shared` i18n catalog) |
 | --- | --- | --- |
-| Catalog key name | Matches `^(common\|validation\|auth\|chat\|notices\|ai\|marketplace\|admin)\.[a-z0-9]+(\.[a-z0-9-]+)*$` | N/A — build-time CI error (never user-facing) |
+| Catalog key name | Matches `^(common\|validation\|errors\|auth\|verification\|hierarchy\|chat\|notices\|notifications\|settings\|landing\|admin\|school\|vendor\|ai\|analytics\|tuition\|marketplace\|commerce\|payments\|ads\|events\|sync\|ops)\.[a-z0-9_]+(\.[a-z0-9_-]+)*$` (registry: `02-solution-approach.md` §1.1; `snake_case` segments allowed — other modules already use e.g. `hierarchy.city_empty`) | N/A — build-time CI error (never user-facing) |
 | Catalog key parity | Key in both `bn.json` and `en.json`; non-empty; identical `{param}` placeholders | N/A — build-time CI error (`DSN-UT-001`) |
 | Locale value | Must be `bn` or `en`; anything else resolves to `bn` | `common.language.unsupported` (dev-facing warning) |
 | Language selection (onboarding/settings, `03`) | One of `bn` / `en`; default `bn` | `common.language.bn` / `common.language.en` labels |

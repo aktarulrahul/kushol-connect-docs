@@ -58,7 +58,7 @@ that modules 08 (notes), 11 (product images) and 12 (receipts) reuse.
 | --- | --- | --- |
 | 03 | Verification status + role claims (verified gate) | Verification is identity's source of truth (`prd.md` §5.1) |
 | 04 | `hierarchy.ResolveUserNodes(userId)`, section/school node lookups | Hierarchy is the data model; official groups bind to its nodes |
-| 06 | `notifications.BroadcastTopic` | FCM topic fan-out is module 06's job |
+| 06 | `notify.BroadcastTopic` | FCM topic fan-out is module 06's job |
 | 01 | Job runner, rate limiter, Redis client, error envelope | Foundations own the plumbing |
 
 **Cache keys / tags revalidated / consumed:** see `06-integration-tasks.md` §4

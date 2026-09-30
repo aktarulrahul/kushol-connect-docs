@@ -10,7 +10,7 @@
 ## 1. Purpose
 
 Kushol Connect's push backbone: FCM topic fan-out mirroring City → School → Section for mass
-messages (notices, city events, campaigns), per-device directed push via the Expo push API for
+messages (notices, city events, campaigns), per-device directed push via FCM token sends for
 personal messages (DMs, tuition matches, payment/test results), deep links that land every tap on
 the right screen, and a delivery log. The delivery half of the Phase-1 exit criterion ("a verified
 student … receives a notice by push"), serving `brd.md` §6 Scalability — FCM topic fan-out at
@@ -27,7 +27,7 @@ scale is this module's reason to exist.
 | School Admin | Governs only their own school (tenant); sends test pushes to self/one section; views per-school delivery aggregates (counts only) |
 | Super Admin | Platform-level delivery oversight; sends test pushes; no per-school content access |
 | Vendor / EdTech brand | N/A — vendors never send pushes directly; campaigns they fund reach users only via module 13 calling this module's exports |
-| System (jobs, webhooks) | `fanout.send` batching worker, `tokens.prune` nightly cleanup, `topics.backfill` for devices registered pre-verification, provider receipt polling |
+| System (jobs, webhooks) | `fanout.send` batching worker, `tokens.prune` nightly cleanup, `topics.backfill` for devices registered pre-verification, client delivery acks |
 
 > The five roles (Super Admin / School Admin / Teacher / Student / Guardian) plus Vendors are
 > defined by module 03 (`03-identity-access`). Verification gates every participatory action
@@ -39,7 +39,7 @@ scale is this module's reason to exist.
 
 - `device_tokens`: registration (idempotent), refresh (`last_seen_at`), logout cleanup, pruning of invalid/expired tokens.
 - Mass fan-out via **FCM topics** (`city-{cityId}` / `school-{schoolId}` / `section-{sectionId}`, bindings owned by module 04) for notices, city events and campaigns — fire-and-forget at scale.
-- Directed per-device push via the **Expo push API** (DMs, tuition matches, payment results, test results, admin test pushes) — full lifecycle tracking queued → sent → delivered → opened.
+- Directed per-device push via **FCM HTTP v1 token sends** (same native FCM token as topics) (DMs, tuition matches, payment results, test results, admin test pushes) — full lifecycle tracking queued → sent → delivered → opened.
 - Deep-link payload contract: message KEY + ids only (never message bodies), resolved on-device so pushes render in the user's locale (bn default / en).
 - `notification_preferences`: one muted flag per class (`notices` / `chat` / `campaigns`), aligned 1:1 with the three Android notification channels.
 - Delivery log (`notification_deliveries`) + open reporting; own list + tenant-scoped admin aggregates; test-push endpoint for pilots (`POST /admin/notifications/test`).
@@ -218,7 +218,7 @@ scale is this module's reason to exist.
 | 2 | Cross-tenant delivery read (School Admin A → school B) | `TENANT_MISMATCH`/404, no data leaked (`NTF-IT-004`) |
 | 3 | Token invalid mid-batch (app uninstalled) | That device pruned + delivery `failed`; remaining devices in the batch still sent (`NTF-IT-003`) |
 | 4 | FCM 5xx on topic dispatch | Retry ×3 backoff via `jobs`, then dead-letter; notice remains in-app + WS (degraded, never fatal) |
-| 5 | Expo push API down | Directed sends stay `queued`; jobs drain on recovery; senders see nothing (send already succeeded upstream) |
+| 5 | FCM per-token path down | Directed sends stay `queued`; jobs drain on recovery; senders see nothing (send already succeeded upstream) |
 | 6 | Device offline / app killed at send time | FCM/Expo hold and deliver on next connectivity — provider-side queuing, no server action |
 | 7 | Same token registered twice (reinstall, re-login) | Upsert on unique token — one row, `last_seen_at` refreshed |
 | 8 | Mute flipped while a topic send is in flight | Best-effort: in-flight push may render; every subsequent send respects the new state |
@@ -242,6 +242,6 @@ scale is this module's reason to exist.
 | --- | --- | --- | --- | --- |
 | 1 | Quiet hours for push delivery (e.g. 22:00–07:00 local, which classes)? | Rahul | Open (`TODO: Confirm`) | None at launch — pushes deliver immediately; Android channels let users silence classes per-OS |
 | 2 | Android channel strategy final copy | Rahul | Open | ONE channel per class — `notices` / `chat` / `campaigns` (3 channels, bn+en names), matching `notification_preferences` 1:1 |
-| 3 | Fan-out path + tracking semantics confirmation | Rahul | Open | Mass (school/section/city) via FCM topics fire-and-forget; directed via Expo push API tracked `queued→sent→delivered→opened` |
+| 3 | Fan-out path + tracking semantics confirmation | Rahul | Open | Mass (school/section/city) via FCM topics fire-and-forget; directed via FCM token sends tracked `queued→sent→delivered→opened` |
 | 4 | Stale-token prune age | Rahul | Open | 90 days since `last_seen_at` (config, not code) |
 | 5 | Delivery-row retention | Rahul | Open | 180 days, then aggregate-and-delete job (config) |

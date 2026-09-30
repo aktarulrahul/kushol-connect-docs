@@ -17,7 +17,7 @@ declared here (`docs/prompt/prompt-build.md` §6).
 | I-3 | `06 notifications` | they call us | read our `fcm_topic_bindings` rows (we never call 06) | degraded — device subscriptions happen late, bindings are already durable |
 | I-4 | `14 lms-erp-sync` | they call us | exported `hierarchy.CreateEnrollments(batch, source)` from roster ingestion | fatal per row — row-level error reported back to 14's ingestion report |
 | I-5 | `01 foundations` | we call them | `jobs.Enqueue` + shared worker for `migration.run` / `hierarchy.backfill` | degraded — commit returns, apply retries via job |
-| I-6 | `09 teacher-analytics`, `13 b2b-ads-events` | they call us | read-only exports `hierarchy.ResolveUserNodes` / `hierarchy.GetSection` | degraded — empty segments; never fatal to those modules |
+| I-6 | `07 command-center-web`, `09 teacher-analytics`, `13 b2b-ads-events` | they call us | read-only exports `hierarchy.ResolveUserNodes` / `GetSection` / `PlatformCounts` / `SchoolCounts` / `AudienceCount` | degraded — empty segments; never fatal to those modules |
 | I-7 | FCM (external) | indirect only | topic naming contract `city-{id}` / `school-{id}` / `section-{id}`; all FCM SDK calls live in 06 | degraded, never fatal — 04 holds no FCM credentials |
 
 ## 2. Exported Contract
@@ -29,6 +29,9 @@ hierarchy.GetSection(sectionID uuid) (SectionDTO, error)
 hierarchy.CreateEnrollments(batch []EnrollmentInput, source string) ([]EnrollmentResult, error)
 hierarchy.PreviewMigration(schoolID uuid, fromSessionYear int, dryRun bool) (MigrationRunDTO, error)
 hierarchy.CommitMigration(runID uuid) (MigrationRunDTO, error)
+hierarchy.PlatformCounts(ctx) (PlatformCountsDTO{Cities, Schools, ActiveSections, VerifiedUsersByRole}, error)
+hierarchy.SchoolCounts(ctx, schoolID uuid) (SchoolCountsDTO{ActiveSections, EnrollmentsByRole, SessionYear}, error)
+hierarchy.AudienceCount(ctx, filter AudienceFilter{CityIDs, SchoolIDs, ClassLevels, Streams, Roles}) (int, error)
 ```
 
 | Export | Callers | Returns | Throws | Notes |
@@ -39,6 +42,9 @@ hierarchy.CommitMigration(runID uuid) (MigrationRunDTO, error)
 | `CreateEnrollments(batch, source)` | 14 roster ingestion | per-row result (created / exists / error) | `VALIDATION_FAILED` (whole-batch shape) | Batch, idempotent per (user, section, role, session); rows never partially silently dropped |
 | `PreviewMigration(schoolID, from, dryRun)` | 07 migration wizard | run + item list (PROMOTED/GRADUATED/RETAINED/ERROR) | `VALIDATION_FAILED`, `CONFLICT` | `dryRun=true` → DRAFT, `false` → PREVIEWED; zero-ERROR required to reach PREVIEWED |
 | `CommitMigration(runID)` | 07 migration wizard | run in COMMITTING→COMMITTED | `CONFLICT`, `NOT_FOUND` | Enqueues `migration.run`; tenant-claims checked inside |
+| `PlatformCounts()` | 07 Super Admin dashboard | platform totals | `FORBIDDEN` (non super_admin) | Aggregate only; Redis 5-min TTL |
+| `SchoolCounts(schoolID)` | 07 School Admin dashboard | per-school totals | `FORBIDDEN`/`TENANT_MISMATCH` | Tenant-scoped aggregate |
+| `AudienceCount(filter)` | 13 audience estimate + dispatch | count of VERIFIED users matching the segment | `VALIDATION_FAILED` (empty filter) | Aggregate only — never user ids; counts < 20 returned as `0` with `suppressed=true` in the DTO to avoid singling out minors (`TODO: Confirm` threshold) |
 
 Rules: exports return DTOs (never sqlc row structs); admin-only exports require role claims in the
 context; services return domain errors (mapped to the problem envelope at the handler), never raw
@@ -48,8 +54,9 @@ HTTP; signature changes are additive first.
 
 | We call | Owner | On failure |
 | --- | --- | --- |
-| `users.GetWithSelection(userId)` — VERIFIED status + registered section choice | 03 | Abort `OnUserVerified` (03 decides verification; 04 never guesses) |
-| `chat.JoinSectionGroups(userId)` — section + school + city official groups | 05 | Enqueue `hierarchy.backfill`; user stays VERIFIED, membership back-filled |
+| `users.GetWithSelection(userID)` — VERIFIED status + `SectionID` from `verification_requests.requested_section_id` | 03 |
+| `guardians.LinkedStudents(guardianID)` — which students a GUARDIAN enrollment covers | 03 | Abort `OnUserVerified` (03 decides verification; 04 never guesses) |
+| `chat.JoinSectionGroups(userID, enrollment EnrollmentDTO)` — section + school + city official groups (signature owned by 05 `06` §2) | 05 | Enqueue `hierarchy.backfill`; user stays VERIFIED, membership back-filled |
 | `chat.ArchiveSectionGroups(schoolID, sessionYear)` — old-session groups at migration | 05 | Job retries; archives are idempotent in 05 |
 | `jobs.Enqueue(name, payload)` + worker runtime | 01 | Commit request already persisted; enqueue retried by request handler |
 | `fcm_topic_bindings` read by 06 for device subscription | — (our table) | 06 owns retry of device subscription; bindings never expire |
@@ -129,7 +136,7 @@ new exports); a breaking change requires an ADR plus a migration note in every c
 
 ## 10. Task Checklist
 
-- [ ] `ORG-INT-001` implement + export the six §2 functions behind interface fakes for consumers — ____
+- [ ] `ORG-INT-001` implement + export the nine §2 functions behind interface fakes for consumers — ____
 - [ ] `ORG-INT-002` wire `hierarchy.backfill` job (05-outage path) into module 01 worker — ____
 - [ ] `ORG-INT-003` implement `migration.run` worker with batch checkpoints + audit — ____
 - [ ] `ORG-INT-004` cache tags `hierarchy:cities` / `hierarchy:school:{id}` + invalidation on mutations — ____

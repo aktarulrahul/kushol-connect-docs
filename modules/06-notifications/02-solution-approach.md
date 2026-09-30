@@ -43,7 +43,7 @@ city│school│section (04) 1───1 fcm_topic_bindings ──topic_name─�
 ## 2. Module Boundary
 
 **Owns (writes):** `device_tokens`, `notification_deliveries`, `notification_preferences` — and
-both provider clients (FCM Admin SDK, Expo push API) which no other module may touch (04 holds no
+the provider client (FCM Admin SDK) which no other module may touch (04 holds no
 FCM credentials; 05 only calls `notify.BroadcastTopic`).
 
 **Reads from other modules (via their exported service functions only):**
@@ -76,8 +76,8 @@ mutation (05 PostNotice │ 10 tuition match │ 12 payment result │ 13 campai
         └─ DIRECTED (user ids) ──▶ notify.SendToUser(userId, payload)
                  ├─ prefs gate: class muted? → skip (server-side, NTF-BR-004)
                  ├─ resolve active devices (device_tokens WHERE pruned_at IS NULL)
-                 ├─ delivery row per device: queued ──▶ Expo push API (chunked) ──▶ sent
-                 │        └─ receipts ▶ delivered │ invalid token ▶ failed + prune (INV-2)
+                 ├─ delivery row per device: queued ──▶ FCM per-token send ──▶ sent
+                 │        └─ client ack ▶ delivered │ invalid token ▶ failed + prune (INV-2)
                  └─ no devices → no-op (user still sees content in-app)
         │
         ▼
@@ -91,7 +91,7 @@ mutation (05 PostNotice │ 10 tuition match │ 12 payment result │ 13 campai
 Delivery/token state machine:
 
 ```text
-delivery: queued ──provider 2xx──▶ sent ──expo receipt──▶ delivered ──user tap──▶ opened
+delivery: queued ──provider 2xx──▶ sent ──client ack──▶ delivered ──user tap──▶ opened
              └──provider 4xx invalid-token / hard error──▶ failed (terminal; token pruned if invalid)
 token:    active ──provider rejection│stale(>90d)──▶ pruned (pruned_at set; never re-targeted)
 ```
@@ -99,7 +99,7 @@ token:    active ──provider rejection│stale(>90d)──▶ pruned (pruned_
 | From | Action | To | Guards | Side effects |
 | --- | --- | --- | --- | --- |
 | `queued` | provider accepts | `sent` | payload valid, devices active | `sent_at` set; retry cleared |
-| `sent` | Expo receipt `ok` | `delivered` | directed rows only | receipt poller |
+| `sent` | app message handler acks | `delivered` | directed rows only | client ack endpoint (best effort) |
 | `delivered` | user taps push | `opened` | caller owns row; write-once | `opened_at` set (INV-6) |
 | any | provider rejects / batch dead-letters | `failed` | retry budget exhausted | token pruned if invalid (`NTF-BR-006`) |
 
@@ -153,8 +153,8 @@ surfaces exist (`04-frontend-tasks.md` is N/A).
 | # | Failure | Detection | Impact | Recovery |
 | --- | --- | --- | --- | --- |
 | 1 | FCM 5xx / timeout or project-wide outage | Client error, 10 s timeout, error-rate alarm | Notice push delayed or absent | `fanout.send` retries ×3 backoff → dead-letter `failed`; notices remain fully in-app + WS (05) — push is an enhancement layer, never the source of truth; queue flushes on restore |
-| 2 | Expo push API down / degraded | 5xx on send, 10 s timeout | Directed pushes stuck `queued` | Queue drains on recovery (status-scoped scan); senders unaffected (send already succeeded upstream) |
-| 3 | Invalid/expired token | Provider `Unregistered` on send or receipt | That device unreachable | Prune immediately (`NTF-BR-006`), mark delivery `failed`, batch continues |
+| 2 | FCM per-token send down / degraded | 5xx on send, 10 s timeout | Directed pushes stuck `queued` | Queue drains on recovery (status-scoped scan); senders unaffected (send already succeeded upstream) |
+| 3 | Invalid/expired token | FCM `UNREGISTERED` / `INVALID_ARGUMENT` on send | That device unreachable | Prune immediately (`NTF-BR-006`), mark delivery `failed`, batch continues |
 | 4 | Jobs worker down | Health/lag alarm on 01 runner | Deliveries pile up `queued`; prunes/backfills miss | Workers are idempotent (status-scoped); drain on restart; alert per runbook |
 | 5 | `fcm_topic_bindings` missing (user unverified) | `ResolveUserNodes` empty | No topic subscription | `topics.backfill` subscribes after verification; directed pushes unaffected |
 
@@ -163,14 +163,16 @@ surfaces exist (`04-frontend-tasks.md` is N/A).
 - Volumes (pilot, `brd.md` §2 Goal 1): 3 schools × ~2,000 users ≈ 6k devices; a school notice is
   **one** FCM topic message regardless of audience size (the scalability reason this module
   exists) — FCM performs the per-device fan-out. Directed volume is modest (DMs, matches,
-  payment results ≈ tens/min at pilot). No new app dependency: `expo-notifications` is already
-  the resolved stack (`tech-stack.md`).
+  payment results ≈ tens/min at pilot). App dependencies: `@react-native-firebase/app` +
+  `messaging` (native FCM token; EAS development builds, no Expo Go) alongside `expo-notifications`
+  (`tech-stack.md`). Email volume (OTP + opted-in notifications) goes through HestiaCP SMTP and is
+  paced by the `email.send` job.
 - Budgets: topic dispatch accepted p95 ≤ 500 ms server-side; end-to-end push render p95 ≤ 5 s
   (FCM best-effort, measured with the pilot test-push tool); directed send→`sent` p95 ≤ 2 s.
 - Hot queries: `device_tokens (user_id, pruned_at)` → directed fan-out; `unique(token)` →
   registration upsert; `notification_deliveries (user_id, created_at DESC)` → history;
   `(status, created_at)` → worker scans; admin aggregates join 04 enrollments (indexed there).
-- Batching: FCM batch limit 500 tokens/message, Expo 100 receipts/request — `fanout.send`
+- Batching: FCM batch limit 500 tokens/message (topic subscribe + multicast) — `fanout.send`
   chunks and paces to stay inside provider quotas; retries carry only the un-sent remainder.
 
 ## 10. Alternatives Considered
@@ -184,15 +186,22 @@ surfaces exist (`04-frontend-tasks.md` is N/A).
 | Complexity / weight | Low | High at scale | Medium — each class uses exactly one path |
 
 **Recommendation:** C — mass classes (`notices`, `campaigns` broadcasts) go topic; directed
-messages (DMs, matches, payment/test results, admin tests) go per-device Expo push. ADR in this
-module's `07-progress.md`.
+messages (DMs, matches, payment/test results, admin tests) go per-device via **FCM HTTP v1 token
+sends** (same provider, see below). ADR in this module's `07-progress.md`.
 
-### Option A — Expo push API for directed · Option B — raw FCM per-device on Android + APNs on iOS
+### Option A — Expo push API for directed + FCM topics for mass · Option B — FCM for both (chosen, revised 2026-09-30)
 
-| | A (chosen) | B |
+| | A (original draft) | B (chosen) |
 | --- | --- | --- |
-| Advantages | One API for both platforms, receipt tracking built-in, matches the resolved stack (`tech-stack.md`: expo-notifications; expo-server-sdk push API) | One fewer intermediary for Android |
-| Disadvantages | Extra hop (Expo → FCM/APNs) and a second service dependency | Two provider integrations + token plumbing per platform; receipts hand-rolled |
+| Advantages | Expo receipts built in | **One token per device serves both paths**; one provider, one credential; topics work on iOS |
+| Disadvantages | **Broken for iOS topics:** FCM topic subscription needs an FCM registration token, but Expo push tokens are not FCM tokens and `getDevicePushTokenAsync` on iOS returns a raw APNs token that FCM topics cannot use — iOS users would never get notices. Two token kinds per device, two providers | Requires `@react-native-firebase/app` + `messaging` (Expo config plugin → EAS dev/prod builds, no Expo Go) and an APNs auth key uploaded to Firebase; `delivered` is a best-effort client ack instead of a provider receipt |
+
+Resolution: the app obtains the **native FCM registration token** via
+`@react-native-firebase/messaging` on both platforms; 06 uses the Firebase Admin Go SDK for topic
+subscribe/unsubscribe, topic sends and per-token directed sends. `expo-notifications` stays for
+permission primer, Android channels, foreground display and tap handling. Lifecycle: `queued →
+sent` (FCM accepted) `→ delivered` (app's background/foreground message handler acks, best
+effort) `→ opened` (tap). The Expo push API and `EXPO_ACCESS_TOKEN` are **not used**.
 
 ### Rejected: app polling instead of push
 
@@ -208,7 +217,7 @@ degrade push to in-app only (§8), which is the acceptable failure mode; recorde
 | --- | --- | --- | --- |
 | 1 | FCM topic sends cannot be tracked per recipient | Delivery stats for notices are send-level only | Accepted default (`NTF-BR-005`, OQ-3); admin dashboards present counts honestly |
 | 2 | Locale rendering: payload carries key + pre-rendered bn/en pairs (server, from `users.locale`); device picks by stored app locale, falls back to `en` | OS-language ≠ app-language edge shows the other language's tray text | Client resolves key from on-device catalog first; pairs are a fallback, never raw content |
-| 3 | Expo push outage windows queue directed sends | DM push arrives late | In-app + WS delivery (05) is unaffected; queue drains with backoff |
+| 3 | FCM outage windows queue directed sends | DM push arrives late | In-app + WS delivery (05) is unaffected; queue drains with backoff |
 | 4 | 90-day stale pruning could drop an inactive-but-valid device | User stops receiving pushes until next app open | `last_seen_at` refreshes on every foreground; threshold is config (OQ-4) |
 | 5 | Topic fan-out reaches suspended/migrated users for seconds before unsubscribe | Stale push to a migrated student | Unsubscribe runs in the migration flow (04) + nightly reconcile job |
-| 6 | FCM/Expo quota changes at 20k users | Batch pacing insufficient | Batch size + pacing are config (§5); load-test before Phase-2 scale-up |
+| 6 | FCM quota changes at 20k users | Batch pacing insufficient | Batch size + pacing are config (§5); load-test before Phase-2 scale-up |

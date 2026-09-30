@@ -9,9 +9,9 @@
 
 ## 1. Purpose
 
-Ships the platform's infrastructure and operations in two parts. **Part A** (after 01/02) — the walking skeleton: multi-stage images built in CI → GHCR, a Compose stack (**api + web + redis only**) on the Hostinger KVM 2 VPS behind HestiaCP Nginx + Let's Encrypt TLS, one-command deploy gated on `/readyz`, rollback < 5 min. **Part B** (after 14) — production hardening: prod wiring (Neon, R2, FCM, gateways), nightly backups with an executed restore drill, runbooks, EAS pipelines, log discipline, and the pilot checklist — captured in `DEPLOYMENT.md`. Serves `brd.md` §8 (pilot readiness, rollout) and `persona.md` "Operate what you build": a small team must run this alone.
+Ships the platform's infrastructure and operations in two parts. **Part A** (after 01/02) — the walking skeleton: multi-stage images built in CI → GHCR, a Compose stack (**api + worker + web + redis only**) on the Hostinger KVM 2 VPS behind HestiaCP Nginx + Let's Encrypt TLS, one-command deploy gated on `/readyz`, rollback < 5 min. **Part B** (after 14) — production hardening: prod wiring (Neon, R2, FCM, gateways), nightly backups with an executed restore drill, runbooks, EAS pipelines, log discipline, and the pilot checklist — captured in `DEPLOYMENT.md`. Serves `brd.md` §8 (pilot readiness, rollout) and `persona.md` "Operate what you build": a small team must run this alone.
 
-**Correction vs the README row (binding):** the index row says "Compose (Postgres/Redis/MinIO)"; `docs/tech-stack.md` §Infrastructure supersedes it (decision 2026-09-29): Postgres runs **off-box on Neon** (free tier, `ap-southeast-1`), media on **Cloudflare R2** — Compose runs **api + web + redis only**; MinIO is deliberately not used. **Language split (binding):** runbooks and `DEPLOYMENT.md` are English (operator-facing); anything user-facing — maintenance banner/page copy, degraded-mode strings — is bn + en via the `ops.*` namespace in `packages/shared` (bn default).
+**Correction vs the README row (binding):** the index row says "Compose (Postgres/Redis/MinIO)"; `docs/tech-stack.md` §Infrastructure supersedes it (decision 2026-09-29): Postgres runs **off-box on Neon** (free tier, `ap-southeast-1`), media on **Cloudflare R2** — Compose runs **api + worker + web + redis only**; MinIO is deliberately not used. **Language split (binding):** runbooks and `DEPLOYMENT.md` are English (operator-facing); anything user-facing — maintenance banner/page copy, degraded-mode strings — is bn + en via the `ops.*` namespace in `packages/shared` (bn default).
 
 ## 2. Actors
 
@@ -21,7 +21,7 @@ Ships the platform's infrastructure and operations in two parts. **Part A** (aft
 | Developer (any module) | Merges to `main`; consumes GHCR images, deploy scripts, `.env.example` files |
 | CI (GitHub Actions) | Builds/pushes images to GHCR; runs the secret scan; never builds on, or deploys from, the VPS |
 | HestiaCP / Nginx (system) | TLS, reverse proxy to `127.0.0.1` containers, firewall, fail2ban, cert renewal |
-| Docker / Compose (system) | Runs api + web + redis with memory caps, restart policies, healthchecks |
+| Docker / Compose (system) | Runs api + worker + web + redis with memory caps, restart policies, healthchecks |
 | External uptime checker (system) | Polls `/healthz` + `/readyz` from off-box and raises alerts |
 | EAS Build / Submit (system) | Builds APK/AAB, submits to Play / TestFlight from 02/03 assets |
 | System (cron) | Nightly backup, quarterly drill reminder, log rotation |
@@ -33,8 +33,8 @@ No product end-user roles act here — every story is operator/developer/CI-faci
 **In scope**
 
 - `Dockerfile` per deployable (api: Go multi-stage → distroless/alpine; web: Next standalone), built in CI → GHCR — never on the VPS
-- `docker-compose.yml` (api + web + redis; profiles; `mem_limit`, restart policies, healthchecks) + `.env.example` + `.dockerignore` per deployable
-- HestiaCP Nginx proxy templates: `api.` / `web.` → `127.0.0.1`, TLS, security headers, WS upgrade, maintenance flag
+- `docker-compose.yml` (api + worker + web + redis; profiles; `mem_limit`, restart policies, healthchecks) + `.env.example` + `.dockerignore` per deployable
+- HestiaCP Nginx proxy templates: `kusholconnect.com` (+ `/api/*`) / `api.kusholconnect.com` → `127.0.0.1`, TLS, security headers, WS upgrade, maintenance flag
 - Deploy / rollback scripts gated on `/readyz` (01 contract); Makefile targets; release log
 - Part B wiring: Neon prod DB, R2 buckets, FCM prod credentials (06 seam), gateway production cutover (12 seam)
 - Nightly `pg_dump` → R2 (versioned) + off-site copy; restore script + executed, documented drill
@@ -68,15 +68,15 @@ No product end-user roles act here — every story is operator/developer/CI-faci
 
 **Priority:** P0 · **Traces:** brd.md §8 Phase 1 · tech-stack.md §Infrastructure · **Depends on:** 01, 02
 
-**Story** — As an **operator**, I want `docker compose up` on the VPS to serve the web landing page and api health endpoints via HestiaCP Nginx with Let's Encrypt TLS on `api.` / `web.` subdomains, so that the platform has a real, secure deployment path from week one.
+**Story** — As an **operator**, I want `docker compose up` on the VPS to serve the web landing page and api health endpoints via HestiaCP Nginx with Let's Encrypt TLS on `kusholconnect.com` and `api.kusholconnect.com`, so that the platform has a real, secure deployment path from week one.
 
 **Acceptance criteria**
 
-- **Given** the VPS with Docker + HestiaCP, **when** `docker compose -p kushol-pilot up -d` runs with a filled `.env`, **then** `https://web.<domain>/` renders the landing page and `https://api.<domain>/healthz` returns 200 over valid TLS.
-- **Given** the Compose file, **when** inspected, **then** only api + web + redis exist (Postgres/MinIO deliberately absent — Neon + R2 off-box) and every container binds `127.0.0.1` only.
+- **Given** the VPS with Docker + HestiaCP, **when** `docker compose -p kushol up -d` runs with a filled `.env`, **then** `https://kusholconnect.com/` renders the landing page and `https://api.kusholconnect.com/healthz` returns 200 over valid TLS.
+- **Given** the Compose file, **when** inspected, **then** only api + worker + web + redis exist (Postgres/MinIO deliberately absent — Neon + R2 off-box) and every container binds `127.0.0.1` only.
 - **Given** a VPS reboot, **when** the host returns, **then** all containers self-heal via restart policies and report healthy within 2 minutes.
 
-**Notes** — Memory caps: api 1.5g / web 1g / redis 512m, sized for the shared host (15 §9 Q5).
+**Notes** — Memory caps: api 512m · worker 256m · web 512m · redis 256m, sized for the shared host (15 §9 Q5).
 
 ---
 
@@ -98,12 +98,13 @@ No product end-user roles act here — every story is operator/developer/CI-faci
 
 **Priority:** P0 · **Traces:** prompt.txt §11 · FND-US-006 · **Depends on:** OPS-US-001, OPS-US-002
 
-**Story** — As an **operator**, I want `ops/deploy.sh <env> <tag>` to pull exact tags, migrate, restart services and pass a `/readyz` gate + smoke check before traffic swaps, so that a bad build never reaches users silently.
+**Story** — As an **operator**, I want `ops/deploy.sh <env> <tag>` to pull exact tags, confirm the database already has this release's migrations, restart services and pass a `/readyz` gate + smoke check, so that a bad build never reaches users silently.
 
 **Acceptance criteria**
 
-- **Given** a green CI tag, **when** `ops/deploy.sh pilot main-abc1234` runs, **then** it pulls pinned tags, runs migrations (01 golang-migrate), `compose up -d`, polls `/readyz` ≤ 120 s and runs the smoke check (OPS-E2E-001) before success.
-- **Given** `/readyz` red or timeout, **when** the gate fails, **then** old containers keep serving (pull-before-swap), the script exits non-zero and writes an incident-log entry; a concurrent deploy is refused via lock file.
+- **Given** a green CI tag, **when** `ops/deploy.sh pilot main-abc1234` runs, **then** it pulls pinned tags, checks `migrate-status` (read-only; migrations are run manually by the owner — Gate 2), `compose up -d`, polls `/readyz` ≤ 120 s and runs the smoke check (OPS-E2E-001) before success.
+- **Given** `/readyz` red or timeout, **when** the gate fails, **then** the script automatically redeploys the previous logged tag (brief restart; old containers were already replaced), exits non-zero and writes an incident-log entry; a concurrent deploy is refused via lock file.
+- **Given** the database is behind the image's expected migration version, **when** deploy runs, **then** it stops before changing any container and names the SQL files the owner must run.
 - **Given** a Neon cold start during the gate, **when** retries run, **then** the warm-up (~hundreds of ms) is tolerated — no false red; readyz green after warm-up. The gate consumes the 01 contract verbatim.
 
 ---
@@ -146,7 +147,7 @@ No product end-user roles act here — every story is operator/developer/CI-faci
 
 - **Given** the checker, **when** `/healthz` fails twice from outside, **then** an alert reaches the operator within 5 minutes (provider `TODO: Confirm`, 15 §9 Q1).
 - **Given** any Compose service, **when** inspected, **then** it declares `mem_limit`, `restart: unless-stopped` and a healthcheck (BR-006); an OOM-killed api restarts and lands in the incident log.
-- **Given** the maintenance flag set, **when** users open `web.<domain>` or the web build ships `NEXT_PUBLIC_MAINTENANCE_MODE=true`, **then** the static bn/en page (bn default) or banner shows `ops.maintenance.*` from `packages/shared` — both entries build-checked; flag removal recovers instantly (`no-store`).
+- **Given** the maintenance flag set, **when** users open `kusholconnect.com` or the web build ships `NEXT_PUBLIC_MAINTENANCE_MODE=true`, **then** the static bn/en page (bn default) or banner shows `ops.maintenance.*` from `packages/shared` — both entries build-checked; flag removal recovers instantly (`no-store`).
 
 **Notes** — In-container healthchecks use `/healthz`; the deploy gate uses `/readyz` — different jobs, one contract (01).
 
@@ -251,7 +252,7 @@ No product end-user roles act here — every story is operator/developer/CI-faci
 | `OPS-BR-001` | Images are built in CI and pulled from GHCR — building on the VPS (2 vCPU, shared with 2 other applications) is a defect | CI workflow + host-script lint |
 | `OPS-BR-002` | No secret enters git, CI logs or images; real env lives only in host `.env` (chmod 600), parsed solely by 01 config modules | gitleaks + masking + perms check |
 | `OPS-BR-003` | No deploy serves traffic until `/readyz` (01 contract) is green and smoke passes; gate failure aborts before the swap | `ops/deploy.sh` gate |
-| `OPS-BR-004` | One Compose project per environment (`kushol-pilot`, `kushol-prod`); environments never share containers, networks or `.env` | Compose project names + runbook |
+| `OPS-BR-004` | One server stack (`kushol`) on the shared KVM 2 — pilot is promoted to prod, never run side by side; dev/pre-release stacks run locally against Neon branches and never share the server's containers, networks or `.env` | Compose project name + runbook |
 | `OPS-BR-005` | Image tags are immutable (git SHA); rollback = redeploy the previous logged tag, never rebuild | GHCR tag scheme + release log |
 | `OPS-BR-006` | Every container declares `mem_limit`, `restart: unless-stopped` and a healthcheck — uncapped is a defect on the shared host | Compose file + review checklist |
 | `OPS-BR-007` | A backup is not a backup until a restore from it has succeeded (checksum-verified drill pre-pilot; quarterly after) | `ops/restore.sh` + pilot checklist |
@@ -295,4 +296,4 @@ Operator-side only — none of it feeds 07/09 product dashboards: backup log (la
 | 2 | Off-site copy target for DB dumps beyond R2 | Rahul | Open | `rclone` sync to a second provider (`TODO: Confirm` before Part B); R2 versioning alone is not off-site |
 | 3 | Log retention on the VPS | Rahul | Open | Docker `json-file` rotation 10 MB × 5 (~30 days); no external shipping during pilot |
 | 4 | Scaling trigger off Neon free tier / single shared VPS | Rahul | Open | Upgrade Neon (Launch ~$19/mo) or move Postgres into Compose at real pilot traffic; VPS revisit at sustained CPU > 70%, > 10 schools, or a pilot SLA breach — recorded in `DEPLOYMENT.md` |
-| 5 | Memory-cap sizing on the shared KVM 2 (8 GB total) | Rahul | Open | Compose `mem_limit` defaults api 1.5g / web 1g / redis 512m (≈ 3 GB Kushol; rest for HestiaCP + 2 co-tenants); adjust after the first monitoring week |
+| 5 | Memory-cap sizing on the shared KVM 2 (8 GB total) | Rahul | Open | Compose `mem_limit` defaults api 512m · worker 256m · web 512m · redis 256m (≈ 1.5 GB Kushol; rest for HestiaCP + 2 co-tenants); adjust after the first monitoring week |

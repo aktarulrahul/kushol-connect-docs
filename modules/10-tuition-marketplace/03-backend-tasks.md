@@ -111,10 +111,10 @@ requirement-side join re-applies the tenant filter.
 
 | # | Migration | Reversible? |
 | --- | --- | --- |
-| 1 | `20261101090000_tut_requirements` (tuition_requirements + status/budget CHECKs + list/expiry indexes) | ✅ |
-| 2 | `20261101091000_tut_tutor_profiles` (tutor_profiles + verified partial + GIN subjects + geo columns) | ✅ |
-| 3 | `20261101092000_tut_tutor_verifications` (verifications + partial unique pending + reject-note CHECK) | ✅ |
-| 4 | `20261101093000_tut_matches` (matches + UNIQUE pair + single-accepted partial) | ✅ |
+| 1 | `20261120090000_tut_requirements` (tuition_requirements + status/budget CHECKs + list/expiry indexes) | ✅ |
+| 2 | `20261120091000_tut_tutor_profiles` (tutor_profiles + verified partial + GIN subjects + geo columns) | ✅ |
+| 3 | `20261120092000_tut_tutor_verifications` (verifications + partial unique pending + reject-note CHECK) | ✅ |
+| 4 | `20261120093000_tut_matches` (matches + UNIQUE pair + single-accepted partial) | ✅ |
 
 ### 1.3 Seed
 

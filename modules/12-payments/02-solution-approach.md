@@ -15,7 +15,7 @@
 | `ledger_entries` | Append-only double-side (debit/credit) money journal per school: fee_payment, convenience_fee, commission, payout, adjustment | Yes |
 | `payment_receipts` | One immutable PDF receipt per successful transaction, serial-numbered per school, stored in R2 (via 05) | Yes |
 | `gateway_events` | Webhook envelope audit: gateway, event id, `signature_valid`, sha256 payload digest, processed flag, **payload summary only — never the payload** | Yes |
-| `users` (03) | Payers (guardian/student), issuers, admins; `locale` for bn/en rendering; guardian↔student link | No — read via 03 |
+| `users` (03) | Payers (guardian/student), issuers, admins; `locale` for bn/en rendering; guardian↔student link (03 `guardians.IsGuardianOf` / `LinkedStudents`) | No — read via 03 |
 | `schools` / hierarchy (04) | Tenant root; section→student resolution for bulk invoices | No — read via 04 |
 | `orders` (11) | Vendor order paid online; 12 only reads `commerce.OrderAmount` and 11 attaches `payment_transaction_id` | No — 11's seam |
 | `media_assets` (05) | Row representing the stored receipt PDF in R2 | No — written via 05's service |
@@ -43,7 +43,7 @@ orders (11) 1───* payment_transactions (order_id set, invoice_id null)
 | ID | Invariant | Enforced by |
 | --- | --- | --- |
 | `PAY-INV-1` | `ledger_entries` is append-only: no UPDATE/DELETE path; corrections are new `adjustment` rows | DB rule/trigger (mirrors 01 `audit_log`) |
-| `PAY-INV-2` | Every `success` transaction produces balanced entries in the same tx: credits (fee_payment + convenience_fee, or commission) == charged amount | Service single-tx write + `PAY-IT` balance tests |
+| `PAY-INV-2` | Every `success` transaction produces balanced entries in the same tx: credits (fee_payment [+ convenience_fee when > 0], or commission) == charged amount | Service single-tx write + `PAY-IT` balance tests |
 | `PAY-INV-3` | At most one transaction per (gateway, gateway_txn_id) — webhook idempotency | `UNIQUE(gateway, gateway_txn_id)` + handler no-op on duplicate |
 | `PAY-INV-4` | At most one receipt per successful transaction; serial unique per school; receipt object immutable | UNIQUE(txn_id), UNIQUE(school_id, serial_no), R2 immutability discipline |
 | `PAY-INV-5` | Invoice amount/title/student immutable after issue; void only with zero successful transactions | Service guards + `PAY-IT` |
@@ -59,7 +59,7 @@ orders (11) 1───* payment_transactions (order_id set, invoice_id null)
 
 | Module | What | Why not duplicated |
 | --- | --- | --- |
-| 03 | `auth.*` chain, roles, verification status, guardian↔student link, `users.locale` | Identity and verification are 03's; 12 never re-checks credentials |
+| 03 | `auth.*` chain, roles, verification status, guardian↔student link (03 `guardians.IsGuardianOf` / `LinkedStudents`), `users.locale` | Identity and verification are 03's; 12 never re-checks credentials |
 | 04 | `hierarchy.ResolveUserNodes` (tenant scoping; section→student rosters for bulk) | The hierarchy is 04's data model; 12 has no school/section tables |
 | 05 | `media.PutObject` (receipt PDFs → R2; **additive export** — 05 ships `PresignUpload`/`ConfirmUpload` for clients; api-generated files need a server-side put) | One storage path; 12 never holds R2 credentials |
 | 06 | `notify.SendToUser` (fee-due push, payment-result push → `/receipts/{txnId}`) | All push fan-out, prefs, retries live in 06 |
@@ -92,7 +92,7 @@ payment flow (authoritative vs UX):
 | invoice issued | void | void | zero successful txns; admin; audit with reason | pending txns refuse at initiate |
 | invoice issued | overdue sweep | overdue | `due_date < today` AND unpaid | daily job; reportable |
 | txn initiated | redirect issued | redirected | payer verified + entitled; gateway up | — |
-| txn redirected | webhook/callback success | success | signature verified; idempotency key free | **ledger entries; attach to 11 order (if order); invoice→paid; receipt job; push** |
+| txn redirected | webhook/callback success | success | signature verified where the gateway signs; **server-to-server `FetchStatus` confirms status + amount + currency + our txn id**; idempotency key free | **ledger entries; attach to 11 order (if order); invoice→paid; receipt job; push** |
 | txn redirected | failure/expire | failed / expired | gateway report or sweep | result push (retry link); invoice stays issued |
 | txn success | manual refund | refunded | Super/School Admin; adjustment entry | audit; no gateway auto-refund |
 
@@ -111,7 +111,7 @@ payment flow (authoritative vs UX):
 
 | Owner can change in the admin | Fixed in code |
 | --- | --- |
-| Convenience fee amount (platform-wide, default **BDT 15** — `TODO: Confirm`) | Ledger entry types + balance rule; state machines (`02` §3) |
+| Convenience fee amount (platform-wide, default **BDT 0 = off** per `brd.md` §7 revised model — transaction fees removed; enabling is an owner decision) | Ledger entry types + balance rule; state machines (`02` §3) |
 | Gateway enable/disable toggles (per gateway; down/holiday switches) | Signature schemes + replay windows per gateway adapter |
 | Invoice kind presets (labels bn/en for tuition/exam/transport/other) | Txn expiry window (30 min); receipt serial format `{SCHOOL-YY}-{seq}` |
 | Order commission rate (default 5% — owned with 11, `TODO: Confirm`) | Rate-limit class `payments` (strict); webhook route list |
@@ -122,6 +122,12 @@ payment flow (authoritative vs UX):
 - **Entry points & auth chain:** every REST route runs authenticate → load role claims → tenant-scope (03 chain). School-scoped reads/writes require `school_admin` of the claims' school (Super Admin may read across, write refunds only); payer routes are self-scoped by claims. **`POST /api/v1/webhooks/{gateway}` is the one deliberate exception: no auth chain — instead, HMAC/signature verification + timestamp replay window + allowlisted gateway source ranges, then the same validation pipeline.** This exception is documented here and in `03-backend-tasks.md` §2; it is flagged in the OpenAPI spec (security: [] with a webhook marker).
 - **Rate limits:** class `payments` (strict) — initiate 5/min/user; callback 30/min/IP; webhook 120/min per gateway (generous, retries are legitimate); ledger reads use the `default` class.
 - **Validation:** contract-generated validators on every field (`01` §6); webhook bodies parsed only after signature verification (envelope first, then payload).
+- **Never trust the callback alone (binding, 2026-09-30):** a redirect/IPN/webhook only *triggers*
+  processing; `success` is written only after the adapter's server-to-server `FetchStatus` confirms the
+  payment (SSLCommerz order-validation API, bKash execute/query-payment, Nagad verify — exact
+  endpoints, signing and whether each gateway pushes webhooks at all are `TODO: Confirm` against the
+  current merchant docs before building each adapter; do not assume a signed-webhook scheme). Where a
+  gateway sends no webhook, a `payments.status_poll` job confirms redirected transactions.
 - **PCI stance:** **no card or wallet credentials ever reach our servers** — gateways host the payment page; we store only gateway transaction ids, amounts and statuses. There is no PAN/CVV/token storage anywhere in this module, which keeps the integration at SAQ-A-level scope. Redirect payloads are opaque gateway references; nothing sensitive is displayed in the UI (transaction drawer shows ids/amounts/status only).
 - **Secrets & logging:** gateway keys live only in the parsed config module; `PAY-BR-007` forbids logging secrets or raw payloads — log gateway, event id, txn id, amounts. `PAY-UT` asserts redaction.
 - **Tenant scope rule for every table:** `fee_invoices`, `ledger_entries`, `payment_receipts` carry `school_id` (all queries scoped); `payment_transactions`/`gateway_events` are scoped transitively via invoice/order + payer, with payer/admin visibility rules in the service; cross-tenant probes return `TENANT_MISMATCH`/404 (`PAY-IT` per table).
@@ -192,8 +198,9 @@ Motion is minimal and functional: the pay-screen gateway chooser uses press feed
 | 1 | Sandbox gateway behaviour ≈ production webhooks/signatures | Signature/format surprises at cutover (module 15) | Adapter + VerifyWebhook isolation; contract tests per gateway; sandbox-first rollout |
 | 2 | Settlement CSV formats stay stable enough for manual import | Reconciliation breaks per format drift | `TODO: Confirm` per-gateway templates; parser per adapter; mismatches fail loud, not silent |
 | 3 | Guardians pay within due dates; volume of overdue is manageable | Push fatigue / reconciliation backlog | Overdue sweep + ledger filters; bulk re-issue is one action |
-| 4 | BDT 15 convenience fee covers gateway MDR + margin | Revenue stream underdelivers (`prd.md` §7) | Fee is config, not code; `TODO: Confirm` before production cutover |
+| 4 | Fee stays off (BDT 0, `brd.md` §7) — gateway MDR is absorbed by the platform/school | MDR cost unfunded | Fee is config, not code; owner decides MDR bearer (`TODO: Confirm` — Rahul) before production cutover |
 | 5 | 11's order seam (`OrderAmount`, attach hook) lands before 12 builds | Order payments blocked (fees unaffected) | Order path is a separate initiatable target; ship fees first if 11 slips |
-| 6 | 05 ships the additive `media.PutObject` server-side export | Receipt upload blocked | Flagged additive in `06` §3; fallback: 05's presign flow driven server-side (uglier, works) |
+| 6 | 05's `media.PutObject` server-side export (declared in 05 `06` §2) | Receipt upload blocked | Contract test against 05's fake; fallback: 05's presign flow driven server-side (uglier, works) |
 | 7 | Webhook route exposed publicly becomes a flood target | Noise/DoS on the money path | `payments` rate-limit class, allowlisted ranges, cheap-verify-first ordering, alerting |
 | 8 | Refund ledger adjustments drift from gateway realities | Ledger ≠ bank at audit | Manual refunds require Super/School Admin + audit; reconciliation flags deltas |
+| 9 | Go PDF tooling renders Bengali (conjuncts, vowel signs) correctly in receipts | Garbled bn receipts — a trust failure with guardians | **Spike before build (`PAY-BE-000`)**: render a bn+en sample receipt with (a) a Go text-shaping library (HarfBuzz-class shaping) + PDF writer, (b) a renderer bundled in the api image; pick the one that renders correctly within the api's 512 MB cap; en-only receipt fallback is **not** acceptable (bn is the default language) |

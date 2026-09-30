@@ -28,7 +28,7 @@ Provides the DeepSeek-powered study layer: the **Notes Scanner** (handwritten no
 | consumes | 04 organization-hierarchy | `hierarchy.ResolveUserNodes` — teach-sections (class tests) + school scope (archive) |
 | consumes | 05 communication-engine | `media.PresignUpload`/`ConfirmUpload` — scan images ride 05's R2 upload service |
 | consumes | 06 notifications | Push on `scan_ready` + `class_test` (ids + type only, deep links) |
-| consumed by | 09 teacher-analytics · 07 command-center-web | 09: `ai.ClassifyChatQueries`, `ai.QuotaState`, `analytics.AttemptStats` · 07: `GET /api/v1/ai/admin/cost-report` (role-gated) + `ai.QuotaState` for cost context |
+| consumed by | 09 teacher-analytics · 07 command-center-web | 09: `ai.ClassifyChatQueries`, `ai.QuotaState`, `ai.AttemptStats` · 07: `GET /api/v1/ai/admin/cost-report` (role-gated) + `ai.QuotaState` for cost context |
 
 ---
 
@@ -59,7 +59,7 @@ App (Expo, /ai-hub*) ──▶ chi REST /api/v1/ai/* (authenticate → role clai
    │                              → versioned JSON-schema validation → 1 repair attempt → persist → READY
    └──◀ 06 push (scan_ready / class_test) ────────────┘ every adapter call → ai_usage_ledger upsert
 aicost.Guard: daily ledger sum vs cap → Redis ai:breaker:state → generation queues, banner shown
-09 consumes: analytics.AttemptStats · ai.ClassifyChatQueries · ai.QuotaState   07 consumes: GET /ai/admin/cost-report
+09 consumes: ai.AttemptStats · ai.ClassifyChatQueries · ai.QuotaState   07 consumes: GET /ai/admin/cost-report
 ```
 
 ### 3.2 Boundary
@@ -150,7 +150,7 @@ Auth chain on every route: authenticate → load role claims → tenant-scope �
 | `ai.TagNoteImage(ctx, imageRef ImageRef, locale string)` | internal (scan-tagging job) | `NoteTags{summary, tags[]{level, value, normalized}}` | same — image must be a 05-confirmed asset |
 | `ai.ClassifyChatQueries(ctx, samples []ChatQuerySample, locale string)` | 09 | `TopicTags{topics[]{value, normalized, confidence}}` | same — aggregates only; 09 must not persist chat text; ledger `classify`, no user quota |
 | `ai.QuotaState(userID uuid.UUID)` | 09 (matrix context), 07 (cost context) | `QuotaStateDTO{plan, features[]{feature, used, limit, week_start}}` | `NOT_FOUND` — DTO only, never ledger rows |
-| `analytics.AttemptStats(sectionID uuid.UUID, weekStart time.Time)` | 09 | `AttemptStatsDTO{attempts, avg_score, per_question[]{question_id, miss_count, miss_pct}}` | `FORBIDDEN` (non-tenant section) — aggregate-only, no student identities |
+| `ai.AttemptStats(sectionID uuid.UUID, from, to time.Time)` | 09 | `AttemptStatsDTO{attempts, avg_score, per_question[]{question_id, miss_count, miss_pct}, per_topic[]{subject, chapter, topic, answered, failed, fail_rate}}` | `FORBIDDEN` (non-tenant section) — aggregate-only, no student identities |
 
 AI output schemas are versioned separately (`AIContract v1`); prompt templates + versions are code constants logged per call; `questions_snapshot` embeds its contract version (`06` §7).
 
@@ -309,3 +309,4 @@ All errors surface as RFC-7807 `application/problem+json`; messages resolve via 
 | Date | Change | Author |
 | --- | --- | --- |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
+| 2026-09-30 | Consistency pass: `ai.AttemptStats(sectionID, from, to)` takes an explicit window and adds `per_topic` aggregates (09's Sun→Sat week is independent of the Monday quota week); Kushol Pro read via 03 `users.PlanOf` | Claude |

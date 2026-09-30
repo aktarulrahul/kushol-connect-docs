@@ -85,6 +85,11 @@ Button                              Dialog (desktop) / Sheet (mobile ≤ 640px)
 | EmptyState | Server-safe | icon/title/action; bn-first copy via `t()` |
 | Avatar (verified-badge variant) | Server-safe | image + badge overlay; initials fallback in Hind Siliguri |
 | `Logo` | Server-safe | lockup per `docs/design-reference/README.md` §5; accessible name "Kushol Connect — Home" |
+| `AdminShell` (Sidebar + Topbar) | Client | professional console shell (`design-reference` §7.2): collapsible role-filtered sidebar, breadcrumbs, school switcher slot, language toggle, user menu; used by `/admin`, `/school`, `/vendor` |
+| `PageHeader` | Server-safe | title, description, primary/secondary action slots |
+| `StatCard` | Server-safe | label, value (Inter tabular), delta, optional sparkline; "—" + tooltip when value unavailable (never placeholder numbers) |
+| `DataTable` | Client | TanStack Table on top of Table shell: sort, filter, pagination, row selection + bulk-action bar, density toggle |
+| `MarketingSection` · `Hero` | Server-safe | landing building blocks (`design-reference` §7.1): section container/grid, eyebrow + headline + body + CTA slots, device-frame screenshot slot |
 
 **States**
 
@@ -186,4 +191,5 @@ its right-hand column (`DSN-BR-007`).
 - [ ] `DSN-FE-016` — Avatar with verified-badge variant
 - [ ] `DSN-FE-017` — `Logo` component (usage rules, accessible name, one-time reveal hook, PNG-fallback support)
 - [ ] `DSN-FE-018` — Light-theme contrast pass (WCAG 2.2 AA, bn/en) + axe clean on the primitive fixtures
+- [ ] `DSN-FE-019` — Professional web primitives: `AdminShell`, `PageHeader`, `StatCard`, `DataTable`, `MarketingSection`/`Hero` (`docs/design-reference/README.md` §7)
 - [ ] `DSN-UT-003` — Web primitive render/a11y fixtures (defined in `06-integration-tasks §9`)

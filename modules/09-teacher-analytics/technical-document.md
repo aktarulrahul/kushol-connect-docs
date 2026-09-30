@@ -22,12 +22,12 @@ Implements `brd.md` §5 BR-02 and `prd.md` §5.2 (Pain Point Matrix): every week
 
 | Direction | Module | What is exchanged |
 | --- | --- | --- |
-| consumes | 08 ai-study-hub | `ai.AttemptStats(sectionId, week)` failed-MCQ aggregates (P0 source); `ai.ClassifyChatQueries(ctx, Samples, Locale)` (P1 source); `ai.QuotaState` context; tables `ai_tests`/`ai_test_attempts`/`ai_test_answers` are 08-owned |
+| consumes | 08 ai-study-hub | `ai.AttemptStats(sectionID, weekStart, weekEnd)` failed-MCQ aggregates (P0 source); `ai.ClassifyChatQueries(ctx, Samples, Locale)` (P1 source); `ai.QuotaState` context; tables `ai_tests`/`ai_test_attempts`/`ai_test_answers` are 08-owned |
 | consumes | 04 organization-hierarchy | `hierarchy.ResolveUserNodes` (teacher → own sections; school_admin → school), `hierarchy.GetSection`, `sections` |
-| consumes | 05 communication-engine | `chat.GroupMembers(groupID)` — aggregates only; no raw message content ever leaves the aggregation boundary |
+| consumes | 05 communication-engine | `chat.SectionQuestionSamples` (anonymized samples → 08 classify, never persisted) + `chat.GroupMembers(groupID)` (distinct-author counts); only topic tags + counts are stored |
 | consumes | 03 identity-access | `auth.RequireRole`, `users` verified gate (teacher / school_admin only) |
 | consumes | 01 foundations | `jobs.Enqueue` + weekly worker (Sunday 00:00 Asia/Dhaka), `audit.Record`, RFC-7807 envelope, Redis rate limiting |
-| consumes | 06 notifications (P1) | Per-user push export (`notifications.SendToUser`) for the Monday teacher summary |
+| consumes | 06 notifications (P1) | Per-user push export (`notify.SendToUser`) for the Monday teacher summary |
 | consumed by | 07 command-center-web | `analytics.SchoolMatrix` export + REST §2 for the Command Center AI-matrix section |
 | consumed by | 06 notifications | `analytics.WeeklyMatrix` as push-builder source data |
 
@@ -58,8 +58,8 @@ Implements `brd.md` §5 BR-02 and `prd.md` §5.2 (Pain Point Matrix): every week
         ▼
 analytics.ComputeSectionWeek(sectionId, weekStart)                    (09 service)
    ├─ 04 hierarchy.GetSection / ResolveUserNodes → section identity + scope (never guessed)
-   ├─ 08 ai.AttemptStats(sectionId, week)        → MCQ topic aggregates (P0)
-   ├─ 05 chat.GroupMembers(groupID)              → official group + distinct authors (boundary only)
+   ├─ 08 `ai.AttemptStats(sectionID, weekStart, weekEnd)`        → MCQ topic aggregates (P0)
+   ├─ 05 chat.SectionQuestionSamples + GroupMembers → anonymized samples + distinct authors (in-memory)
    ├─ 08 ai.ClassifyChatQueries(Samples, "bn")   → chat topic tags (P1 — skipped on failure)
    ├─ merge per (topic_tag, language, source): fail_rate · sample_size · insight_text (ANL-BR-008)
    ├─ upsert weekly_pain_points (current open week only — ANL-INV-002)
@@ -74,7 +74,7 @@ Monday 07:00: analytics.weekly_push (P1) → 06 SendToUser → owning teachers (
 
 **Owns (tables / services):** `weekly_pain_points` — nothing else. No FK into 08 tables: the job copies aggregates at compute time, so the matrix survives source retention windows and stays cheap to read.
 
-**Reads (via exported service functions only):** 08 — `AttemptStats`, `ClassifyChatQueries` (frozen by 08's `06` §2); 04 — `ResolveUserNodes`, `GetSection`; 05 — `GroupMembers` (member/author metadata only); 03 — `auth.RequireRole` + verified claims; 01 — `jobs.Enqueue` + weekly worker, `audit.Record`, Redis limiter; 06 (P1) — per-user push. Cache tags: `school:{id}:matrix:{week}`, `school:{id}:matrix:index`.
+**Reads (via exported service functions only):** 08 — `AttemptStats`, `ClassifyChatQueries` (frozen by 08's `06` §2); 04 — `ResolveUserNodes`, `GetSection`; 05 — `SectionQuestionSamples`, `GroupMembers` (member/author metadata only); 03 — `auth.RequireRole` + verified claims; 01 — `jobs.Enqueue` + weekly worker, `audit.Record`, Redis limiter; 06 (P1) — per-user push. Cache tags: `school:{id}:matrix:{week}`, `school:{id}:matrix:index`.
 
 ### 3.3 Request / data flows
 
@@ -109,7 +109,7 @@ Monday 07:00: analytics.weekly_push (P1) → 06 SendToUser → owning teachers (
 | --- | --- | --- | --- | --- |
 | `weekly_pain_points` | One aggregate row per (school, section, week, topic tag, source): `fail_rate`, `sample_size`, `insight_text`, `computed_at` | `school_id` on every row — always from the JWT claim; no repository method accepts a caller-supplied school id (ANL-INV-005) | UNIQUE `(school_id, section_id, week_start, topic_tag, source)` · `(school_id, week_start)` · `(section_id, week_start)` | CHECKs: `language ∈ bn\|en`, `source ∈ mcq\|chat`, `fail_rate` 0–1; recompute = `ON CONFLICT DO UPDATE` (ANL-BR-011); rows with `sample_size < ANALYTICS_MIN_SAMPLE` filtered in the query itself (ANL-INV-004); topic tags render as-is with stored `language` (ANL-BR-009) |
 
-Migration `20261019090001_create_weekly_pain_points`; no production seed — the table is computed (`ANL-BR-012`); fictional "Demo High School" demo rows for the 07 dashboard build; testcontainers fixtures seed 08's `ai_test_answers`.
+Migration `20261110090001_create_weekly_pain_points`; no production seed — the table is computed (`ANL-BR-012`); fictional "Demo High School" demo rows for the 07 dashboard build; testcontainers fixtures seed 08's `ai_test_answers`.
 
 ---
 
@@ -298,3 +298,4 @@ All errors surface as RFC-7807 `application/problem+json`; messages resolve via 
 | Date | Change | Author |
 | --- | --- | --- |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
+| 2026-09-30 | Consistency pass: migration re-versioned `20261110090001` (after 08); consumes `ai.AttemptStats(sectionID, weekStart, weekEnd)` per-topic data and 05 `chat.SectionQuestionSamples` (anonymized, never stored); `notify.SendToUser`; teacher web access confirmed in 07 | Claude |

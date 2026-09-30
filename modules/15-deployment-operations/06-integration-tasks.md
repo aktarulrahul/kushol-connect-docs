@@ -18,7 +18,7 @@ service calls. Every script, registry and external dependency is declared here �
 | I-4 | `12-payments` | they call us | sandbox→production key cutover: `BKASH_*`/`NAGAD_*`/`SSLCOMMERZ_*` env swap + webhook URL registration (12 shipped on sandbox per its default) | degraded — payments disabled in pilot until cutover |
 | I-5 | `02-design-system` · `03-identity-access` | they call us | EAS Build/Submit consumes 02 icon/splash assets + 03 credentials/wiring patterns; `EXPO_TOKEN` in CI | degraded — app releases blocked until wired |
 | I-6 | GHCR (external) | we call | CI `docker push` (`GITHUB_TOKEN`); VPS `docker pull` (read-only token in host `.env`) | fatal to deploys; running services unaffected (INV-001: never built on VPS) |
-| I-7 | VPS SSH + HestiaCP | we manage | key-only SSH, non-root deploy user, custom proxy templates (`api.`/`web.`), firewall/fail2ban, LE certs | fatal — full stack down; DR path via restore runbook |
+| I-7 | VPS SSH + HestiaCP | we manage | key-only SSH, non-root deploy user, custom proxy templates (apex + `api.`), firewall/fail2ban, LE certs | fatal — full stack down; DR path via restore runbook |
 | I-8 | Neon (external) | we call | console (DB/branch provisioning, operator) + `pg_dump` wire via `DATABASE_URL`; api's runtime path stays owned by 01 | degraded — api 503 envelope (01); backup job fails + alarm |
 | I-9 | R2 (external) | we call | S3 API: backup upload + off-site `rclone` copy with `R2_BACKUP_*` ops creds; app media creds (`R2_*`) are wired env-only | degraded — media/receipts degraded (05/08/12); backups fail + alarm |
 | I-10 | EAS (expo.dev, external) | we call | CLI build/submit/update in CI with `EXPO_TOKEN` | degraded — documented local `eas build` fallback |
@@ -27,7 +27,7 @@ service calls. Every script, registry and external dependency is declared here �
 ## 2. Exported Contract
 
 ```text
-ops/deploy.sh   <env> [tag]     # lock → pull exact tags → migrate up → compose up -d → /readyz gate ≤120s → smoke → release-log line
+ops/deploy.sh   <env> [tag]     # lock → pull exact tags → schema check (never migrates) → compose up -d → /readyz gate ≤120s → smoke → release-log / auto-rollback line
 ops/rollback.sh <env>           # previous tag from release log → redeploy + gate, < 5 min
 ops/backup.sh                   # pg_dump -Fc → .sha256 → R2 (versioned) → off-site rclone → prune
 ops/restore.sh  <artifact> <target>   # checksum verify → restore → row-count sanity → api smoke (drill/DR)

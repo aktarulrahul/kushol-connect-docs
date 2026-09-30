@@ -12,11 +12,11 @@
 
 | # | Counterparty | Direction | Mechanism | Failure is… |
 | --- | --- | --- | --- | --- |
-| I-1 | `07-command-center-web` | they call us | REST `/school/invoices*`, `/school/ledger*`, `/school/reconciliation` + exports (`06` §2) for dashboard cards | degraded — ledger screens show error states; payments unaffected |
+| I-1 | `07-command-center-web` | they call us | REST `/school/invoices*`, `/school/ledger*`, `/school/payments/reconciliation` + exports (`06` §2) for dashboard cards | degraded — ledger screens show error states; payments unaffected |
 | I-2 | `11-campus-commerce` | they call us | REST `POST /payments/initiate {orderId}` + export `payments.TransactionSummary` for checkout; 11 attaches `payment_transaction_id` on success (seam defined in 11's spec) | degraded — order checkout falls back to COD; fee payments unaffected |
 | I-3 | `06-notifications` | we call them | `notify.SendToUser` — fee-due push (`/payments/{invoiceId}`) + payment-result push (`/receipts/{txnId}`) | degraded, never fatal — invoices remain payable in-app |
-| I-4 | `05-communication-engine` | we call them | `media.PutObject` (receipt PDFs → R2; **additive export** — see `06` §3) | degraded — receipt job retries; money state already final |
-| I-5 | `03-identity-access` | we call them | auth chain (authenticate → role claims → tenant-scope); verification status; guardian↔student link; `users.locale` | fatal to entry points by design (`UNAUTHENTICATED`/`FORBIDDEN`) |
+| I-4 | `05-communication-engine` | we call them | `media.PutObject` (receipt PDFs → R2; declared in 05 `06` §2) | degraded — receipt job retries; money state already final |
+| I-5 | `03-identity-access` | we call them | auth chain (authenticate → role claims → tenant-scope); verification status; guardian↔student link (03 `guardians.IsGuardianOf` / `LinkedStudents`); `users.locale` | fatal to entry points by design (`UNAUTHENTICATED`/`FORBIDDEN`) |
 | I-6 | `04-organization-hierarchy` | we call them | `hierarchy.ResolveUserNodes` + section rosters (school scoping, bulk-invoice targeting) | degraded — issue forms' pickers degrade; no cross-school fallback ever |
 | I-7 | `01-foundations` | we call them | `jobs.Enqueue`/`Register` (receipt, reconcile, sweeps, notify fan-out), `audit.Record` (every money mutation), RFC-7807 envelope | receipt/recon jobs stay queued (retry); un-audited money mutation aborts by design |
 | I-8 | SSLCommerz / bKash / Nagad (external) | bidirectional | HTTPS hosted-checkout initiate + server-to-server webhook + status API | degraded — chooser hides a down gateway; ledger core never trusts client-side claims |
@@ -50,7 +50,7 @@ Rules: exports return DTOs (never sqlc row structs); admin-only exports require 
 | We call | Owner | On failure |
 | --- | --- | --- |
 | `notify.SendToUser(userID, PushPayload{type: payment_result \| fee_due, deepLink})` | 06 | Degraded — push lost, flow continues (invoice list + status screen carry the UX); 06 owns retries |
-| `media.PutObject(ctx, in PutInput{bytes, kind: receipt-pdf, schoolId})` → `MediaAssetDTO` | 05 — **additive export required** | Receipt job retries w/ backoff (`PAY-JOB-001`); 05 today ships only `PresignUpload`/`ConfirmUpload` (client flow); api-generated PDFs need this small server-side put helper — flagged **additive**, agreed shape: same sniffer/allowlist rules, service-account path |
+| `media.PutObject(ctx, in PutInput{bytes, kind: receipt_pdf, schoolId})` → `MediaAssetDTO` | 05 — declared in 05 `06` §2 (2026-09-30) | Receipt job retries w/ backoff (`PAY-JOB-001`); 05 today ships only `PresignUpload`/`ConfirmUpload` (client flow); api-generated PDFs need this small server-side put helper — flagged **additive**, agreed shape: same sniffer/allowlist rules, service-account path |
 | `commerce.OrderAmount(orderID)` + success attach hook (`payment_transaction_id` → 11 orders row) | 11 (seam defined in 11's spec) | Order payment refused at initiate (`PAYMENT_FAILED`) if 11 unreachable; fee path unaffected; attach failure → refund path + reconciliation flag (`02` §8.9) |
 | `hierarchy.ResolveUserNodes(userID)` / section roster reads | 04 | Bulk issue refuses (`VALIDATION_FAILED`) rather than guessing scope; single issue depends on student's school claim |
 | Auth chain + `users` (locale, verification) | 03 | Chain failures propagate (`UNAUTHENTICATED`/`FORBIDDEN`); SUSPENDED payer refused |
@@ -91,7 +91,7 @@ All webhook payloads are signature-verified before parsing; **secrets and raw pa
 | Summary cards (web) | `GET /school/ledger/summary` | counts + ৳ totals for the month |
 | Issue forms (web) | `POST /school/invoices` · `POST /school/invoices/bulk` | `InvoiceDTO` / `{created, failed[]}`; zod mirrors of `01` §6 |
 | Void (web) | `PATCH /school/invoices/{id}/void` | `CONFLICT` surfaced when payments exist |
-| Reconciliation (web) | `GET /school/reconciliation?date=` | per-gateway totals + mismatch rows |
+| Reconciliation (web) | `GET /school/payments/reconciliation?date=` | per-gateway totals + mismatch rows |
 | Pay now (app) | `POST /payments/initiate` | `RedirectPayload` → in-app browser |
 | Return/status (app) | callback 302 → `payments.InvoiceStatus` poll | success/failure/pending states |
 | Receipt (app/web) | `GET /payments/receipts/{txnId}` | immutable R2 URL + serial no |
@@ -136,7 +136,7 @@ Schema changes expand/contract; JSON shapes versioned; the OpenAPI spec is the s
 
 - [ ] `PAY-INT-001` Publish exports `InitiateInvoicePayment` / `InvoiceStatus` / `TransactionSummary`; 07/11 consumer stubs compile
 - [ ] `PAY-INT-002` Confirm 11's seam signatures (`commerce.OrderAmount` + attach hook) against 11's spec; adapt names if 11 finalizes differently — flag any drift in `08-gaps.md`
-- [ ] `PAY-INT-003` Coordinate the **additive** `media.PutObject` export with module 05 (shape above); note in `08-gaps.md` until 05 ships it
+- [ ] `PAY-INT-003` Consume 05 `media.PutObject` (declared in 05 `06` §2, kind `receipt_pdf`); contract test against 05 fake
 - [ ] `PAY-INT-004` Wire `notify.SendToUser` payloads: `fee_due` (`/payments/{invoiceId}`, bn "বকেয়া ফি" + amount) and `payment_result` (`/receipts/{txnId}`) — freeze with 06 (`NTF-INT-007`)
 - [ ] `PAY-INT-005` Register jobs (`receipt.generate`, `invoice.notify`, `payments.reconcile`, `payments.overdue_sweep`, `payments.expire`) with the 01 worker + cron
 - [ ] `PAY-INT-006` Webhook routes outside the auth group with signature middleware; OpenAPI spec annotated as the signature-verified exception

@@ -9,6 +9,9 @@
 Single engineer-facing reference compressing this module's spec set (`01`–`06`). When this file
 drifts, the spec files win.
 
+> Infrastructure plan: `docs/infra/architecture-and-deployment.md` (architecture, host checks, DNS, email).
+> This spec set was aligned with it on 2026-09-30.
+
 ---
 
 ## 1. Overview
@@ -16,7 +19,7 @@ drifts, the spec files win.
 ### 1.1 Purpose
 
 Ships the platform's infrastructure and operations in two parts. **Part A** (after 01/02) — the
-walking skeleton: multi-stage images built in CI → GHCR, a Compose stack (**api + web + redis
+walking skeleton: multi-stage images built in CI → GHCR, a Compose stack (**api + worker + web + redis
 only**) on the Hostinger KVM 2 VPS behind HestiaCP Nginx + Let's Encrypt TLS, one-command deploy
 gated on `/readyz`, rollback < 5 min. **Part B** (after 14) — production hardening: prod wiring
 (Neon, R2, FCM, gateways), nightly backups with an executed restore drill, runbooks, EAS
@@ -25,7 +28,7 @@ pipelines, log discipline, and the pilot checklist — captured in `DEPLOYMENT.m
 
 **Binding correction vs the README row:** `docs/tech-stack.md` §Infrastructure (decision
 2026-09-29) supersedes "Compose (Postgres/Redis/MinIO)" — Postgres runs **off-box on Neon** (free
-tier, `ap-southeast-1`), media on **Cloudflare R2**; Compose runs **api + web + redis only**;
+tier, `ap-southeast-1`), media on **Cloudflare R2**; Compose runs **api + worker + web + redis only**;
 MinIO is deliberately not used. **Language split (binding):** runbooks and `DEPLOYMENT.md` are
 English (operator-facing); user-facing ops copy (maintenance banner/page, degraded-mode strings)
 is bn + en via `ops.*` in `packages/shared` (bn default).
@@ -33,9 +36,9 @@ is bn + en via `ops.*` in `packages/shared` (bn default).
 ### 1.2 Scope
 
 **In:** `Dockerfile` per deployable (api: Go multi-stage → distroless/alpine; web: Next
-standalone), built in CI → GHCR — never on the VPS; `docker-compose.yml` (api + web + redis;
+standalone), built in CI → GHCR — never on the VPS; `docker-compose.yml` (api + worker + web + redis;
 profiles; `mem_limit`, restart policies, healthchecks) + `.env.example` + `.dockerignore`;
-HestiaCP Nginx proxy templates (`api.`/`web.` → `127.0.0.1`, TLS, security headers, WS upgrade,
+HestiaCP Nginx proxy templates (apex + `api.` → `127.0.0.1`, TLS, security headers, WS upgrade,
 maintenance flag); deploy/rollback scripts gated on `/readyz` + Makefile + release log; Part B
 wiring (Neon prod DB, R2 buckets, FCM prod credentials via the 06 seam, gateway production
 cutover via the 12 seam); nightly `pg_dump` → R2 (versioned) + off-site copy + restore script +
@@ -81,10 +84,10 @@ orchestration (rejected until measured need); data-model ownership — none, inf
 GitHub Actions (CI) ──build + gitleaks──► GHCR : ghcr.io/<org>/kushol-{api,web}:main-<sha7>
                                                 │ pull exact tags (never build on VPS, BR-001)
 users ─HTTPS─► HestiaCP Nginx (TLS, LE, fail2ban, maintenance flag)                 │
-   │        ├─ api.<domain> ──► 127.0.0.1:8080 ─┐                                   ▼
-   │        ├─ web.<domain> ──► 127.0.0.1:3000 ─┤ Compose project kushol-<env>
-   │        └─ flag → static bn/en page         ├─ api   (mem 1.5g, restart, healthcheck)
-   │                                            ├─ web   (mem 1g)   └─ redis (512m, loopback)
+   │        ├─ api.kusholconnect.com ──► 127.0.0.1:8180 ─┐                                   ▼
+   │        ├─ kusholconnect.com (www → 301) ──► 127.0.0.1:3100; /api/* → 8180 ─┤ Compose project kushol
+   │        └─ flag → static bn/en page         ├─ api   (mem 512m, restart, healthcheck) + worker (256m)
+   │                                            ├─ web   (mem 512m)   └─ redis (256m, loopback)
    ├─ api ──TLS──► Neon Postgres (off-box, ap-southeast-1)   ◄─ cron 02:30 ops/backup.sh
    ├─ api ──TLS──► Cloudflare R2 (media + versioned backups bucket → off-site rclone copy)
    ├─ api ──► FCM · bKash/Nagad/SSLCommerz · DeepSeek · SMS (module-owned code, 15-wired env)
@@ -109,16 +112,17 @@ revalidation surface (`06` §4).
 ```text
 1. Deploy (release lifecycle): merge to main → CI builds + pushes main-<sha7> (+ gitleaks)
    → ops/deploy.sh <env> [tag]: lock file → pull exact tags (old stack untouched, pull-before-
-   swap) → migrate up (01 golang-migrate, after DB pre-flight ping) → compose up -d → poll
+   swap) → schema check (`migrate-status` read-only; DB behind → stop, owner runs SQL — Gate 2) → compose up -d → poll
    /readyz ≤ 120 s (2 s interval; Neon cold start tolerated) → smoke (OPS-E2E-001) → release-log
-   line. Any gate/smoke/pull failure: exit ≠ 0, old containers keep serving, incident-log entry.
+   line. Pull/schema failure: exit ≠ 0 before any swap (old containers keep serving). Gate/smoke failure: automatic
+   rollback to the previous logged tag, exit ≠ 0, incident-log entry (brief restart blip either way).
 2. Rollback: ops/rollback.sh <env> → previous tag from ops/releases.log → redeploy + gate, < 5
    min; refuses tags never deployed (immutable tags; rollback is a redeploy, never a rebuild).
 3. Backup / restore: cron 02:30 Asia/Dhaka → ops/backup.sh: pg_dump -Fc → .sha256 → R2 versioned
    bucket → off-site rclone → prune (30-day default); skips + alarms on deploy-lock/low disk.
    ops/restore.sh <artifact> <target>: checksum verify → restore to scratch/target → row-count
    sanity → api smoke; any failure aborts non-zero + alarms (BR-007: not a backup until restored).
-4. Traffic topology: users → HestiaCP Nginx TLS (api./web. subdomains) → loopback containers →
+4. Traffic topology: users → HestiaCP Nginx TLS (apex + `api.` subdomain) → loopback containers →
    Neon/R2 off-box; external uptime checker polls /healthz + /readyz from off-box and alerts
    ≤ 5 min; app: EAS profile builds → Maestro smoke on the preview APK → distribution.
 ```
@@ -127,7 +131,7 @@ revalidation surface (`06` §4).
 
 | Entity | States | Transitions (from → to, guard) |
 | --- | --- | --- |
-| Release (Part A) | BUILT, PULLED, MIGRATED, GATED, SERVING, ABORTED | merge → BUILT (CI quality gates + gitleaks green) · BUILT → PULLED (deploy lock held; tag scheme matches) · PULLED → MIGRATED (expand/contract migrate up) · MIGRATED → GATED (healthchecks pass) · GATED → SERVING (`/readyz` 200 ≤ 120 s + smoke green; release log) · GATED → ABORTED (gate/smoke red; old containers serving; incident entry) · SERVING → SERVING (rollback: previous logged tag, < 5 min) |
+| Release (Part A) | BUILT, PULLED, VERIFIED, GATED, SERVING, ROLLED_BACK | merge → BUILT (CI quality gates + gitleaks green) · BUILT → PULLED (deploy lock held; tag scheme matches) · PULLED → VERIFIED (`migrate-status`: DB at the image's expected version — owner already ran the SQL; else stop, nothing changed) · VERIFIED → GATED (`compose up -d`; healthchecks pass) · GATED → SERVING (`/readyz` 200 ≤ 120 s + smoke green; release log) · GATED → ROLLED_BACK (gate/smoke red; previous tag redeployed automatically; incident entry) · SERVING → SERVING (rollback: previous logged tag, < 5 min) |
 | App channels (Part B) | development / preview / production | build + submit per profile; OTA publish = channel-scoped, `runtimeVersion`-matched; canary development → preview (24 h) → production; bad bundle → republish previous |
 | Backup cycle | dump → checksum → R2 → off-site → prune → DRILL | nightly, each step gated (skip + alarm on lock/low disk); drill quarterly + pre-pilot; drill failure blocks pilot sign-off |
 
@@ -151,7 +155,7 @@ object storage, repo docs — not rows.
 
 No product endpoints are created. The REST surface here is **consumed**, not exported; the
 exported contracts are scripts + docs (§5.3) plus the Nginx vhost contract (`api.`→
-`127.0.0.1:8080` with WS upgrade + 25 m body limit; `web.`→`127.0.0.1:3000` with static caching +
+`127.0.0.1:8180` with WS upgrade + 2 m body limit (media via R2 presign); apex→`127.0.0.1:3100` (+ `/api/`→8180) with static caching +
 CSP/security headers; maintenance flag serving the static bn/en page `no-store`) — `03` §2.
 
 | # | Method · Path | Roles | Purpose | Key errors | Stories |
@@ -231,32 +235,39 @@ Full env inventory — `.env.example` per deployable mirrors 01 config-module ke
 | `REDIS_URL` | yes (api) | `redis://127.0.0.1:6379/0` (Compose loopback) | api → redis |
 | `JWT_SECRET` | yes (api) | random 32+ bytes | 03 auth |
 | `DEEPSEEK_API_KEY` | Part B (api) | DeepSeek dashboard key | 08 AI |
-| `FCM_SERVER_KEY` | Part B (api) | prod service account (06 seam) | 06 push |
+| `FCM_SERVER_KEY` | Part B (api) | prod service account (06 seam; FCM for topics + directed — no Expo push token) | 06 push |
 | `R2_*` (account/bucket/keys) | Part B (api) | R2 dashboard values | 05/08/12 media + receipts |
 | `R2_BACKUP_*` | ops-only | ops-scoped R2 creds | `ops/backup.sh` |
 | `BKASH_*` / `NAGAD_*` / `SSLCOMMERZ_*` | Part B (api) | prod keys + webhook URLs (12 cutover) | 12 payments |
 | `GOOGLE_*` / `GITHUB_*` | yes (api) | OAuth client creds | 03 SSO |
 | `SMS_GATEWAY_*` | yes (api) | local SMS gateway creds | 03 OTP |
-| `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_SITE_URL` | yes (web) | `https://api.<domain>` / `https://web.<domain>` | web build |
+| `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_SITE_URL` | yes (web) | `/api` (same-origin — browser calls go through the web host) / `https://kusholconnect.com` | web build |
+| `API_INTERNAL_URL` | yes (web, server-only) | `http://api:8080` (Compose network) | Next.js server-side calls to the api (forwards the session cookie) |
 | `NEXT_PUBLIC_MAINTENANCE_MODE` | build-time (web) | `true` ships the banner | OpsBanner (§6.1) |
 | `EXPO_PUBLIC_API_URL` | per EAS profile | LAN host / pilot / prod API URL | app builds (§6.2) |
 | `EXPO_TOKEN` · GHCR pull token | CI/host | CI secret / host `.env` | EAS + image pulls |
-| `APP_ENV` / `LOG_LEVEL` | yes | `pilot`·`prod` / `info` | 01 config modules |
+| `APP_ENV` / `LOG_LEVEL` / `HTTP_PORT` | yes | `production` for both pilot and prod hosts (01 allows `development`·`test`·`production`; pilot vs prod differ by domain/keys, not mode) / `info` / `8080` | 01 config modules |
+| `OTP_PEPPER` | yes (api) | random 32+ bytes | 03 OTP HMAC |
+| `AI_PROVIDER` / `AI_INTERNAL_TOKEN` | Part B (api) | `deepseek` / random token for the later FastAPI service | 08 `AIService` |
+| `ERP_SECRET_KEY` | when 14 ships (api) | 32-byte base64 key | 14 webhook-secret encryption |
+| `NEXT_PUBLIC_DOWNLOAD_URLS_READY` | build-time (web) | `false` until APK/TestFlight links exist | 07 landing/download |
 
 ### 8.2 Runtime config — the two lists
 
 | Owner can change (host `.env` + runbook step — no admin UI in pilot) | Fixed in code |
 | --- | --- |
-| Deployed image tags per env (release log) | **Memory caps (api 1.5g / web 1g / redis 512m)** + restart policies |
+| Deployed image tags per env (release log) | **Memory caps (api 512m · worker 256m · web 512m · redis 256m)** + restart policies |
 | `APP_ENV`, `LOG_LEVEL`, feature env values from module `.env.example`s | Healthcheck paths/intervals; `/readyz` gate timeout (120 s) |
 | Maintenance flag (Nginx file + build input) | `127.0.0.1`-only port bindings; GHCR tag scheme `main-<sha7>` |
 | Backup schedule (cron) + retention counts; uptime checker contacts | Backup artifact naming + checksum format; prune policy |
 | Ops alert routing (email/Telegram) | `ops.*` string keys (bn/en copy editable in `packages/shared` only) |
 
-Environment matrix: dev (`kushol-dev`, Neon dev branch, `development` channel) · pilot
-(`kushol-pilot`, Neon free tier, `preview` APK, uptime checker on) · prod (`kushol-prod`, Neon
-prod DB, R2 versioning, `production` AAB/APK + TestFlight, weekly ops review) — one Compose
-project + one `.env` + one subdomain pair per env, never shared (BR-004).
+Environment matrix: dev (local — `go run`/`next dev` or a local Compose, Neon dev branch,
+`development` channel) · server (Compose project `kushol` on the KVM 2, `kusholconnect.com` +
+`api.kusholconnect.com`): runs as **pilot** first (Neon plan per plan F6, `preview` APK, uptime
+checker on) and is **promoted to prod** after pilot sign-off (Neon paid, R2 versioning,
+`production` AAB/APK + TestFlight, weekly ops review). Only one server stack runs on the shared
+8 GB host; pre-release checks use Neon branches + local Compose (BR-004).
 
 ---
 
@@ -278,7 +289,8 @@ project + one `.env` + one subdomain pair per env, never shared (BR-004).
 | Code | Meaning | When this module returns it | Client handling |
 | --- | --- | --- | --- |
 | 503 `application/problem+json` | Dependency down (Neon/Redis), via the 01 contract | api through the Nginx front door; bn/en problem copy; maintenance page/banner optionally flagged | Users see the static bn/en page; operator follows the incident runbook (RPO ≤ 24 h) |
-| Gate failure (non-zero exit) | `/readyz` red or timeout within 120 s, or smoke red | `ops/deploy.sh` before the swap (BR-003); `ops.deploy.readyzTimeout` operator key | Old containers keep serving; incident-log entry; rollback path |
+| Gate failure (non-zero exit) | `/readyz` red or timeout within 120 s, or smoke red | `ops/deploy.sh` after `compose up -d` (BR-003); `ops.deploy.readyzTimeout` operator key | Automatic rollback to the previous logged tag; incident-log entry |
+| Schema behind (non-zero exit) | DB version < image's expected migration version | `ops/deploy.sh` before any container change | Nothing changed; owner runs the named SQL files (Gate 2), then re-runs deploy |
 | `ops.backup.checksumMismatch` | Artifact `.sha256` mismatch | `ops/restore.sh` pre-verify | Abort non-zero + alarm — a silent partial restore is impossible |
 | `ops.config.envIncomplete` | `.env` missing/empty keys vs `.env.example` | Deploy pre-flight (OPS-UT-002) | Operator fills env; deploy refuses |
 | Tag-scheme refusal | Tag outside `^(main\|release)-[0-9a-f]{7,40}$`, or rollback target never deployed | Deploy/rollback scripts (BR-005/INV-006) | Operator picks a logged release tag |
@@ -318,7 +330,7 @@ All api errors stay RFC-7807 via 01 (15 never wraps them). Operator-facing messa
 | Expected volumes | Deploys on merge to `main`; backups nightly; uptime polls 60 s / 5 min; pilot scale 2–3 schools |
 | Hot paths + indexes | Image sizes: api < 40 MB (distroless/alpine), web < 250 MB (Next standalone) — small pulls keep deploys fast on the shared line |
 | Latency targets | Deploy ≤ 5 min wall-clock (pull + migrate + gate + smoke); rollback ≤ 5 min operator time (drill-timed); gate polls `/readyz` every 2 s up to 120 s; smoke ≤ 30 s; **Neon cold start (~hundreds of ms) tolerated by design — no false red** |
-| Bundle / payload impact | **Shared-host memory caps:** Kushol ≈ 3 GB of the 8 GB host (api 1.5g / web 1g / redis 512m; HestiaCP + 2 co-tenants ≈ 5 GB); Nginx gzip/brotli + immutable static caching; CWV budgets via Lighthouse CI |
+| Bundle / payload impact | **Shared-host memory caps:** Kushol ≈ 1.5 GB of the 8 GB host (+ HestiaCP mail stack on the host — ClamAV ≈ 1 GB if enabled) (api 512m · worker 256m · web 512m · redis 256m; HestiaCP + 2 co-tenants ≈ 5 GB); Nginx gzip/brotli + immutable static caching; CWV budgets via Lighthouse CI |
 | Caching | Static assets cache-immutable at Nginx; maintenance page `no-store` (instant recovery); app-level caching owned by 07; backups at 02:30 off-peak, alarm if dump > 30 min |
 
 ---
@@ -334,7 +346,7 @@ Unconfirmed items keep their `TODO: Confirm` marker.
 | 2 | Off-site copy target for DB dumps beyond R2 | DR depth (R2 versioning alone is not off-site) | Rahul | Open — `TODO: Confirm` before Part B | `rclone` sync to a second provider |
 | 3 | Log retention on the VPS | Disk growth vs forensics window | Rahul | Open | Docker `json-file` rotation 10 MB × 5 (~30 days); no external shipping during pilot |
 | 4 | Scaling trigger off Neon free tier / **single-VPS SPOF** | Refusals/pauses at pilot growth; full outage until reprovision | Rahul | Open / accepted-for-pilot | Upgrade Neon (Launch ~$19/mo) or move Postgres into Compose at real pilot traffic; VPS revisit at sustained CPU > 70%, > 10 schools, or a pilot SLA breach — recorded in `DEPLOYMENT.md`; DR = fresh box + restore scripts, RPO ≤ 24 h |
-| 5 | Memory-cap sizing on the shared KVM 2 (8 GB) | OOM kills / co-tenant starvation | Rahul | Open | api 1.5g / web 1g / redis 512m; adjust after the first monitoring week |
+| 5 | Memory-cap sizing on the shared KVM 2 (8 GB) | OOM kills / co-tenant starvation | Rahul | Open | api 512m · worker 256m · web 512m · redis 256m; adjust after the first monitoring week |
 | 6 | Shared-host contention; ap-southeast-1 latency to Bangladesh users; EAS quota limits; HestiaCP upgrades clobbering Nginx templates; drills/docs drifting from reality | Latency spikes, late app releases, broken proxy/TLS, DR failure when needed | Rahul | Risk | Hard `mem_limit`s + weekly `docker stats` review; measure p95 from prod (Neon region change is config-level); documented local `eas build` fallback; templates versioned + post-upgrade diff/re-apply; quarterly drill + same-commit docs discipline |
 
 ---
@@ -352,3 +364,6 @@ Unconfirmed items keep their `TODO: Confirm` marker.
 | Date | Change | Author |
 | --- | --- | --- |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
+| 2026-09-30 | Aligned with `docs/infra/architecture-and-deployment.md`: deploy never migrates (read-only `migrate-status` check; owner runs SQL — Gate 2); gate/smoke failure auto-rolls back (old containers are replaced by `compose up -d`); `worker` container; caps api 512m / worker 256m / web 512m / redis 256m; ports 8180/3100 (configurable); one server stack promoted pilot → prod; host-prep runbook `OPS-BE-016`; HestiaCP mail backups | Claude |
+| 2026-09-30 | Domain set: `kusholconnect.com` (web, apex; `www` 301 → apex) + `api.kusholconnect.com` (mobile API + WebSocket); web host also proxies `/api/*` → api so the web session cookie stays same-origin. Hostinger Docker Manager does not support the HestiaCP OS image — deploy with Docker Engine + Compose over SSH | Claude |
+| 2026-09-30 | Env inventory aligned: `APP_ENV` values match 01 (`production` on pilot + prod); added `OTP_PEPPER`, `AI_PROVIDER`, `AI_INTERNAL_TOKEN`, `ERP_SECRET_KEY`, `NEXT_PUBLIC_DOWNLOAD_URLS_READY`, `HTTP_PORT` | Claude |

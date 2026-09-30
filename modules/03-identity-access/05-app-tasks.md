@@ -5,6 +5,9 @@
 **Stack:** Expo SDK · expo-router · React Native · NativeWind tokens · TanStack Query · zustand · react-hook-form + zod
 **Last updated:** 2026-09-30
 
+> **Visual direction (owner, 2026-09-30):** onboarding carousel, login/register, OTP (6 boxes) and
+> success modals follow the CircleUp auth layouts in Kushol teal — `docs/design-reference/README.md` §6.1.
+
 ---
 
 ## 1. Screen Inventory
@@ -183,7 +186,7 @@ verifies, BR-006); verified-email match links the identity silently.
 | --- | --- | --- | --- | --- |
 | locale | segmented | `validation.locale.invalid` | `bn` | always |
 | role | cards | enum | student | always |
-| schoolId/classId/sectionId | search + chips | `validation.hierarchy.invalid` | — | always |
+| schoolId/sectionId (class level shown from the section) | search + chips | `validation.hierarchy.invalid` | — | always |
 | phone | tel | `validation.phone.invalid` | — | student/guardian required; staff optional |
 | otp_code | 6 boxes | `validation.otp.format` | — | after request |
 | student_code + class | inputs | `validation.guardian.studentCode` | — | role=guardian |

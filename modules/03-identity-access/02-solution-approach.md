@@ -15,10 +15,11 @@
 | `otp_codes` | Issued OTPs (hashed), purpose, expiry, attempt counter, consumption state | ✅ |
 | `sessions` | Web http-only sessions (opaque token, SHA-256 stored server-side) | ✅ |
 | `refresh_tokens` | Mobile refresh tokens with rotation `family_id` for reuse detection | ✅ |
-| `verification_requests` | Join-request queue: evidence payload, status, verifier decision, SLA reminder counters | ✅ |
+| `verification_requests` | Join-request queue: evidence payload, registration-time section choice (`requested_section_id`), status, verifier decision, SLA reminder counters | ✅ |
+| `guardian_links` | Durable guardian ↔ student link written when a guardian request is approved (or by 14 roster); read by 04/05/12 | ✅ |
 | `audit_log` | Append-only security/decision trail | No — module 01 |
 | `jobs` | In-DB job table (SLA reminders, OTP outbox retry, provisioning) | No — module 01 |
-| `cities`, `schools`, `classes`, `sections`, `enrollments`, `fcm_topic_bindings` | Hierarchy + post-verification provisioning targets | No — module 04 (read-only here) |
+| `cities`, `schools`, `sections` (class level is a section attribute — no `classes` table), `enrollments`, `fcm_topic_bindings` | Hierarchy + post-verification provisioning targets | No — module 04 (read-only here) |
 
 ### 1.2 Relationships
 

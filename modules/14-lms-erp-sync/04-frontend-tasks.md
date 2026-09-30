@@ -17,8 +17,8 @@ tokens only from `packages/shared`, every user-facing string in Bengali + Englis
 | 1 | `/school/roster` | Roster home: imports history + summary cards (fills the 07 stub §2.13 row 21) | Dynamic | School Admin |
 | 2 | `/school/roster/new` | Upload wizard (3 steps + summary: template → upload → dry-run report → commit) | Dynamic | School Admin |
 | 3 | `/school/roster/imports/[id]` | Import status + totals + error rows + error-CSV download | Dynamic | School Admin |
-| 4 | `/school/integrations` | ERP webhook endpoints (replaces 07's `/school/webhooks` stub §2.13 row 22; nav label "ইন্টিগ্রেশন / Integrations") | Dynamic | School Admin |
-| 5 | `/school/reconciliation` | Reconciliation report (roster vs platform drift) — linked from roster home + `/school` dashboard card | Dynamic | School Admin |
+| 4 | `/school/integrations` | ERP webhook endpoints (fills 07's `/school/integrations` stub, row 22; nav label "ইন্টিগ্রেশন / Integrations") | Dynamic | School Admin |
+| 5 | `/school/roster/reconciliation` | Reconciliation report (roster vs platform drift) — linked from roster home + `/school` dashboard card | Dynamic | School Admin |
 
 ## 2. Screen Breakdown
 
@@ -142,7 +142,7 @@ Polling while `committing` · Cross-tenant → branded 404 · Success (terminal 
 | Test failed | Failure reason + "check your ERP URL" hint; endpoint stays ACTIVE |
 | Success | Test ✓ inline; rotation/creation modals close after ack |
 
-### 2.5 Reconciliation — `/school/reconciliation`
+### 2.5 Reconciliation — `/school/roster/reconciliation`
 
 **Components** — `BaselineCard` (last import + totals or "no baseline" state) ·
 `PlatformCountsCard` · `DriftTable` (per-section delta, flagged rows highlighted, no PII).
@@ -230,8 +230,8 @@ en). Representative catalog entries:
 - [ ] `LMS-FE-009` test-event button + success/failure feedback — ____
 - [ ] `LMS-FE-010` rotate-secret dialog + overlap display — ____
 - [ ] `LMS-FE-011` event log drawer + redrive action — ____
-- [ ] `LMS-FE-012` `/school/reconciliation` report screen + dashboard link — ____
-- [ ] `LMS-FE-013` replace 07 stubs: `/school/roster` + `/school/webhooks`→`/school/integrations` nav entries — ____
+- [ ] `LMS-FE-012` `/school/roster/reconciliation` report screen + dashboard link — ____
+- [ ] `LMS-FE-013` replace 07 stubs: `/school/roster` + `/school/integrations` nav entries — ____
 - [ ] `LMS-FE-014` bn/en catalog entries (`sync.*`) in `packages/shared` + zod schemas mirrored — ____
 - [ ] `LMS-FE-015` a11y pass (§7) + reduced-motion verification + axe clean — ____
 - [ ] `LMS-FE-016` responsive pass per §6 (360 px reference: portal usable on tablet, wizard on phone) — ____

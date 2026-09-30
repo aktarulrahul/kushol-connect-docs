@@ -126,6 +126,65 @@ contract (`06` §2) is still written before another module calls it. Full stage/
 
 ---
 
+## Cross-module registries (binding — added 2026-09-30 consistency pass)
+
+These registries exist because the drafted specs collided. Before a module invents a name, it
+checks here; in its Stage 3 docs sync it updates the relevant row.
+
+### Migration versions
+
+golang-migrate records only the highest applied version, so **a file whose version is lower than
+the database's current version is silently skipped**. Versions therefore increase in **build
+order**, not in module number. If a module is built out of the order below, re-stamp its files
+with the build date before the owner runs them (and note it in `07-progress.md`).
+
+| Build order | Module | Version block | Notes |
+| --- | --- | --- | --- |
+| 1 | 01 | `20260930000001–000003` | extensions, `audit_log`, `jobs` |
+| 2 | 03 | `20261001090000–090030` | no FKs to 04 tables (04 not built yet) |
+| 3 | 04 | `20261002090001–090007` | `…090007` adds FKs from 03 tables to `schools`/`sections` |
+| 4 | 05 | `20261003090000–094000` | |
+| 5 | 06 | `20261006090001–090003` | |
+| 6 | 07 | `20261015090000–091000` | |
+| 7 | 08 | `20261101090000–093000` | |
+| 8 | 09 | `20261110090001` | |
+| 9 | 10 | `20261120090000–093000` | |
+| 10 | 11 | `20270201090000–093000` | |
+| 11 | 12 | `20270210090000–093000` | after 11 (order payments reference orders) |
+| 12 | 13 | `20270220100000–101000` | |
+| 13 | 14 | `20270301090001–090004` | |
+
+(02 and 15 own no tables.)
+
+### Names that must stay unique
+
+| Registry | Source of truth |
+| --- | --- |
+| Error codes (RFC-7807 `code`) | `01-foundations/technical-document.md` §10 (core + module-specific table) |
+| i18n catalog namespaces | `02-design-system/02-solution-approach.md` §1.1 |
+| Go export packages | `audit` `jobs` (01) · `auth` `sessions` `verification` `users` `guardians` (03) · `hierarchy` (04) · `chat` `media` (05) · `notify` (06) · `vendors` (07) · `ai` `aiquota` (08; `ai.AttemptStats` lives in `ai` because `analytics` is 09's package) · `analytics` (09) · each module's `06` §2 is the signature source |
+| Web routes | 07 owns the `/admin`, `/school`, `/vendor` route tree and stub names; feature modules fill stubs under the same name (`/school/ai-matrix` 09 · `/school/tutors` 10 · `/school/ledger`, `/school/payments/*` 12 · `/school/roster/*`, `/school/integrations` 14) |
+| API paths | One owner per path; shared-sounding reports are namespaced by owner (`/school/payments/reconciliation` 12 vs `/school/roster/reconciliation` 14) |
+| Env variables | Each module's `technical-document.md` §8.1; full inventory in `prompt.txt` §11 and 15's `.env.example` |
+
+Infrastructure, domain and email plan: `docs/infra/architecture-and-deployment.md` (findings F1–F17, owner actions, spec edits still pending §9).
+
+### Resolved cross-module decisions (2026-09-30)
+
+| Decision | Where recorded |
+| --- | --- |
+| `vendor` is a 03 user role (platform-scoped), created only by 07 vendor approval | 03 `03` §1.1, 07 `03` |
+| Durable guardian ↔ student link = 03 `guardian_links` (written in the guardian approve tx) | 03 `03` §1.1 |
+| Kushol Pro = `users.plan` + `plan_expires_at` (03), read by 08 via `users.PlanOf` | 03, 08 |
+| Registration section choice = `verification_requests.requested_section_id`; no `classes` table (class level lives on `sections`) | 03, 04 |
+| `sections.stream` (science / business_studies / humanities) for BR-05 targeting | 04, 13 |
+| Push = FCM only (topics + directed), one native FCM token per device; Expo push API not used | 06 `02` §10, `tech-stack.md` |
+| ERP webhook secrets encrypted (AES-256-GCM, `ERP_SECRET_KEY`), not hashed | 14 |
+| Convenience fee default BDT 0 (`brd.md` §7 supersedes `prd.md` §7) | 12, `prd.md` |
+| Payment success needs server-to-server status confirmation; gateway webhook schemes `TODO: Confirm` | 12 `02` §6 |
+| Teachers may use `/school/ai-matrix` (own sections) on web; no other web portal | 07, 09 |
+| UI: mobile = CircleUp layout + WhatsApp chat in Kushol teal; web = professional SaaS | `docs/design-reference/README.md` §6–§7 |
+
 ## Blocked before build — questions and the defaults each module will use
 
 | Module | Question | Default if unanswered |

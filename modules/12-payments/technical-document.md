@@ -23,9 +23,9 @@ Turns fee collection from cash-in-an-envelope into a trust-first digital flow: S
 | Direction | Module | What is exchanged |
 | --- | --- | --- |
 | consumes | 01 foundations | `jobs.Enqueue`/`Register` (receipt, reconcile, sweeps, notify fan-out), `audit.Record` (every money mutation — failure aborts the mutation), RFC-7807 envelope |
-| consumes | 03 identity-access | Auth chain, roles, verification status, guardian↔student link, `users.locale` |
+| consumes | 03 identity-access | Auth chain, roles, verification status, guardian↔student link (03 `guardians.IsGuardianOf` / `LinkedStudents`), `users.locale` |
 | consumes | 04 organization-hierarchy | `hierarchy.ResolveUserNodes` (school scoping; section→student resolution for bulk invoices) |
-| consumes | 05 communication-engine | `media.PutObject` (receipt PDFs → R2; **additive export** — 05 today ships only the client presign flow, `06` §3) |
+| consumes | 05 communication-engine | `media.PutObject` (receipt PDFs → R2; declared in 05 `06` §2) |
 | consumes | 06 notifications | `notify.SendToUser` — fee-due push w/ deep link; payment-result push → receipt |
 | consumes | 07 command-center-web | The `/school/ledger` nav stub (`WEB-FE-025`) this module fills |
 | consumes | 11 campus-commerce | `commerce.OrderAmount(orderId)` + the `payment_transaction_id` attach seam (defined in 11's spec) |
@@ -54,7 +54,7 @@ Turns fee collection from cash-in-an-envelope into a trust-first digital flow: S
 ```text
 app payer (Expo) ──┐                                     ┌─► 03 auth chain (roles, verification, guardian link, locale)
 web admin (Next.js)┴─► chi REST /api/v1/school·payments/* ─┼─► 04 hierarchy.ResolveUserNodes (school scope, section rosters)
-                        │  ▲                                ├─► 05 media.PutObject (receipt PDFs → R2, additive)
+                        │  ▲                                ├─► 05 media.PutObject (receipt PDFs → R2)
                         │  └─ POST /payments/callback/{gateway} (UX only — status check + 302) ► 06 notify.SendToUser (fee-due, payment-result)
                         ▼
        payments service (PAY-BE-001–014) ── 11 seam: commerce.OrderAmount + attach hook
@@ -137,7 +137,7 @@ Summary of `03-backend-tasks.md` §2 (auth chain authenticate → role claims �
 | 3 | GET `/api/v1/school/invoices` | School Admin (own school) | Invoice tab (status/class/month filters + totals) | — | PAY-US-009 |
 | 4 | PATCH `/api/v1/school/invoices/{id}/void` | School Admin (own school) | Void before any payment (reason) | `CONFLICT` if ≥1 success | PAY-US-012 |
 | 5 | GET `/api/v1/school/ledger` · `/api/v1/school/ledger/summary` | School Admin (own school) | Ledger tab + summary cards (server-computed totals, `no-store`) | — | PAY-US-009 |
-| 6 | GET `/api/v1/school/reconciliation?date=` | Super Admin + School Admin (own slice) | Per-gateway settled-vs-ledger + mismatch list | — | PAY-US-010 |
+| 6 | GET `/api/v1/school/payments/reconciliation?date=` | Super Admin + School Admin (own slice) | Per-gateway settled-vs-ledger + mismatch list | — | PAY-US-010 |
 | 7 | POST `/api/v1/payments/initiate` | Verified entitled payer | Start payment (invoice xor order) → `RedirectPayload` | `FORBIDDEN`, `CONFLICT`, `PAYMENT_FAILED`, `VALIDATION_FAILED` | PAY-US-004/005/011 |
 | 8 | **POST `/api/v1/webhooks/{gateway}`** | **None — the one unauthenticated-but-signature-verified exception** (flagged `security: []` in the OpenAPI spec; mounted outside the auth group) | Authoritative gateway confirmation; always 2xx for valid signatures | `403` invalid signature/replay window (+ flagged `gateway_events` + alert); `DUPLICATE_WEBHOOK` 200 on replay | PAY-US-006/007/013 |
 | 9 | POST `/api/v1/payments/callback/{gateway}` | None (gateway browser return; txn token) | UX-only return path — status re-check vs gateway, 302 → `/payments/status/{txnId}` | surfaces in redirect state, not as an API error | PAY-US-005 |
@@ -188,7 +188,7 @@ No public payment pages — payers pay in the app; the web callback route only 3
 | --- | --- | --- | --- |
 | `/(tabs)/marketplace` → "ফি পরিশোধ / Pay fees" | Payments home entry | none (tab) | cached list + banner; Pay disabled |
 | `/payments` | Invoice list — due/paid tabs, ৳ in bn digits via `Intl` | Marketplace entry | cached read + offline banner |
-| `/payments/[invoiceId]` | Pay screen — amount breakdown (fee + BDT 15 convenience fee = total), gateway chooser (down gateway hidden via health flag), "কার্ডের তথ্য আমরা দেখি না" trust line | fee-due push (`payments.feeDue`), list tap | **payments require connectivity — refused up front, never queued** |
+| `/payments/[invoiceId]` | Pay screen — amount breakdown (fee [+ convenience fee when enabled; default none] = total), gateway chooser (down gateway hidden via health flag), "কার্ডের তথ্য আমরা দেখি না" trust line | fee-due push (`payments.feeDue`), list tap | **payments require connectivity — refused up front, never queued** |
 | `/payments/status/[txnId]` | Return/status screen — poll `InvoiceStatus` 3 s ×20 → success/failure/"processing — we'll notify you" | gateway callback 302, push | poll resumes when online; push is the backstop |
 | `/receipts/[txnId]` | Receipt view/share — summary card + PDF via immutable R2 URL; "রসিদ তৈরি হচ্ছে…" while generating | payment-result push (`payment_result`), status screen | cached URL viewable; PDF fetch needs network |
 
@@ -226,7 +226,7 @@ From `02-solution-approach.md` §5.
 
 | Admin-changeable (later) | Fixed in code |
 | --- | --- |
-| Convenience fee amount (platform-wide, default **BDT 15** — `TODO: Confirm`; `prd.md` §7 allows 15–20) | Ledger entry types + balance rule; invoice/transaction state machines (`02` §3) |
+| Convenience fee amount (platform-wide, default **BDT 0 = off** — `brd.md` §7 removes transaction fees, superseding `prd.md` §7) | Ledger entry types + balance rule; invoice/transaction state machines (`02` §3) |
 | Gateway enable/disable toggles (per gateway; down/holiday switches) | Signature schemes + replay windows per gateway adapter |
 | Invoice kind presets (labels bn/en for tuition/exam/transport/other) | Txn expiry window (30 min); receipt serial format `{SCHOOL-YY}-{seq}` |
 | Order commission rate (default 5% — owned with 11, `TODO: Confirm`) | Rate-limit class `payments` (strict); webhook route list |
@@ -306,7 +306,7 @@ Consolidated from `01` §9 and `02` §11 — the table to review in module readi
 | # | Item | Impact | Owner | Status | Default if unanswered |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Gateway launch order & production accounts; sandbox behaviour ≈ production webhooks/signatures | Signature/format surprises at cutover (module 15) | Rahul | Open | SSLCommerz first (cards + internet banking), then bKash and Nagad wallets; sandbox keys until module 15; adapter + `VerifyWebhook` isolation, contract tests per gateway, sandbox-first rollout |
-| 2 | Convenience fee amount (`prd.md` §7 allows 15–20) | Revenue stream underdelivers vs gateway MDR + margin | Rahul | Open (`TODO: Confirm`) | **BDT 15 flat** per transaction, charged to the payer, shown before redirect |
+| 2 | Convenience fee amount (`prd.md` §7 allows 15–20) | Revenue stream underdelivers vs gateway MDR + margin | Rahul | Open (`TODO: Confirm`) | **BDT 0 (off)** per `brd.md` §7 (supersedes `prd.md` §7); enabling + MDR bearer is an owner decision `TODO: Confirm` |
 | 3 | Settlement report file format per gateway | Reconciliation breaks per format drift | Rahul | Open (`TODO: Confirm`) | Manual CSV import at launch (one template per gateway); auto-fetch deferred |
 | 4 | Refund mechanics | Ledger ≠ bank at audit if adjustments drift | Rahul | Open | Manual, Super/School-Admin initiated, `adjustment` ledger entry, **no gateway auto-refund at launch** |
 | 5 | Partial payments (`partially_paid`) | Reconciliation corrections | Rahul | Open | Full-payment only at launch; `partially_paid` reserved for manual admin adjustments |
@@ -329,3 +329,4 @@ Consolidated from `01` §9 and `02` §11 — the table to review in module readi
 | Date | Change | Author |
 | --- | --- | --- |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
+| 2026-09-30 | Consistency pass: migrations re-versioned `20270210…` (after 11); convenience fee default BDT 0 per `brd.md` §7; success requires server-to-server `FetchStatus` confirmation (gateway webhook schemes `TODO: Confirm`); route `/school/payments/reconciliation` (was colliding with 14); guardian entitlement via 03 `guardians.IsGuardianOf`; `media.PutObject` now declared by 05 | Claude |

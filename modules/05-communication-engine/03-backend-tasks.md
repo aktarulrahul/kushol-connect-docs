@@ -133,11 +133,11 @@ tenant storage stats.
 
 | # | Migration | Reversible? |
 | --- | --- | --- |
-| 1 | `20261001090000_com_chat_groups_members` (chat_groups + chat_group_members, CHECKs, unique dm pair) | ✅ |
-| 2 | `20261001091000_com_chat_messages` (messages + idempotency unique + pagination index) | ✅ |
-| 3 | `20261001092000_com_message_requests` (requests + partial unique pending + expiry index) | ✅ |
-| 4 | `20261001093000_com_notices` (notices + board composite index) | ✅ |
-| 5 | `20261001094000_com_media_assets` (assets + archival indexes) | ✅ |
+| 1 | `20261003090000_com_chat_groups_members` (chat_groups + chat_group_members, CHECKs, unique dm pair) | ✅ |
+| 2 | `20261003091000_com_chat_messages` (messages + idempotency unique + pagination index) | ✅ |
+| 3 | `20261003092000_com_message_requests` (requests + partial unique pending + expiry index) | ✅ |
+| 4 | `20261003093000_com_notices` (notices + board composite index) | ✅ |
+| 5 | `20261003094000_com_media_assets` (assets + archival indexes) | ✅ |
 
 ### 1.3 Seed
 
@@ -211,7 +211,7 @@ stricter sub-limit on 8.
 | --- | --- |
 | **Auth** | authenticate → role claims → tenant-scope |
 | **Input** | `{scope, sectionId?, title, body, pinned?, attachmentId?}` |
-| **Result** | `{ "data": { notice } }`; triggers tag bust `notices:*` + `notifications.BroadcastTopic` |
+| **Result** | `{ "data": { notice } }`; triggers tag bust `notices:*` + `notify.BroadcastTopic` |
 | **Errors** | `FORBIDDEN` (role/scope matrix, INV-5) · `VALIDATION_FAILED` · `NOT_VERIFIED` |
 | **Rate limit** | default class (admins/teachers only) |
 | **Audit** | Yes — publish/pin/delete audited (school-sourced content) |

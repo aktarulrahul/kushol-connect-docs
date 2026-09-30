@@ -27,7 +27,7 @@ schools (04) 1 ──── n weekly_pain_points n ──── 1 sections (04)
 weekly_pain_points: UNIQUE(school_id, section_id, week_start, topic_tag, source)
 
 inputs (read-only, via exports — never joined directly):
-  ai.AttemptStats(sectionId, week)      ← ai_test_answers (08)
+  `ai.AttemptStats(sectionID, weekStart, weekEnd)`      ← ai_test_answers (08)
   ai.ClassifyChatQueries(Samples)       ← official section group messages (05), inside the boundary
 ```
 
@@ -53,9 +53,9 @@ matrix survives source retention windows and stays cheap to read.
 
 | Module | What | Why not duplicated |
 | --- | --- | --- |
-| 08 | `ai.AttemptStats(sectionId, week)` — failed-MCQ aggregates; `ai.ClassifyChatQueries(ctx, Samples, Locale)` — chat → topic tags | MCQ grading and AI prompting are 08's domain; 09 never touches `ai_test_answers` SQL or DeepSeek directly |
+| 08 | `ai.AttemptStats(sectionID, weekStart, weekEnd)` — failed-MCQ aggregates; `ai.ClassifyChatQueries(ctx, Samples, Locale)` — chat → topic tags | MCQ grading and AI prompting are 08's domain; 09 never touches `ai_test_answers` SQL or DeepSeek directly |
 | 04 | `hierarchy.ResolveUserNodes(userId)` (teacher → own sections; school_admin → school), `hierarchy.GetSection`, `sections` | Scope decisions follow the hierarchy; 09 never re-derives ownership |
-| 05 | `chat.GroupMembers(groupID)` — resolves the official section group + distinct authors; **aggregates only, no raw message content ever leaves the aggregation boundary** | Messaging belongs to 05; 09 consumes member/author metadata and derives tags via 08 |
+| 05 | `chat.SectionQuestionSamples` (anonymized, PII-masked samples, classified then discarded) + `chat.GroupMembers(groupID)` (distinct authors); **only topic tags + counts are persisted** | Messaging belongs to 05; 09 consumes member/author metadata and derives tags via 08 |
 | 03 | `auth.RequireRole`, verified status on `users` | Verification and RBAC are 03's gate |
 | 01 | `jobs.Enqueue` + weekly worker, `audit.Record`, Redis rate limiter, RFC-7807 envelope | No bespoke scheduler; audit trail is platform-wide |
 | 06 (P1) | Per-user push export for the Monday summary | Delivery mechanics stay in 06 |
@@ -68,8 +68,9 @@ matrix survives source retention windows and stays cheap to read.
 jobs worker (Sunday 00:00 Asia/Dhaka, per school; or analytics.refresh_section per section)
   └─► analytics.ComputeSectionWeek(sectionId, weekStart)          (09 service)
         ├─ hierarchy.GetSection(sectionId)                        → section identity + school scope
-        ├─ ai.AttemptStats(sectionId, week)                       → MCQ topic aggregates (P0) from ai_test_answers
-        ├─ chat.GroupMembers(groupID)                             → official section group + distinct authors
+        ├─ `ai.AttemptStats(sectionID, weekStart, weekEnd)`                       → MCQ topic aggregates (P0) from ai_test_answers
+        ├─ chat.SectionQuestionSamples(sectionID, from, to, 200)  → anonymized chat text (in-memory, never stored)
+        ├─ chat.GroupMembers(groupID)                             → distinct authors
         │    (sample ≤ cap messages of the week — inside the boundary; raw text never persisted)
         ├─ ai.ClassifyChatQueries(ctx, Samples, Locale="bn")      → chat topic tags (P1) — skipped on failure
         ├─ merge per (topic_tag, language, source):

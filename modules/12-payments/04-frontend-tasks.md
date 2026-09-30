@@ -114,7 +114,7 @@ Submission: same Zod schema on the server · disable while pending · map `field
 | Ledger reads (always fresh) | Server Component shell → generated OpenAPI client → api; `cache: no-store` — money screens are never cached |
 | Issue / void mutations | Server Action → generated client → api → toast + table refetch (revalidates `payments:invoices:{schoolId}` tags, `06` §4) |
 | Summary cards | Server fetch of `/school/ledger/summary` per navigation — no client cache |
-| Reconciliation | Client date filter → `/school/reconciliation?date=` → mismatch table |
+| Reconciliation | Client date filter → `/school/payments/reconciliation?date=` → mismatch table |
 | CSV export | Client util over the current page's fetched dataset (server-supplied totals) |
 
 ## 5. Motion Spec

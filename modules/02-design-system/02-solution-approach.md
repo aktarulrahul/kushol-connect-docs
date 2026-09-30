@@ -15,7 +15,7 @@ Written before any task list and any code (`docs/prompt/prompt-build.md` §4 ste
 | Design token (semantic) | Named theme value — `color.*`, `space.*`, `radius.*`, `type.*`, `motion.*`; source in `packages/shared`, compiled to Tailwind v4 `@theme` (web) and the NativeWind theme (app) | Yes |
 | Color scale | 10-step tints/shades generated in code from deep teal `#095777` + paper/ink neutrals — never hand-picked per component (`design-reference` §2) | Yes |
 | String catalog | `bn.json` / `en.json` in `packages/shared`; flat dot-namespaced keys → `{bn, en}` values (schema: `03-backend-tasks §2`) | Yes |
-| Translation key | Logical id `namespace.name`; namespaces: `common`, `validation`, `auth`, `chat`, `notices`, `ai`, `marketplace`, `admin` | Yes |
+| Translation key | Logical id `namespace.name`; namespaces (registry, one owner module each): `common`, `validation`, `errors`, `auth`, `verification`, `hierarchy`, `chat`, `notices`, `notifications`, `settings`, `landing`, `admin`, `school`, `vendor`, `ai`, `analytics`, `tuition`, `marketplace`, `commerce`, `payments`, `ads`, `events`, `sync`, `ops`. A module adding a namespace updates this registry in its Stage 3 docs sync | Yes |
 | Web primitive | shadcn-style component hand-written in `applications/web/src/components/ui/`, token-styled, a11y-complete | Yes |
 | RN primitive | NativeWind component mirroring the web inventory, on radix-primitives/zeego where useful | Yes |
 | Brand asset | Logo lockup/monogram, app icon, splash, notification small icon — derived from `docs/design-reference/brand/` (files owner-supplied; usage owned here) | Yes (usage) |

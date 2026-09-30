@@ -317,3 +317,4 @@ Consolidated from `01` §9 and `02` §11 — the table to review in module readi
 | Date | Change | Author |
 | --- | --- | --- |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
+| 2026-09-30 | Consistency pass: migrations re-versioned `20261120…` (were colliding with 08's `20261101…`) | Claude |

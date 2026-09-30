@@ -49,13 +49,14 @@ tenant-scope column/rule — unscoped tables are a defect (`prompt.txt` §9).
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | no | uuid v7 | PK |
 | `school_id` | `uuid` | no | — | FK → `schools`; **tenant column** |
-| `class_level` | `int` | no | — | 1–12 (Class 6 → A/B pattern) |
+| `class_level` | `int` | no | — | 1–12 (Class 6 → A/B pattern). The only "class" concept — there is no `classes` table |
+| `stream` | `text` | null | — | CHECK ∈ science/business_studies/humanities; NULL for general sections (typically classes 1–8). Enables BR-05 targeting such as "Class 12 Science in Chattogram" (13) |
 | `name` | `text` | no | — | Short label: A, B, … |
 | `session_year` | `int` | no | — | e.g. 2026 — drives migration |
 | `status` | `text` | no | `'ACTIVE'` | `ACTIVE` / `ARCHIVED` |
 | `created_at` / `updated_at` | `timestamptz` | no | `now()` | `created_by` records the creating School Admin |
 
-**Constraints:** FK `school_id`; `CHECK (class_level BETWEEN 1 AND 12)`; unique `(school_id, class_level, name, session_year)` (`ORG-BR-002`).
+**Constraints:** FK `school_id`; `CHECK (class_level BETWEEN 1 AND 12)`; unique `(school_id, class_level, name, session_year)` (`ORG-BR-002`); CHECK `stream` enum. Migration carries `stream` forward on PROMOTED rows.
 **Indexes:** `(school_id, session_year, status)` → picker + migration scan; `(school_id, class_level)` → promotion mapping.
 
 #### `enrollments` (model `Enrollment`)
@@ -127,12 +128,13 @@ tenant-scope column/rule — unscoped tables are a defect (`prompt.txt` §9).
 
 | # | Migration | Reversible? |
 | --- | --- | --- |
-| 1 | `20261001090001_create_cities` | ✅ |
-| 2 | `20261001090002_create_schools` | ✅ |
-| 3 | `20261001090003_create_sections` | ✅ |
-| 4 | `20261001090004_create_enrollments` | ✅ |
-| 5 | `20261001090005_create_fcm_topic_bindings` | ✅ |
-| 6 | `20261001090006_create_migration_runs_and_items` | ✅ |
+| 1 | `20261002090001_create_cities` | ✅ |
+| 2 | `20261002090002_create_schools` | ✅ |
+| 3 | `20261002090003_create_sections` | ✅ |
+| 4 | `20261002090004_create_enrollments` | ✅ |
+| 5 | `20261002090005_create_fcm_topic_bindings` | ✅ |
+| 6 | `20261002090006_create_migration_runs_and_items` | ✅ |
+| 7 | `20261002090007_add_identity_hierarchy_fks` — adds FKs from 03's `users.school_id`, `verification_requests.school_id`, `verification_requests.requested_section_id`, `guardian_links.school_id` to `schools`/`sections` (03 is migrated before 04 exists) | ✅ (drop constraints) |
 
 ### 1.3 Seed
 
@@ -325,4 +327,5 @@ reads never return drafts, archived nodes, or personal data.
 - [ ] `ORG-BE-010`–`011` services: migration preview/commit/get — ____
 - [ ] Entry points: 13 endpoints per §2 (handlers over `ORG-BE-001`–`011`) + OpenAPI spec entries + contract regen — ____
 - [ ] `ORG-BE-024`–`025` jobs: `migration.run` + `hierarchy.backfill` workers · seed per §1.3 (`ORG-BR-012`) — ____
+- [ ] `ORG-BE-026` migration `20261002090007_add_identity_hierarchy_fks` + `sections.stream` · `ORG-BE-027` count exports `PlatformCounts`/`SchoolCounts`/`AudienceCount` (aggregate-only, small-count suppression) — ____
 - [ ] Tests: `ORG-UT-001`–`005` · `ORG-IT-001`–`007` green in CI — ____

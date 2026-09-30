@@ -35,7 +35,7 @@ owns; 13 only reserves + exposes the seam); email/SMS ad channels; A/B testing; 
 | --- | --- | --- |
 | consumes | 06 notifications | `notify.BroadcastTopic` (sponsored push, topics `city-{id}`/`school-{id}`/`section-{id}`, payload `type=campaign`); `notify.SendToUser` (event-cancel buyer notices) |
 | consumes | 07 command-center-web | `vendors.Approve` gate re-checked per `/vendor/*` mutation; `/admin/campaigns` moderation stub this module fills; `leads.Create` funnel |
-| consumes | 04 organization-hierarchy · 05 communication-engine | sections-by-city+grade reads + aggregated `hierarchy.AudienceCount` (additive, 04 §7); `media_assets` presign/confirm for creative images |
+| consumes | 04 organization-hierarchy · 05 communication-engine | sections-by-city+grade+stream reads + aggregated `hierarchy.AudienceCount` (declared in 04 `06` §2); `media_assets` presign/confirm for creative images |
 | consumes | 03 identity-access · 01 foundations | auth chain + buyer VERIFIED check (03); `jobs.Enqueue`, `audit.Record`, RFC-7807 envelope, `default` limiter (01) |
 | consumed by | 12 payments | seam: 12 fills `event_tickets.payment_transaction_id`, then calls `events.MarkTicketPaid` — **not a build dependency** |
 | consumed by | 07 · web · 06 (render) | REST §5.1 for `/vendor/ads|events*`, `/admin/moderation`, `/admin/ads`, public `/events*`; 13 owns the `type=campaign` payload + labels, 06 owns FCM/Expo delivery/rendering |
@@ -62,7 +62,7 @@ owns; 13 only reserves + exposes the seam); email/SMS ad channels; A/B testing; 
 web (/vendor/ads·events, /admin/moderation, /admin/ads, /events) ──openapi-fetch──►
 api (chi) ── ads/events services ── tenant-scoped repos ── sqlc ── PostgreSQL
         │        (ad_campaigns, ad_creatives, ad_events, events, event_tickets, ads_daily)
-        ├─ 04: sections by city+grade, hierarchy.AudienceCount (additive)
+        ├─ 04: sections by city+grade, hierarchy.AudienceCount
         ├─ 07: vendors.Approve gate (fail-closed)   ├─ 06: notify.BroadcastTopic / SendToUser
         ├─ 05: media_assets presign/confirm          ├─ 01: jobs · audit.Record · RFC-7807 · limiter
         └─ seam: 12 fills payment_transaction_id → events.MarkTicketPaid
@@ -326,3 +326,4 @@ items keep their `TODO: Confirm` marker.
 | Date | Change | Author |
 | --- | --- | --- |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
+| 2026-09-30 | Consistency pass: migrations re-versioned `20270220…` (after 12); `hierarchy.AudienceCount` declared by 04 with `Streams` (04 `sections.stream`) for BR-05 | Claude |

@@ -17,20 +17,23 @@
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | no | uuid v7 | PK |
-| `role` | `text` | no | — | CHECK ∈ super_admin/school_admin/teacher/student/guardian |
+| `role` | `text` | no | — | CHECK ∈ super_admin/school_admin/teacher/student/guardian/vendor (`vendor` = platform-scoped portal login for 07/11/13, created only by the 07 vendor-approval flow — never self-registered in the app) |
 | `status` | `text` | no | `'PENDING'` | CHECK ∈ PENDING/VERIFIED/SUSPENDED |
 | `locale` | `text` | no | `'bn'` | CHECK ∈ bn/en |
 | `full_name` | `text` | no | — | 2–80 chars, service-trimmed |
 | `phone_e164` | `text` | null | — | E.164 `+880…`; required for student/guardian |
 | `email` | `citext` | null | — | required for staff; lowercased |
 | `password_hash` | `text` | null | — | argon2id encoded; staff only |
-| `school_id` | `uuid` | null | — | FK → schools (04); NULL = platform scope (super_admin) |
+| `school_id` | `uuid` | null | — | Loose ref → schools (04). 03 builds before 04, so the FK is added by 04's migration `20261002090007_add_identity_hierarchy_fks`. NULL = platform scope (super_admin, vendor) |
 | `is_ambassador` | `boolean` | no | `false` | Student Ambassador flag; valid only for VERIFIED students |
+| `plan` | `text` | no | `'free'` | CHECK ∈ free/pro — Kushol Pro flag read by 08 quotas; set by Super Admin/ops until module 12 billing sets it |
+| `plan_expires_at` | `timestamptz` | null | — | NULL = no expiry; read-time check (expired ⇒ treated as free) |
 | `last_login_at` | `timestamptz` | null | — | device/audit support |
 | `created_at` / `updated_at` | `timestamptz` | no | `now()` | |
 
 **Constraints:** CHECKs on role/status/locale; partial unique `phone_e164` WHERE NOT NULL;
-partial unique `email` WHERE NOT NULL; CHECK `is_ambassador` ⇒ role='student'.
+partial unique `email` WHERE NOT NULL; CHECK `is_ambassador` ⇒ role='student'; CHECK role ∈
+(super_admin, vendor) ⇔ `school_id IS NULL`; CHECK `plan` ∈ free/pro.
 **Indexes:** `phone_e164` → OTP login lookup; `email` → password/SSO lookup;
 `(school_id, role, status)` → roster + queue counts; `(status)` partial on PENDING → SLA job.
 
@@ -52,8 +55,10 @@ partial unique `email` WHERE NOT NULL; CHECK `is_ambassador` ⇒ role='student'.
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | no | uuid v7 | PK |
-| `phone_e164` | `text` | no | — | target number |
-| `purpose` | `text` | no | — | CHECK ∈ login/register/link |
+| `channel` | `text` | no | `'sms'` | CHECK ∈ sms/email — email OTPs are sent by 06's email channel from `noreply@kusholconnect.com` (HestiaCP SMTP) |
+| `phone_e164` | `text` | null | — | target number (channel `sms`) |
+| `email` | `citext` | null | — | target address (channel `email`) |
+| `purpose` | `text` | no | — | CHECK ∈ login/register/link/reset (`reset` = staff/vendor password reset and first-password set) |
 | `code_hmac` | `text` | no | — | HMAC-SHA256(code, `OTP_PEPPER`) |
 | `attempts` | `int` | no | `0` | max 3 (service) |
 | `expires_at` | `timestamptz` | no | `now()+5 min` | |
@@ -61,8 +66,8 @@ partial unique `email` WHERE NOT NULL; CHECK `is_ambassador` ⇒ role='student'.
 | `request_ip` | `inet` | null | — | abuse analysis |
 | `created_at` | `timestamptz` | no | `now()` | |
 
-**Constraints:** none beyond CHECK.
-**Indexes:** `(phone_e164, created_at DESC)` → hourly cap count + latest-code lookup; partial on
+**Constraints:** CHECK exactly one of `phone_e164`/`email`, matching `channel`.
+**Indexes:** `(phone_e164, created_at DESC)` and `(email, created_at DESC)` (partial, non-null) → hourly cap count + latest-code lookup; partial on
 `consumed_at IS NULL AND expires_at > now()` → active-code check.
 
 #### `sessions` (model `Session` — web http-only)
@@ -105,9 +110,10 @@ logout-all; `(expires_at)` partial → cleanup job.
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | no | uuid v7 | PK |
 | `user_id` | `uuid` | no | — | FK → users; ≤1 open (partial unique) |
-| `school_id` | `uuid` | no | — | FK → schools (04); denormalized for queue scope |
+| `school_id` | `uuid` | no | — | Loose ref → schools (FK added by 04, see `users.school_id`); denormalized for queue scope |
+| `requested_section_id` | `uuid` | null | — | Loose ref → sections (FK added by 04). The registration-time section choice (student/guardian/teacher); read by 04 `OnUserVerified` via `users.GetWithSelection`. Class level is derived from the section — there is no separate class entity |
 | `requested_role` | `text` | no | — | snapshot of user role |
-| `evidence` | `jsonb` | null | — | e.g. guardian: `{studentCode, studentClass, relation}` |
+| `evidence` | `jsonb` | null | — | e.g. guardian: `{studentCode, relation}` — proof only; the durable link is `guardian_links` |
 | `status` | `text` | no | `'PENDING'` | CHECK ∈ PENDING/APPROVED/REJECTED/CANCELLED |
 | `decided_by` | `uuid` | null | — | FK → users (verifier) |
 | `decision_reason` | `text` | null | — | required on reject |
@@ -121,7 +127,28 @@ logout-all; `(expires_at)` partial → cleanup job.
 **Indexes:** `(school_id, status, created_at)` → admin/ambassador queue; `(status, created_at)`
 → SLA reminder scan.
 
-Tenant scope: `users`, `verification_requests` carry `school_id` directly;
+#### `guardian_links` (model `GuardianLink`)
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no | uuid v7 | PK |
+| `school_id` | `uuid` | no | — | tenant scope (loose ref → schools; FK added by 04) |
+| `guardian_user_id` | `uuid` | no | — | FK → users (role guardian) |
+| `student_user_id` | `uuid` | no | — | FK → users (role student) |
+| `relation` | `text` | no | — | CHECK ∈ father/mother/other |
+| `status` | `text` | no | `'ACTIVE'` | CHECK ∈ ACTIVE/REVOKED |
+| `source` | `text` | no | — | CHECK ∈ VERIFICATION/ROSTER (14) |
+| `verified_by` | `uuid` | null | — | FK → users (approver); NULL for ROSTER |
+| `created_at` / `revoked_at` | `timestamptz` | no / null | `now()` / — | |
+
+**Constraints:** partial unique `(guardian_user_id, student_user_id)` WHERE `status='ACTIVE'`;
+guardian and student must share `school_id` (service-enforced + test).
+**Indexes:** `(guardian_user_id, status)` → "my children" (12 fee entitlement); `(student_user_id, status)`
+→ guardians of a student (05 guardian reach, 12 notices).
+Written in the same tx as a guardian approval: the approver confirms which student the evidence
+matched (`studentUserId` on the approve request). A guardian may link to 1..n students.
+
+Tenant scope: `users`, `verification_requests`, `guardian_links` carry `school_id` directly;
 `sessions`, `refresh_tokens`, `auth_identities` scope through the owning user; `otp_codes` are
 pre-auth (phone/IP scoped). Unscoped queries on tenant-owned tables are a defect.
 
@@ -134,7 +161,12 @@ pre-auth (phone/IP scoped). Unscoped queries on tenant-owned tables are a defect
 | 3 | `20261001090010_create_otp_codes` | ✅ |
 | 4 | `20261001090015_create_sessions` | ✅ |
 | 5 | `20261001090020_create_refresh_tokens` | ✅ |
-| 6 | `20261001090025_create_verification_requests` | ✅ |
+| 6 | `20261001090025_create_verification_requests` (incl. `requested_section_id`) | ✅ |
+| 7 | `20261001090030_create_guardian_links` | ✅ |
+
+No FK to 04 tables here: 03 is built and migrated before 04 exists. 04's migration
+`20261002090007_add_identity_hierarchy_fks` adds `users.school_id`, `verification_requests.school_id`,
+`verification_requests.requested_section_id` and `guardian_links.school_id` FKs.
 
 ### 1.3 Seed
 
@@ -152,7 +184,7 @@ pre-auth (phone/IP scoped). Unscoped queries on tenant-owned tables are a defect
 | | |
 | --- | --- |
 | **Auth** | public + OTP code in payload; rate-limit class `auth` |
-| **Input** | `{locale, role, fullName, phone, otpCode, schoolId, classId, sectionId, studentCode?, email?, password?}` — contract validator; hierarchy placement re-validated server-side against 04 reads |
+| **Input** | `{locale, role, fullName, phone, otpCode, schoolId, sectionId, studentCode?, relation?, email?, password?}` (no `classId` — class level comes from the section) — contract validator; hierarchy placement re-validated server-side against 04 reads |
 | **Result** | `201 {data:{user, accessToken?, refreshToken?, verificationRequest}}` — tokens only when phone OTP completed |
 | **Errors** | `VALIDATION_FAILED` · `CONFLICT` (phone/email taken, hierarchy mismatch) · `RATE_LIMITED` · `INTERNAL` |
 | **Rate limit** | `auth`: 10/hour/IP |
@@ -164,9 +196,9 @@ pre-auth (phone/IP scoped). Unscoped queries on tenant-owned tables are a defect
 | | |
 | --- | --- |
 | **Auth** | public; class `auth` |
-| **Input** | request/resend: `{phone, purpose: login|register|link}` · verify: `{phone, otpCode, purpose}` |
-| **Result** | request/resend: `202 {data:{sentAt, cooldownSeconds}}` — identical response whether or not the phone is registered · verify: `200 {data:{accessToken, refreshToken, user}}` (or `{status:"unknown_phone"}` → register; register/link purposes mark the code verified for the follow-up call) |
-| **Errors** | `VALIDATION_FAILED` (wrong/expired/attempts-exhausted — one generic message) · `RATE_LIMITED` (60 s cooldown; 5/hour/phone; 20/hour/IP; 3 attempts/code; 10 verifies/hour/phone) · `INTERNAL` |
+| **Input** | request/resend: `{phone | email, purpose: login|register|link}` · verify: `{phone | email, otpCode, purpose}` — `phone` is the primary path for students/guardians; `email` is available to any user with a verified email on file (staff and vendors; students/guardians only as a fallback when SMS is delayed) |
+| **Result** | request/resend: `202 {data:{sentAt, cooldownSeconds, channel}}` — identical response whether or not the phone/email is registered; email codes are enqueued to 06 `notify.SendEmail` with priority (no batching) · verify: `200 {data:{accessToken, refreshToken, user}}` (or `{status:"unknown_phone"}` → register; register/link purposes mark the code verified for the follow-up call) |
+| **Errors** | `VALIDATION_FAILED` (wrong/expired/attempts-exhausted — one generic message) · `RATE_LIMITED` (60 s cooldown; 5/hour per phone or email; 200/hour/IP — high because Bangladeshi carriers share IPs (CGNAT) and whole schools register from one Wi-Fi, so per-target caps are the primary control; 3 attempts/code; 10 verifies/hour per target) · `INTERNAL` |
 | **Rate limit** | `auth` (sub-caps left) |
 | **Audit** | `user.login` on token issue (first-of-device flagged); request/resend metrics only |
 | **Stories** | `IDT-US-001` `IDT-US-003` |
@@ -178,10 +210,22 @@ pre-auth (phone/IP scoped). Unscoped queries on tenant-owned tables are a defect
 | **Auth** | public; class `auth` |
 | **Input** | `{email, password, deviceLabel?}` |
 | **Result** | `200 {data:{user, accessToken?, refreshToken?, sessionSet}}` — web gets the http-only session cookie; app gets tokens; `PENDING` users still get a session (pending screen) |
-| **Errors** | `UNAUTHENTICATED` (generic, enumeration-safe) · `VALIDATION_FAILED` · `RATE_LIMITED` (10/hour/account, 30/hour/IP) |
+| **Errors** | `UNAUTHENTICATED` (generic, enumeration-safe) · `VALIDATION_FAILED` · `RATE_LIMITED` (10/hour/account, 100/hour/IP) |
 | **Rate limit** | `auth` |
 | **Audit** | `user.login` (success; failures counted, not audited) |
 | **Stories** | `IDT-US-004` `IDT-US-013` |
+
+### Endpoint `POST /api/v1/auth/password/forgot` · `POST /api/v1/auth/password/reset`
+
+| | |
+| --- | --- |
+| **Auth** | public; class `auth` |
+| **Input** | forgot: `{email}` · reset: `{email, otpCode, newPassword}` (argon2id policy: ≥ 10 chars, not in a breached/common list) |
+| **Result** | forgot: `202` always (enumeration-safe) — if the email belongs to a staff/vendor account, a 6-digit `reset` OTP is emailed from `noreply@` (bn + en, 5-min TTL) · reset: `204`; password updated, **all sessions + refresh families revoked** (`sessions.InvalidateForUser`) |
+| **Errors** | `VALIDATION_FAILED` (bad/expired code, weak password — one generic code message) · `RATE_LIMITED` (5/hour/email, 100/hour/IP) |
+| **Rate limit** | `auth` |
+| **Audit** | `user.password_reset` |
+| **Stories** | `IDT-US-015` (staff forgot password) · vendor first-password set after 07 approval (`users.CreateVendorLogin` triggers a `reset` OTP email) |
 
 ### Endpoint `POST /api/v1/auth/refresh`
 
@@ -236,8 +280,8 @@ pre-auth (phone/IP scoped). Unscoped queries on tenant-owned tables are a defect
 | | |
 | --- | --- |
 | **Auth** | authenticate → role claims → tenant-scope; class `auth`. List/approve: school_admin (own school), student+`is_ambassador` (same school, student/guardian requests only, approve-only), super_admin (all). Reject: school_admin/super_admin only (BR-005). Roster: school_admin (own school from claim), super_admin (`?schoolId=`) |
-| **Input** | list: `?status=PENDING&role=&cursor=&limit=` · reject: `{reason}` (10–500 chars, required) · roster: `?role=&status=&q=&cursor=&limit=` |
-| **Result** | list: `200 {data:[{id, user{name,role,phoneMasked}, evidence, createdAt, reminderCount}], nextCursor}` · approve: same tx flips `users.status=VERIFIED`, then enqueues provisioning (→ 04 `OnUserVerified`); reject stores reason + notifies via 06 · roster: `200 {data:[user], nextCursor}` (names, roles, statuses, masked phones) |
+| **Input** | list: `?status=PENDING&role=&cursor=&limit=` · approve: `{}`; guardian requests require `{studentUserId}` (the same-school VERIFIED student the evidence matched → `guardian_links` row in the approve tx) · reject: `{reason}` (10–500 chars, required) · roster: `?role=&status=&q=&cursor=&limit=` |
+| **Result** | list: `200 {data:[{id, user{name,role,phoneMasked}, evidence, createdAt, reminderCount}], nextCursor}` · approve: same tx flips `users.status=VERIFIED` (+ inserts `guardian_links` for guardians), then enqueues provisioning (→ 04 `OnUserVerified`); reject stores reason + notifies via 06 · roster: `200 {data:[user], nextCursor}` (names, roles, statuses, masked phones) |
 | **Errors** | `FORBIDDEN` (wrong school/role, ambassador reject) · `NOT_FOUND` · `CONFLICT` (already decided) · `VALIDATION_FAILED` · `NOT_VERIFIED` (unverified verifier) · `TENANT_MISMATCH` (roster cross-school) |
 | **Rate limit** | `auth`; ambassador approvals additionally capped/day |
 | **Audit** | `verification.approved` / `verification.rejected` (verifier, target, reason) |
@@ -302,7 +346,7 @@ middleware reads cookie **presence** for redirects only — every real decision 
 | `IDT-UT-003` | JWT issue/verify round-trip, expiry, wrong-aud rejection, claim refresh on rotation | Unit | token contract |
 | `IDT-UT-004` | Refresh rotation state machine incl. reuse ⇒ family revoke | Unit | BR-012 |
 | `IDT-UT-005` | Password login: identical error body + timing bucket for unknown user vs wrong password | Unit | enumeration safety |
-| `IDT-UT-006` | Role/verified guard matrix (5 roles × route classes × statuses) | Unit | BR-001/BR-002/BR-005 |
+| `IDT-UT-006` | Role/verified guard matrix (6 roles incl. vendor × route classes × statuses) | Unit | BR-001/BR-002/BR-005 |
 | `IDT-UT-007` | CSRF double-submit accept/reject paths | Unit | web mutation safety |
 | `IDT-IT-001` | **OTP flow**: issue → verify → expiry → 3-attempt death → cooldown → hourly cap | Integration (testcontainers Postgres + fake gateway) | BR-003 end-to-end |
 | `IDT-IT-002` | **Refresh rotation + reuse detection** revokes the family; victim re-login works | Integration | BR-012, `INV-4` |
@@ -329,6 +373,7 @@ table (IT-003), verified-gate enforcement (IT-004).
 - [ ] `IDT-BE-004` `sessions`
 - [ ] `IDT-BE-005` `refresh_tokens`
 - [ ] `IDT-BE-006` `verification_requests`
+- [ ] `IDT-BE-006a` `guardian_links`
 
 ### Repository · Service · Entry points · Seed · Tests
 
@@ -342,4 +387,7 @@ table (IT-003), verified-gate enforcement (IT-004).
 - [ ] `IDT-BE-022`–`BE-028` sqlc repositories
 - [ ] `IDT-BE-029`–`BE-031` jobs (SLA reminder, OTP retry, provisioning) + cleanup
 - [ ] `IDT-BE-032` bootstrap Super Admin CLI (env; `TODO: Confirm` contacts)
+- [ ] `IDT-BE-033` `guardian_links` migration + repository + `guardians.*` exports (written in the guardian approve tx)
+- [ ] `IDT-BE-035` email OTP channel (`otp_codes.channel/email`, `reset` purpose) + forgot/reset endpoints; OTP emails via 06 `notify.SendEmail`
+- [ ] `IDT-BE-034` `users.GetWithSelection`, `users.UpsertRosterUser`, `users.SetPlan`, `users.CreateVendorLogin`, `verification.PendingCount` exports (see `06-integration-tasks.md` §2)
 - [ ] `IDT-UT-001`–`007` unit tests green in CI · `IDT-IT-001`–`010` integration tests green on testcontainers Postgres

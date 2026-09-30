@@ -24,7 +24,7 @@ Rows marked `verify` belong to modules not yet built. Aligned with `prd.md` §6 
 
 | Layer | Technology | Version | Notes |
 | --- | --- | --- | --- |
-| Framework | **Expo SDK** (managed workflow) | latest stable `verify` | OTA updates via EAS; Android APK direct + Play Store; iOS via TestFlight (`prd.md` §4B) |
+| Framework | **Expo SDK** (managed workflow + config plugins / CNG) | latest stable `verify` | **EAS development builds, not Expo Go** — `@react-native-firebase` needs native code; OTA updates via EAS; Android APK direct + Play Store; iOS via TestFlight (`prd.md` §4B) |
 | UI runtime | React Native + React | latest stable `verify` | Hermes engine |
 | Navigation | **expo-router** (file-based) | latest `verify` | Typed routes; deep links for payment/notification payloads |
 | Language | TypeScript (strict) | latest `verify` | |
@@ -34,9 +34,11 @@ Rows marked `verify` belong to modules not yet built. Aligned with `prd.md` §6 
 | Fonts | **Hind Siliguri** (Bengali UI + display) · **Inter** (Latin) via @expo-google-fonts | bundled | Bangla glyphs are a launch requirement, not an add-on |
 | State (server) | **TanStack Query** | 5.x | Chat + marketplace lists |
 | State (client) | zustand | latest `verify` | Session, settings, cached roster |
+| Local persistence | **react-native-mmkv** (zustand persist: offline chat queue per 05 §8, settings, cached roster) · expo-sqlite only if message caching outgrows MMKV | latest `verify` | Offline queue must survive app restarts (05 §8); tokens in **expo-secure-store** |
+| Media capture | **expo-image-manipulator** (resize/compress to ~1 MB before upload) · **expo-audio** (voice notes record/play) | latest `verify` | 05 media caps: image ≤ 10 MB, voice ≤ 5 min |
 | Forms | react-hook-form + zod resolver | 7.x / **zod 4.x** | Schemas imported from `packages/shared` |
 | Chat | Plain **WebSocket** client to the Go gateway + optimistic UI | stdlib `verify` | Offline queue, media (image/voice) compression before upload |
-| Push | **expo-notifications** → FCM topics | latest `verify` | Topic subscriptions mirror the hierarchy (city/school/section — `brd.md` §6) |
+| Push | **@react-native-firebase/messaging** (native FCM token, Expo config plugin, EAS builds) + **expo-notifications** (permission, channels, display, taps) | latest `verify` | One FCM token serves topic subscriptions (city/school/section — `brd.md` §6) and directed sends; Expo push tokens/APNs tokens cannot join FCM topics on iOS (decision 2026-09-30, module 06 `02` §10) |
 | AI capture | expo-camera / expo-image-picker | latest `verify` | Notes Scanner input for DeepSeek vision |
 | Testing | **Maestro** (E2E flows) + jest-expo (unit) | latest `verify` | Onboarding → verify → join section group is the golden path |
 | Build/CI | **EAS Build & Submit** | cloud | APK/TestFlight distribution per `brd.md` §8 Phase 1 |
@@ -67,18 +69,20 @@ Rows marked `verify` belong to modules not yet built. Aligned with `prd.md` §6 
 | Contracts | **OpenAPI 3.1** spec in `contracts/openapi/` → `oapi-codegen` (Go types/handlers) + `openapi-typescript`/`openapi-fetch` (TS clients for web/app) | latest `verify` | Spec is written first; request/response validation generated from it |
 | Realtime / messaging | **gorilla/websocket** (+ Redis pub/sub fan-out across instances) | latest `verify` | **Messaging lives in Go**: rooms mirror City → School → Section and custom groups; presence in Redis |
 | Database | **PostgreSQL** (multi-tenant, shared-schema + tenant scoping) — hosted on **Neon** free tier (Singapore `ap-southeast-1`) for quick start | 16+ `verify` | Decision recorded 2026-09-29: Neon over Supabase (pure Postgres, DB branches fit the migration workflow; Supabase free pauses after 1 week idle). Free tier scales to zero (cold start ~hundreds of ms) — fine for dev/pilot, upgrade (Launch ~$19/mo) or move back to a Compose container when real school traffic starts. Tenant columns enforced in the repository layer; `pg_trgm` for search |
-| Data access | **sqlc** (type-safe generated queries) + **pgx/v5** driver | latest `verify` | Migrations as plain SQL files (golang-migrate or goose), expand/contract |
+| Data access | **sqlc** (type-safe generated queries) + **pgx/v5** driver | latest `verify` | Migrations as plain SQL files — **golang-migrate** (pinned 2026-09-30), expand/contract; applied manually by the owner (Gate 2), never at deploy/boot |
 | Cache / presence | **Redis** (go-redis) | 7 `verify` | Chat cache, online presence, rate limits, idempotency keys (`prd.md` §6) |
 | Push | **Firebase Admin Go SDK** → **FCM topic subscriptions** | latest `verify` | Topic-per-node fan-out for mass notices (`brd.md` §6) |
 | AI | **DeepSeek API** behind an internal `AIService` Go interface | latest `verify` | Phase 2: Go calls DeepSeek directly (vision for Notes Scanner, Auto-CT MCQs, Pain Point Matrix analytics); output validated against the OpenAPI/JSON-Schema shapes; per-user quota. **Later: extracted to `applications/ai` (Python FastAPI)** behind the same interface — clients never change |
 | Auth | **Custom Go auth** — argon2id (x/crypto) · access + refresh JWTs (mobile) · http-only sessions (web) · **phone OTP via a local SMS gateway** (e.g. SSLWireless) · **social SSO: Google + GitHub** (`golang.org/x/oauth2` / `coreos/go-oidc`) | latest `verify` | Decision recorded 2026-09-29 (Clerk evaluated and rejected — see "Deliberately not used"). Five roles: Super Admin, School Admin, Teacher, Student, Guardian; tenancy + verification claims in the JWT |
 | Uploads | **Cloudflare R2** (S3-compatible API, zero egress fees) + magic-byte sniffing | latest `verify` | Decision recorded 2026-09-29 — all media (chat images, voice notes, PDFs, scanned notes) and generated PDF receipts go to R2; clients upload via presigned URLs, api never proxies file bytes |
 | Payments | **bKash / Nagad / SSLCommerz** via server-side HTTP integrations | `verify` | Fee payments + marketplace; webhook signature verification, idempotent ledger (`prd.md` §5.4) |
-| Notifications content | expo-server-sdk equivalent (plain HTTPS push API) | — | |
+| Notifications content | Firebase Admin Go SDK per-token send (FCM HTTP v1) | — | Expo push API not used (2026-09-30) |
 | Validation | Generated OpenAPI validators + per-field rules in services | — | Every entry point; same shapes as the TS clients |
 | Logging | `log/slog` (JSON stdout, redacted) | stdlib | |
 | Testing | `go test` unit (services) + integration against a real Postgres (testcontainers-go) | stdlib `verify` | Tenant-isolation and webhook tests are mandatory |
-| Queueing | In-DB job table + Go worker process `verify` | — | Year-end migration, AI batch analytics, receipt generation — no Kafka/RabbitMQ until measured need |
+| Queueing | In-DB job table + Go worker (same binary, `worker` subcommand, own container) | — | Year-end migration, AI batch analytics, receipts, email — no Kafka/RabbitMQ until measured need. Evaluate **River** (Postgres job queue for Go) in 01's Stage 1 plan before hand-building |
+| Email (app) | SMTP submission to **HestiaCP Exim** as `noreply@kusholconnect.com` (Go SMTP client, 587 STARTTLS) | — | OTP codes, password reset, vendor invites, opted-in notifications (06 channel). Upgrade path: transactional provider API if deliverability suffers |
+| PDF (receipts) | `verify` — chosen by module 12's Bengali-shaping spike | — | Must shape Bengali conjuncts correctly |
 
 ## applications/ai — AI service (later; Phase 2+)
 
@@ -97,7 +101,7 @@ Rows marked `verify` belong to modules not yet built. Aligned with `prd.md` §6 
 | API contracts | `contracts/openapi/` OpenAPI 3.1 spec | Generates Go server types + validators (oapi-codegen) and TS clients (openapi-typescript/openapi-fetch) — web/app never hand-write API types |
 | Shared package | `packages/shared` | bn/en message catalogs, design tokens — the single source for TS-side non-API concerns; **Zod schemas stay for web/app forms**, mirroring the OpenAPI shapes |
 | i18n | JSON catalogs in `packages/shared` (bn default, en) | RTL not needed; date/number via `Intl` with `bn`/`en` locales |
-| Env validation | zod-parsed env (TS apps) · `envconfig`/viper-style parsed config (Go) | Never read env outside a config module |
+| Env validation | zod-parsed env (TS apps) · one struct-tag env parser for Go (`caarlos0/env`-class; final pick at 01) — no viper | Never read env outside a config module |
 | Lint/format | ESLint 9 (flat, type-checked) + Prettier · golangci-lint + gofmt/goimports · Husky + lint-staged | Boundary rule: app/web → api only through the generated OpenAPI client |
 | CI | GitHub Actions | Quality gate per app (`go test/vet/lint` for api; `pnpm lint/typecheck/test/build` for web/app); EAS build on `app` changes |
 
@@ -109,9 +113,13 @@ Rows marked `verify` belong to modules not yet built. Aligned with `prd.md` §6 
 | OS | Ubuntu 24.04 LTS | HestiaCP-supported release |
 | Panel | **HestiaCP** | Manages Nginx, Let's Encrypt, DNS, firewall, fail2ban — single shared control plane for all apps on the VPS |
 | Reverse proxy | Nginx (HestiaCP-managed, custom proxy templates) | `api.` and `web.` subdomains → containers on `127.0.0.1` ports; HestiaCP templates keep the config out of the containers |
-| Containers | Docker Engine + Compose v2 | Multi-stage builds; api + web + redis (+ ai in Phase 2+); Postgres off-box on Neon, media off-box on R2 |
+| Containers | Docker Engine + Compose v2 (Docker's apt repo) | Multi-stage builds; api + worker + web + redis (+ ai in Phase 2+); caps api 512m / worker 256m / web 512m / redis 256m; ports bound to `127.0.0.1` only; Postgres off-box on Neon, media off-box on R2 |
 | TLS | Let's Encrypt via HestiaCP | Auto-renewal |
 | CI / registry | GitHub Actions + GHCR | Go and TS images built in CI and pulled by the VPS — never build images on the KVM 2 (2 vCPU is too tight, especially with other tenants) |
+| Domain / DNS | `kusholconnect.com` (Hostinger registrar): apex = web (+ `/api/*` → api), `api.` = mobile API/WebSocket, `mail.`/`webmail.` = HestiaCP mail | Plan: `docs/infra/architecture-and-deployment.md` §6 |
+| Email | **HestiaCP mail server** on the VPS (Exim/Dovecot) for team mailboxes; the api sends OTP codes + notifications as `noreply@kusholconnect.com` over SMTP 587 (Go `net/smtp`-class client, module 06 channel) | Owner decision 2026-09-30; transactional-provider upgrade path if deliverability suffers — plan §7 |
+| Deployment method | Docker Engine + Compose over SSH behind HestiaCP Nginx — Hostinger's Docker Manager does **not** support the HestiaCP OS image | Verified via Hostinger API 2026-09-30 |
+| Monitoring | External uptime checker on `/healthz` + `/readyz` (`TODO: Confirm` provider) · error tracking for api/web/app (Sentry-class free tier, `TODO: Confirm`) | Plan F12 — decide before pilot |
 | Backups | Neon automated backups (point-in-time on paid) + periodic `pg_dump` + R2 bucket versioning + off-site copy | Restore drill documented in the runbook (module 15) |
 
 ## Deliberately not used (until a measured need)

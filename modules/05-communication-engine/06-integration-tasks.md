@@ -13,7 +13,7 @@
 | # | Counterparty | Direction | Mechanism | Failure is… |
 | --- | --- | --- | --- | --- |
 | I-1 | `04-organization-hierarchy` | they call us | exported Go service fn `chat.JoinSectionGroups` (on verification / section creation) | degraded — group join retried via job; verification itself never blocked |
-| I-2 | `06-notifications` | we call them | exported fn `notifications.BroadcastTopic(topic, payload)` | degraded, never fatal — notices still in-app + WS |
+| I-2 | `06-notifications` | we call them | exported fn `notify.BroadcastTopic(topic, payload)` | degraded, never fatal — notices still in-app + WS |
 | I-3 | `08-ai-study-hub` / `10-tuition-marketplace` | they call us | `media.PresignUpload` / `media.ConfirmUpload` | fatal to *their* media features only; text chat unaffected |
 | I-4 | `09-teacher-analytics` | they call us | `chat.GroupMembers(groupID)` — aggregates only | degraded — analytics sampling skips |
 | I-5 | `07-command-center-web` | they call us | REST endpoints #15–#20 (notices) + #3/#4/#6 (club approval) via generated client | degraded — composer shows API error |
@@ -33,6 +33,10 @@ chat.PostNotice(ctx, actor ActorClaims, in NoticeInput) (NoticeDTO, error)
 media.PresignUpload(ctx, owner ActorClaims, in PresignInput) (PresignResult, error)
 media.ConfirmUpload(ctx, owner ActorClaims, assetID uuid, in ConfirmInput) (MediaAssetDTO, error)
 chat.GroupMembers(groupID uuid) ([]MemberDTO, error)
+chat.ArchiveSectionGroups(ctx, schoolID uuid, sessionYear int) (archived int, err error)
+chat.NoticeStats(ctx, schoolID uuid) (NoticeStatsDTO{PublishedLast30d, Pinned, LastPublishedAt}, error)
+chat.SectionQuestionSamples(ctx, sectionID uuid, from, to time.Time, limit int) ([]ChatSample{Text, CreatedAt}, error)
+media.PutObject(ctx, in PutInput{Bytes, Kind, SchoolID, OwnerID}) (MediaAssetDTO, error)
 ```
 
 | Export | Callers | Returns | Throws | Notes |
@@ -42,6 +46,10 @@ chat.GroupMembers(groupID uuid) ([]MemberDTO, error)
 | `media.PresignUpload(owner, PresignInput)` | 08 notes · 11 product images · 12 receipts | `PresignResult{assetID, uploadURL, expiresAt}` | `VALIDATION_FAILED` (kind/size) | 15-min TTL; asset starts `pending` |
 | `media.ConfirmUpload(owner, assetID, ConfirmInput)` | 08 · 11 · 12 | `MediaAssetDTO` (sniffed mime, status) | `VALIDATION_FAILED` (magic-byte mismatch, expired, non-owner) | The security boundary — sniffing is server-side only |
 | `chat.GroupMembers(groupID)` | 09 (analytics sampling) | `[]MemberDTO{userID, role, sectionID}` | `NOT_FOUND` | **Aggregates only** — never message bodies; callers must not persist member lists |
+| `chat.ArchiveSectionGroups(schoolID, sessionYear)` | 04 year-end migration | count archived | domain errors | Idempotent; archived groups become read-only (composer disabled, `CONFLICT` on send) |
+| `chat.NoticeStats(schoolID)` | 07 School Admin dashboard | notice counts | `TENANT_MISMATCH` | Aggregate only |
+| `chat.SectionQuestionSamples(sectionID, from, to, limit)` | 09 Pain Point Matrix (P1 chat source) | ≤ `limit` (max 200) text messages from the section's **official** group in the window | `FORBIDDEN` (non-tenant), `VALIDATION_FAILED` | Text kind only, deleted excluded; **no author ids, names or group ids**; phone numbers/emails/URLs masked server-side before return; caller must not persist samples — only 08-classified topic tags. `TODO: Confirm` (Rahul) whether schools must opt in before chat text reaches the AI provider |
+| `media.PutObject(in)` | 12 receipt PDFs (server-generated files) | `MediaAssetDTO` (status `confirmed`) | `VALIDATION_FAILED` (kind/size) | Server-side put for api-generated files; kind allowlist extended with `receipt_pdf`; same R2 bucket/key scheme and archival rules as client uploads |
 
 Rules: exports return DTOs (never sqlc row structs); admin-only exports require role claims in the
 context; services return domain errors (mapped to the problem envelope at the handler), never raw
@@ -52,7 +60,7 @@ HTTP; signature changes are additive first.
 | We call | Owner | On failure |
 | --- | --- | --- |
 | `hierarchy.ResolveUserNodes(userID)` — school/section membership for room resolution + notice scoping | 04 | WS: disconnect client (cannot resolve rooms safely); REST: refuse with `INTERNAL` + alert — never guess scope |
-| `notifications.BroadcastTopic(topic, payload)` — topics `school-{id}` / `section-{id}` on notice publish; `school-{id}` on accepted request (via 06) | 06 | Log + continue; in-app/WS delivery unaffected; 06 owns retry |
+| `notify.BroadcastTopic(topic, payload)` — topics `school-{id}` / `section-{id}` on notice publish; `school-{id}` on accepted request (via 06) | 06 | Log + continue; in-app/WS delivery unaffected; 06 owns retry |
 | `jobs.Runner.Register(name, schedule, fn)` — archival, request-expiry, asset-cleanup jobs | 01 | Job misses logged; runner alarms; jobs are idempotent so late runs are safe |
 | Verified/role claims middleware (`authenticate → load role claims → tenant-scope`) | 03 | Writes refused with `NOT_VERIFIED`/`FORBIDDEN` — the gate is the feature |
 
@@ -145,3 +153,4 @@ depends on them.
 - [ ] `COM-INT-010` WS reconnect contract documented + tested (backoff, re-subscribe, REST catch-up)
 - [ ] `COM-INT-011` Failure-matrix drills scripted (Redis down, R2 down, gateway kill) in CI smoke
 - [ ] `COM-INT-012` Tests `COM-IT-001`–`011` + `COM-E2E-001`–`003` green in CI
+- [ ] `COM-INT-013` Implement + export `ArchiveSectionGroups` (04), `NoticeStats` (07), `SectionQuestionSamples` with PII masking + no-author guarantee (09), `media.PutObject` + `receipt_pdf` kind (12); contract tests per export

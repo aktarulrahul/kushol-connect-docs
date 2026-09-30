@@ -93,6 +93,13 @@ Consumption rule identical to web (`04-frontend-tasks §1`): primitives + tokens
 | EmptyState | Client | bn-first copy + primary action |
 | Avatar (verified-badge variant) | Client | initials fallback in Hind Siliguri |
 | Icon wrapper | Client | lucide-react-native with token sizes/colours |
+| `FloatingTabBar` + `Fab` | Client | CircleUp-style detached dark pill (teal-950), icon-only tabs + active dot, separate circular primary FAB with per-tab contextual action (hidden when none); safe-area aware; ≥ 44pt targets (`design-reference` §6.1) |
+| `ScreenHeader` | Client | header wash (teal-50 → Paper, static) + large left title + circular outlined action button + avatar entry to `/settings` |
+| `SegmentedPill` | Client | pill track with filled active segment (chat filters etc.); `accessibilityRole="tablist"` |
+| `ListRow` | Client | avatar slot (+presence dot), title, 1-line preview, trailing time + `UnreadBadge`; long-press slot; used by chat list, notifications, members |
+| `UnreadBadge` · `PresenceDot` · `AvatarStack` | Client | count badge (99+ cap, bn numerals via `Intl`); online dot; overlapping avatars + "১k+" count |
+| `OtpInput` | Client | 6 boxes, auto-advance, paste + SMS autofill (`textContentType="oneTimeCode"`/`autoComplete="sms-otp"`) |
+| `ConfirmModal` | Client | centred card with circular icon badge, Cancel (outline) + primary/destructive (CircleUp 47/83) |
 | Table shell | N/A on RN — lists are FlatList/SectionList patterns owned by feature modules |
 
 **States**
@@ -196,6 +203,7 @@ Bangla. There is no offline queue surface in this module (queues belong to
 - [ ] `DSN-AP-013` — Skeleton + EmptyState
 - [ ] `DSN-AP-014` — Avatar with verified-badge variant
 - [ ] `DSN-AP-015` — Icon wrapper (lucide-react-native, token sizing)
+- [ ] `DSN-AP-018` — CircleUp-pattern primitives: `FloatingTabBar`+`Fab`, `ScreenHeader`, `SegmentedPill`, `ListRow`, `UnreadBadge`/`PresenceDot`/`AvatarStack`, `OtpInput`, `ConfirmModal` (`docs/design-reference/README.md` §6)
 - [ ] `DSN-AP-016` — App icon (adaptive) + splash + notification small icon from brand assets in `app.json`/EAS config; fallback per `01-user-stories §9` Q1
 - [ ] `DSN-AP-017` — 360px bn-first verification pass (specimen + +30% strings) on a low-end Android profile
 - [ ] `DSN-UT-004` — RN primitive render fixtures (defined in `06-integration-tasks §9`)

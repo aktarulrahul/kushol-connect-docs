@@ -21,9 +21,18 @@ auth.Authenticate(r *http.Request) (Principal, error)
 auth.RequireRole(roles ...Role) func(http.Handler) http.Handler
 auth.RequireVerified() func(http.Handler) http.Handler
 auth.CurrentUser(ctx context.Context) (Principal, error)
-type Principal struct { UserID, Role, SchoolID, Status, Locale }
+type Principal struct { UserID, Role, SchoolID, Status, Locale, Plan }   // Role incl. vendor; SchoolID nil for super_admin/vendor
 sessions.InvalidateForUser(userID uuid.UUID) error
 verification.EnqueueProvisioning(userID uuid.UUID)   // 01 job → hierarchy.OnUserVerified (owned by 04)
+verification.PendingCount(ctx, schoolID uuid.UUID) (int, error)
+users.GetWithSelection(ctx, userID uuid.UUID) (UserSelection{UserID, Role, Status, SchoolID, SectionID}, error)
+users.UpsertRosterUser(ctx, schoolID uuid.UUID, in RosterUserInput{FullName, PhoneE164, Role, StudentCode?}) (RosterUserResult{UserID, Created bool}, error)
+users.PlanOf(ctx, userID uuid.UUID) (Plan{Tier: free|pro, ExpiresAt?}, error)
+users.SetPlan(ctx, actor Principal, userID uuid.UUID, tier string, expiresAt *time.Time) error
+users.CreateVendorLogin(ctx, actor Principal, in VendorLoginInput{FullName, Email}) (userID uuid.UUID, err error)
+guardians.LinkedStudents(ctx, guardianID uuid.UUID) ([]StudentRef{UserID, SchoolID, Relation}, error)
+guardians.GuardiansOf(ctx, studentID uuid.UUID) ([]uuid.UUID, error)
+guardians.IsGuardianOf(ctx, guardianID, studentID uuid.UUID) (bool, error)
 ```
 
 | Export | Callers | Returns | Throws | Notes |
@@ -34,6 +43,12 @@ verification.EnqueueProvisioning(userID uuid.UUID)   // 01 job → hierarchy.OnU
 | `auth.CurrentUser` | services needing the actor | `Principal` | `UNAUTHENTICATED` | context-embedded by middleware |
 | `sessions.InvalidateForUser` | suspend/reinstate paths here; future admin tooling | nil | — | kills sessions + refresh families + caches |
 | `verification.EnqueueProvisioning` | approve flow | job id | `INTERNAL` | idempotent per user; retries `OnUserVerified` |
+| `verification.PendingCount` | 07 School Admin dashboard | count of PENDING requests for the school | `FORBIDDEN` (cross-tenant) | tenant-scoped read |
+| `users.GetWithSelection` | 04 `OnUserVerified` | status + registration-time `requested_section_id` | `NOT_FOUND` | read-only; 04 never guesses placement |
+| `users.UpsertRosterUser` | 14 roster ingestion | user id + created flag | `VALIDATION_FAILED`, `CONFLICT` (phone owned by another school) | match on `phone_e164` within the school; creates PENDING users only — never auto-verifies (BR-001); audited `user.roster_upserted` |
+| `users.PlanOf` / `users.SetPlan` | 08 quotas (read) · 07 Super Admin + 12 billing (write) | Kushol Pro tier | `FORBIDDEN` (SetPlan: super_admin or 12's system actor only) | expired `plan_expires_at` ⇒ free; audited `user.plan_changed` |
+| `users.CreateVendorLogin` | 07 vendor approval | new `vendor` user id (email+password invite; password set via reset link) | `CONFLICT` (email exists), `FORBIDDEN` (non super_admin) | the only way a `vendor` user is created; 07 stores the id in `vendor_accounts.portal_user_id` |
+| `guardians.LinkedStudents` / `GuardiansOf` / `IsGuardianOf` | 12 fee entitlement · 05 guardian reach · 04 guardian enrollment · 14 roster | ACTIVE `guardian_links` only | — | tenant-scoped; never exposes other schools' links |
 
 Rules: exports return DTOs (never sqlc row structs); admin-only exports require role claims in the
 context; services return domain errors (mapped to the problem envelope at the handler), never raw
@@ -43,11 +58,11 @@ HTTP; signature changes are additive first.
 
 | We call | Owner | On failure |
 | --- | --- | --- |
-| `hierarchy.GetCities/GetSchools/GetClasses/GetSections` (read) | 04 | degraded — 5-min stale cache; registration blocked with `validation.hierarchy.invalid` if placement can't be proven |
+| `hierarchy.GetCities/GetSchools/GetSections` (read; no class entity — class level is a section attribute) | 04 | degraded — 5-min stale cache; registration blocked with `validation.hierarchy.invalid` if placement can't be proven |
 | `hierarchy.OnUserVerified(userID)` (write; hand-off target) | 04 (04 orchestrates enrollment, chat group joins, FCM topic subs) | provisioning job retries ×5 with backoff + alert; user stays VERIFIED |
 | `audit.Append(event)` | 01 | audit write retried inline; approval never blocked by audit failure alone (logged + alerted) |
 | `jobs.Enqueue / worker runtime` | 01 | job table is 01-owned; enqueue failure surfaces as `INTERNAL` |
-| `notifications.Send(kind, user)` (approved/rejected/reminder) | 06 | skipped + retried next SLA tick; never blocks the decision |
+| `notify.SendToUser(userID, payload)` (approved/rejected/reminder) | 06 | skipped + retried next SLA tick; never blocks the decision |
 
 Sequencing note: 03 builds before 04, so all hierarchy calls sit behind a Go interface declared
 here with an in-memory fake used by `IDT-IT-*` tests; the 04 spec binds the real implementation.

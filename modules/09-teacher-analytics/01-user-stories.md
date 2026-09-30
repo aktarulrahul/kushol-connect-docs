@@ -50,9 +50,9 @@ content and per-student weakness rows never exist in this module.
 
 | Module | What this module needs from it |
 | --- | --- |
-| 08 ai-study-hub | `ai.AttemptStats(sectionId, week)` failed-MCQ aggregates from `ai_test_answers`; `ai.ClassifyChatQueries(ctx, Samples, Locale)`; tables `ai_tests`/`ai_test_attempts`/`ai_test_answers` |
+| 08 ai-study-hub | `ai.AttemptStats(sectionID, weekStart, weekEnd)` failed-MCQ aggregates from `ai_test_answers`; `ai.ClassifyChatQueries(ctx, Samples, Locale)`; tables `ai_tests`/`ai_test_attempts`/`ai_test_answers` |
 | 04 organization-hierarchy | `hierarchy.ResolveUserNodes` (teacher → own sections; school_admin → school), `hierarchy.GetSection`, `sections` |
-| 05 communication-engine | `chat.GroupMembers(groupID)` — aggregates only; **no raw message content ever leaves the aggregation boundary** |
+| 05 communication-engine | `chat.SectionQuestionSamples` (anonymized samples, never stored) + `chat.GroupMembers(groupID)`; **only topic tags + counts are persisted** |
 | 03 identity-access | `auth.RequireRole`, `users` (role teacher/school_admin; verified gate) |
 | 01 foundations | `jobs.Enqueue` + weekly worker, `audit.Record`, RFC-7807 envelope, Redis rate limiting |
 | 06 notifications (P1) | Per-user push export for the Monday teacher summary (exact export name fixed in 06's spec) |

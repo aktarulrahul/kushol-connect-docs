@@ -31,7 +31,7 @@ logic (13/09, read-only exports) · landing-funnel self-signup (Phase 3) · prom
 | --- | --- | --- |
 | consumes / consumed by | 03 identity-access | We consume `users.GetWithSelection` (VERIFIED status + registration-time section choice) + pre-verified School Admin bootstrap; 03 calls `hierarchy.OnUserVerified` at its verify handler |
 | consumes | 01 foundations | `jobs` table + worker (`migration.run`, `hierarchy.backfill`), RFC-7807 envelope, config parsing, audit-log sink |
-| consumes | 05 communication-engine (interface-first) | `chat.JoinSectionGroups(userId)` · `chat.ArchiveSectionGroups(schoolId, sessionYear)` |
+| consumes | 05 communication-engine (interface-first) | `chat.JoinSectionGroups(userID, enrollment)` · `chat.ArchiveSectionGroups(schoolId, sessionYear)` |
 | consumed by | 05 / 06 | 05 calls `hierarchy.ResolveUserNodes` (WS room resolution, notice scoping); 06 reads `fcm_topic_bindings` + `ResolveUserNodes` (04 never calls 06) |
 | consumed by | 07 / 09 / 13 / 14 | 07 admin screens via REST; 09/13 read-only exports (`ResolveUserNodes` / `GetSection`, aggregates only); 14 `CreateEnrollments(batch, source)` |
 
@@ -153,6 +153,8 @@ From `06-integration-tasks.md` §2 — frozen for Phase 1; DTOs only, domain err
 | `hierarchy.CreateEnrollments(batch, source)` | 14 roster ingestion | Per-row result (created / exists / error); idempotent batch, rows never silently dropped | `VALIDATION_FAILED` (whole-batch shape) |
 | `hierarchy.PreviewMigration(schoolID, from, dryRun)` | 07 migration wizard | Run + items (PROMOTED/GRADUATED/RETAINED/ERROR); `dryRun=true` → DRAFT, `false` → PREVIEWED | `VALIDATION_FAILED`, `CONFLICT` |
 | `hierarchy.CommitMigration(runID)` | 07 migration wizard | Run COMMITTING→COMMITTED; tenant claims checked inside | `CONFLICT`, `NOT_FOUND` |
+| `hierarchy.PlatformCounts()` / `SchoolCounts(schoolID)` | 07 dashboards | aggregate counts | `FORBIDDEN` / `TENANT_MISMATCH` |
+| `hierarchy.AudienceCount(filter)` | 13 | VERIFIED-user count for a city/school/class/stream/role segment; small counts suppressed | `VALIDATION_FAILED` |
 
 ---
 
@@ -162,8 +164,8 @@ From `06-integration-tasks.md` §2 — frozen for Phase 1; DTOs only, domain err
 
 N/A — no web screens (`ORG-FE-*` does not exist; apps `api` + `shared` only). Module 07 builds the
 admin surfaces against this module's endpoints: `/admin/tenants`, `/admin/tenants/new`,
-`/admin/cities` (Super Admin) and `/school/hierarchy`, `/school/hierarchy/sections/[sectionId]`,
-`/school/migration` (School Admin). This module guarantees bn + en names and stable ids in every
+`/admin/cities` (Super Admin) and `/school/sections`, `/school/sections/[sectionId]`,
+`/school/migrations/new` (School Admin). This module guarantees bn + en names and stable ids in every
 payload so 07's screens stay accessible.
 
 ### 6.2 Mobile (detail in `05-app-tasks.md`)
@@ -304,3 +306,4 @@ Consolidated from `01` §9 + `02` §11 — the readiness-check table; unconfirme
 | Date | Change | Author |
 | --- | --- | --- |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
+| 2026-09-30 | Consistency pass: migrations re-versioned `20261002…` (build order); `20261002090007` adds deferred FKs onto 03 tables; `sections.stream`; exports `PlatformCounts`/`SchoolCounts`/`AudienceCount`; `JoinSectionGroups(userID, enrollment)` aligned with 05; guardian enrollments read 03 `guardian_links` | Claude |

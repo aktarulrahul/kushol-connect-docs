@@ -47,7 +47,7 @@ event listings with ticketing** at a 10% platform commission (PRD §7).
 | --- | --- |
 | 06 notifications | `notify.BroadcastTopic` for sponsored push (topics `city-{id}`/`school-{id}`/`section-{id}`); `type=campaign` payload; push labels rendered per its contract |
 | 07 command-center-web | `vendors.Approve` gate (only approved vendor accounts advertise); the `/admin/campaigns` moderation stub this module fills; `landing_leads` as top-of-funnel |
-| 04 organization-hierarchy · 05 communication-engine | `cities/schools/sections` targeting dimensions + aggregated verified-user counts (additive `hierarchy.AudienceCount`, 04 §7); `media_assets` (R2 presign + magic-byte confirm) for creative images |
+| 04 organization-hierarchy · 05 communication-engine | `cities/schools/sections` targeting dimensions + aggregated verified-user counts (`hierarchy.AudienceCount`, declared in 04 `06` §2); `media_assets` (R2 presign + magic-byte confirm) for creative images |
 | 03 identity-access · 01 foundations | Role guards + buyer verification (03); `jobs.Enqueue`, `audit.Record`, RFC-7807 envelope, `default` limiter (01) |
 | 12 payments | Seam only — `event_tickets.payment_transaction_id` filled by 12 once delivered; **not a build dependency** (README) |
 

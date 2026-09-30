@@ -37,7 +37,7 @@ Provides the real-time communication core of Kushol Connect: hierarchy-driven gr
 
 **Out of scope** (explicit — prevents scope drift)
 
-- Push delivery itself (FCM topics, deep links) — module 06; this module only calls `notifications.BroadcastTopic` when a notice is published.
+- Push delivery itself (FCM topics, deep links) — module 06; this module only calls `notify.BroadcastTopic` when a notice is published.
 - City-wide campaigns/events shown alongside notices — module 13 (arrive via 06 push, not the `notices` table — seam documented in COM-US-012).
 - The School Admin web notice composer UI — module 07 (this module ships the APIs it calls).
 - Live video/voice calls — `brd.md` §4 out of scope.
@@ -175,7 +175,7 @@ Provides the real-time communication core of Kushol Connect: hierarchy-driven gr
 **Acceptance criteria**
 
 - **Given** I am School Admin of school S, **when** I publish via `POST /notices` (scope `school`, optional pin/attachment), **then** it appears on every member's Notices tab pinned-first with `published_at` and school branding.
-- **Given** it is published, **when** `notifications.BroadcastTopic` runs for `school-{schoolId}`, **then** members receive the push "নতুন নোটিশ প্রকাশিত হয়েছে / New notice published" (06 owns delivery).
+- **Given** it is published, **when** `notify.BroadcastTopic` runs for `school-{schoolId}`, **then** members receive the push "নতুন নোটিশ প্রকাশিত হয়েছে / New notice published" (06 owns delivery).
 - **Given** a student/guardian views the board, **when** they look for a reply box, **then** none exists — read-only for non-admin roles.
 
 ### `COM-US-011` — Teacher publishes a section notice

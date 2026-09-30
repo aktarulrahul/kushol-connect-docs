@@ -29,6 +29,11 @@ commerce, peer-to-peer tuition matchmaking, and DeepSeek-powered AI study tools.
 
 ## 3. Product Phasing Strategy
 
+> **Superseded ordering (2026-09-30).** The build order is set by `brd.md` §8, `prompt.txt`
+> "Phase gates" and `docs/modules/README.md`: **Phase 2 = AI Hub + Auto-CT + Pain Point Matrix →
+> tuition marketplace; Phase 3 = campus commerce → payments → B2B ads/events → LMS/ERP sync.**
+> The phase contents below are kept as the original pitch; where they disagree, the build order wins.
+
 ### Phase 1: The MVP (Community & Communication)
 
 - **Mobile App Release:** Built on React Native (Expo CLI). Android APK release and iOS Beta via
@@ -131,6 +136,10 @@ Built using Expo CLI for rapid cross-platform deployment.
 Kushol utilizes a highly scalable B2B2C monetization matrix:
 
 ### 1. FinTech Convenience Fees (High Volume)
+
+> **Superseded (2026-09-30).** `brd.md` §7 (revised business model) removes fees on financial
+> transactions. Module 12 ships the fee as platform config with default **BDT 0 (off)**; turning it
+> on is an owner decision recorded in 12's `07-progress.md`. The figures below are the original pitch.
 
 - **Mechanism:** BDT 15–20 flat fee charged to guardians for every school fee/tuition transaction
   processed in-app.

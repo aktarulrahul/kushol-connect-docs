@@ -241,6 +241,20 @@ unknown codes (`06-integration-tasks.md` §7).
 | `INTERNAL` | unexpected failure | dependency down on `/readyz` (503); panics → recover middleware; Neon hard outage on DB paths | retry + request id; never a stack trace |
 | `UNAUTHENTICATED` / `FORBIDDEN` / `NOT_VERIFIED` / `QUOTA_EXCEEDED` / `CONFLICT` | defined in the shared registry here | returned by consumer modules (03+), not by FND's own routes | registry copy bn/en |
 
+**Module-specific codes (registered here, owned by the listed module — 2026-09-30).** The registry
+lives in one Go package + `packages/shared`; a module adding a code adds it here in its Stage 3 docs
+sync with bn/en copy. Clients treat unknown codes with generic bn/en copy (open set).
+
+| Code | Owner | HTTP | Meaning |
+| --- | --- | --- | --- |
+| `OUT_OF_STOCK` | 11 | 409 | Variant stock insufficient at reserve/checkout |
+| `PAYMENT_FAILED` | 12 | 402 | Gateway reported failure/cancel for this attempt |
+| `INVALID_SIGNATURE` | 12, 14 | 403 | Webhook signature missing/invalid (security-logged) |
+| `STALE_TIMESTAMP` | 14 | 400 | Webhook timestamp outside the ±5-min replay window |
+| `DUPLICATE_WEBHOOK` | 12 | 200 | Already-processed gateway event (idempotent no-op) |
+| `UNKNOWN_EVENT` | 12 | 400 | Webhook event type not handled by the adapter |
+| `CAMPAIGN_REJECTED` | 13 | 409 | Action on a campaign rejected in moderation |
+
 ---
 
 ## 11. Observability & Operations
@@ -317,3 +331,5 @@ keep their `TODO: Confirm` marker.
 | Date | Change | Author |
 | --- | --- | --- |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
+| 2026-09-30 | Deployment alignment (`docs/infra/architecture-and-deployment.md`): one binary with `serve`/`worker`/`migrate`/`migrate-status`/`healthcheck` (`FND-BE-014`); `serve` never migrates; worker idle back-off to 30 s; RealIP trusts only the local proxy; golang-migrate pinned | Claude |
+| 2026-09-30 | Consistency pass: module-specific error codes registered (§10); migration version rule (monotonic in build order, see `docs/modules/README.md`) | Claude |

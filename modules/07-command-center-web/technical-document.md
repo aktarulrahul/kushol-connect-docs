@@ -192,8 +192,9 @@ N/A — module 07 covers `web` + `api` only (README row). App surfaces that cons
 
 | Variable | Required | Example / default | Used by |
 | --- | --- | --- | --- |
-| `NEXT_PUBLIC_API_URL` | Yes | `https://api.kushol.example` | generated `openapi-fetch` client base URL (web → api) |
-| `NEXT_PUBLIC_SITE_URL` | Yes | `https://kushol.example` | SEO suite — metadata, OG, JSON-LD, sitemap, robots |
+| `NEXT_PUBLIC_API_URL` | Yes | `/api` (same-origin; Nginx on `kusholconnect.com` proxies `/api/*` → api) | generated `openapi-fetch` client base URL in the browser |
+| `API_INTERNAL_URL` | Yes (server-only) | `http://api:8080` | Server Components / Route Handlers call the api over the Compose network, forwarding the session cookie |
+| `NEXT_PUBLIC_SITE_URL` | Yes | `https://kusholconnect.com` | SEO suite — metadata, OG, JSON-LD, sitemap, robots |
 | `NEXT_PUBLIC_DOWNLOAD_URLS_READY` | No | `false` | flag-gates `/download` links (`WEB-BR-012`) until module 15 publishes EAS URLs; `NEXT_PUBLIC_*` limited to site URL + this flag — no secrets in client bundles (`02` §6); no api-side env beyond module 01's shared config |
 
 ### 8.2 Runtime config — the two lists
@@ -212,7 +213,7 @@ N/A — module 07 covers `web` + `api` only (README row). App surfaces that cons
 | Concern | Rule |
 | --- | --- |
 | Auth chain | Middleware checks session-cookie **presence only** for redirects (`WEB-BR-001`); every real decision runs api-side: authenticate → load role claims → tenant-scope (03 chain); mutations carry `X-CSRF-Token`; portal layouts re-check role claims per route group |
-| Role matrix | Public: `/`, `/download`, POST leads + vendor-register. Super Admin: `/admin/*` (endpoints #3–#7, #9). School Admin: `/school/*` (#8, claim-scoped). Vendor: `/vendor` shell gated on server status. Teacher/Student/Guardian: no portal |
+| Role matrix | Public: `/`, `/download`, POST leads + vendor-register. Super Admin: `/admin/*` (endpoints #3–#7, #9). School Admin: `/school/*` (#8, claim-scoped). Teacher: `/school/ai-matrix` only (own sections, module 09) — every other `/school/*` route returns `FORBIDDEN`. Vendor: `/vendor` shell gated on server status. Teacher/Student/Guardian: no portal |
 | Tenant scope | School Admin screens send no `schoolId` — scope is claim-derived (`WEB-BR-008`); `landing_leads`/`vendor_accounts` are platform-wide (Super Admin reads); cross-tenant attempts → `TENANT_MISMATCH`/404 with request id |
 | Rate limits | Class `leads` on `POST /leads` + `POST /vendor/register`: 10/h/IP, 3/min burst (Redis, DB fallback counters); default class on all other routes |
 | Audit events | `vendor.approved` / `vendor.rejected` / `vendor.suspended` (actor, target, reason); `lead.status_changed`; destructive UI actions (school/city create, vendor decision, lead status, migration preview/commit) confirmed in UI naming the object and audit-logged api-side; audit failure aborts the action (01 I-3) |
@@ -305,3 +306,4 @@ All errors surface as RFC-7807 `application/problem+json`; user-visible messages
 | Date | Change | Author |
 | --- | --- | --- |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
+| 2026-09-30 | Consistency pass: vendor portal login = 03 `vendor` role created by `users.CreateVendorLogin` on approval; exports `vendors.AccountForUser` + `RequireApprovedVendor` for 11/13; stub routes renamed to owners' names (`/school/ai-matrix` — Teacher access to own sections, `/school/integrations`), `/school/sections/[sectionId]` added; UI direction = professional SaaS landing + admin console (`docs/design-reference/README.md` §7) | Claude |

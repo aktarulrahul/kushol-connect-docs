@@ -122,7 +122,7 @@ OpenAPI client (`01-foundations`).
 
 | # | Method · Path | Roles | Purpose | Key errors | Stories |
 | --- | --- | --- | --- | --- | --- |
-| None — no endpoints exist; no `DSN-BE` items. The module's real contract is the **catalog JSON schema** (`03-backend-tasks.md` §2): flat `key → {bn, en}` map, dot-namespaced under `common · validation · auth · chat · notices · ai · marketplace · admin`, identical key sets and `{param}` placeholders in both files — CI-gated | — | — | — | — | — |
+| None — no endpoints exist; no `DSN-BE` items. The module's real contract is the **catalog JSON schema** (`03-backend-tasks.md` §2): flat `key → {bn, en}` map, dot-namespaced under `common · validation · errors · auth · verification · hierarchy · chat · notices · notifications · settings · landing · admin · school · vendor · ai · analytics · tuition · marketplace · commerce · payments · ads · events · sync · ops`, identical key sets and `{param}` placeholders in both files — CI-gated | — | — | — | — | — |
 
 ### 5.2 Realtime / jobs
 
@@ -301,3 +301,4 @@ readiness checks; unconfirmed items keep their `TODO: Confirm` marker.
 | Date | Change | Author |
 | --- | --- | --- |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
+| 2026-09-30 | Namespace whitelist replaced by a 24-namespace registry (`02` §1.1) — later modules already used namespaces outside the original eight; CircleUp mobile primitives (`DSN-AP-018`) and professional web primitives (`DSN-FE-019`) added per owner UI direction (`docs/design-reference/README.md` §6–§7) | Claude |

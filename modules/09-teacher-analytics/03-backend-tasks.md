@@ -40,7 +40,7 @@ Schema first. Nothing below is designed until the schema is settled. `weekly_pai
 
 | # | Migration | Reversible? |
 | --- | --- | --- |
-| 1 | `20261019090001_create_weekly_pain_points` | ✅ |
+| 1 | `20261110090001_create_weekly_pain_points` | ✅ |
 
 ### 1.3 Seed
 
@@ -117,7 +117,7 @@ zod-validated query params mirroring `validation.*`.
 
 | ID | Method | Rules / guards | Revalidates | Audit |
 | --- | --- | --- | --- | --- |
-| `ANL-BE-001` | `ComputeSectionWeek(sectionId, weekStart)` | Pipeline per `02` §2: 04 identity → 08 `AttemptStats` (P0) → 05 `GroupMembers` boundary → 08 `ClassifyChatQueries` (P1, skip on failure) → merge per (topic, source) per `ANL-BR-008` → upsert **current week only** (`ANL-INV-002`) | `school:{id}:matrix:{week}` + `school:{id}:matrix:index` | yes — computed / degraded-mcq-only |
+| `ANL-BE-001` | `ComputeSectionWeek(sectionId, weekStart)` | Pipeline per `02` §2: 04 identity → 08 `AttemptStats` (P0) → 05 `SectionQuestionSamples` + `GroupMembers` → 08 `ClassifyChatQueries` (P1, skip on failure) → merge per (topic, source) per `ANL-BR-008` → upsert **current week only** (`ANL-INV-002`) | `school:{id}:matrix:{week}` + `school:{id}:matrix:index` | yes — computed / degraded-mcq-only |
 | `ANL-BE-002` | `WeeklyMatrix(actor, sectionId, week, source)` | Role checks (`ANL-BR-002/003/010`); week window validation; read + merge rows per topic; suppression filter + `suppressedCount`; status derivation | — | no |
 | `ANL-BE-003` | `SchoolMatrix(actor, week, sectionId?)` | `SCHOOL_ADMIN` only; all sections of the claim's school; weighted rollup over unsuppressed rows | — | no |
 | `ANL-BE-004` | `AvailableWeeks(actor, sectionId, limit)` | Same scoping as `ANL-BE-002`; ≤12 weeks, newest first | — | no |
@@ -186,7 +186,7 @@ rows never returned by any read path.
 
 - [ ] `ANL-BE-011`–`015` sqlc: upsert + suppressed-filtered reads + weeks list — ____
 - [ ] `ANL-BE-008`–`010` pure helpers: suppression, rollup, insight render, severity — ____
-- [ ] `ANL-BE-001` compute pipeline (consume 08 `AttemptStats` / `ClassifyChatQueries`, 05 `GroupMembers`, 04 `GetSection`) — ____
+- [ ] `ANL-BE-001` compute pipeline (consume 08 `AttemptStats` / `ClassifyChatQueries`, 05 `SectionQuestionSamples`/`GroupMembers`, 04 `GetSection`) — ____
 - [ ] `ANL-BE-002`–`004` read services (role/tenant scoping, merge, status derivation) — ____
 - [ ] `ANL-BE-005` refresh orchestration (limiter + enqueue + audit) — ____
 - [ ] `ANL-BE-006`/`016`–`017` jobs: weekly worker + refresh worker (register with 01 runner) — ____

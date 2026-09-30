@@ -9,6 +9,9 @@
 > `docs/tech-stack.md` (app table — push via **expo-notifications**) are binding: tokens only,
 > every user-facing string in Bengali + English, 360px-first layouts.
 
+> **Visual direction (owner, 2026-09-30):** notification centre + settings pages follow CircleUp
+> screens 80–89 — `docs/design-reference/README.md` §6.3.
+
 ---
 
 ## 1. Screen Inventory
@@ -153,7 +156,7 @@ On every directed tap the app fires `POST /notifications/deliveries/{deliveryId}
 | Field | Control | zod rule (from `packages/shared`) | Default | Conditional on |
 | --- | --- | --- | --- | --- |
 | Preference `muted` per class | labelled switch (3 rows) | `validation.notifications.class_invalid` · `muted_required` | all unmuted | always |
-| Device `token` / `platform` / `appVersion` | system-provided (expo-notifications), not user input | `validation.notifications.token_invalid` · `platform_invalid` | auto | post-permission |
+| Device `token` / `platform` / `appVersion` | system-provided (`@react-native-firebase/messaging`), not user input | `validation.notifications.token_invalid` · `platform_invalid` | auto | post-permission |
 
 Submission: same contract shape as the API · disable while pending · map field errors · never
 lose input on error · toggles stay interactive (optimistic) with rollback + message on failure.
@@ -163,9 +166,9 @@ lose input on error · toggles stay interactive (optimistic) with rollback + mes
 | Need | Mechanism |
 | --- | --- |
 | Preference read/write | TanStack Query → generated OpenAPI client → `GET/PATCH /notifications/preferences`; cache key `notifications:prefs:{userId}` (`06` §4) |
-| Device registration | login (03) success → primer → `getDevicePushTokenAsync` → `POST /notifications/devices`; re-run on token rotation; foreground heartbeats refresh `last_seen_at` |
+| Device registration | login (03) success → primer (expo-notifications permission) → `messaging().getToken()` from `@react-native-firebase/messaging` (native FCM token on iOS + Android; never `getExpoPushTokenAsync`/`getDevicePushTokenAsync`) → `POST /notifications/devices`; re-run on `onTokenRefresh`; foreground heartbeats refresh `last_seen_at` |
 | Logout cleanup | `DELETE /notifications/devices/{id}` before token wipe — failure is retried silently and never blocks logout |
-| Push receive | expo-notifications listener → key resolved from on-device `notifications.*` catalog → `strings` pair fallback → render on the class channel |
+| Push receive | `@react-native-firebase/messaging` handlers (foreground + background; background handler POSTs the delivered ack) → expo-notifications display → key resolved from on-device `notifications.*` catalog → `strings` pair fallback → render on the class channel |
 | Push tap | response listener → deep-link map (§2.4) → route → `POST …/opened` (directed only) |
 | History | TanStack Query paginated `GET /notifications/deliveries` (settings sub-screen) |
 

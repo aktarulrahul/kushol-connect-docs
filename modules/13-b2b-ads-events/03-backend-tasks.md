@@ -124,8 +124,8 @@ Rebuilt nightly; vendor analytics read only this table (BR-008).
 
 | # | Migration | Reversible? |
 | --- | --- | --- |
-| 1 | `20270110100000_ad_campaigns_creatives_events` (ads pair + events) | ✅ |
-| 2 | `20270110101000_ad_events_tickets_daily` (fact table + tickets + aggregate) | ✅ |
+| 1 | `20270220100000_ad_campaigns_creatives_events` (ads pair + events) | ✅ |
+| 2 | `20270220101000_ad_events_tickets_daily` (fact table + tickets + aggregate) | ✅ |
 
 ### 1.3 Seed
 

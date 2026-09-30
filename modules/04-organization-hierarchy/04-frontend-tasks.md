@@ -22,9 +22,9 @@ Routes module 07 will implement (owned there; listed here so the contract is vis
 | 1 | `/admin/tenants` | Tenant school list (search, status, city filter) | Server Component | Super Admin |
 | 2 | `/admin/tenants/new` | School onboarding wizard (city + school + first School Admin) | Server Component + client form | Super Admin |
 | 3 | `/admin/cities` | City management (add, archive, launch flag) | Server Component | Super Admin |
-| 4 | `/school/hierarchy` | Classes/sections manager per session year | Server Component | School Admin |
-| 5 | `/school/hierarchy/sections/[sectionId]` | Section detail + roster + class-teacher assignment | Server Component | School Admin |
-| 6 | `/school/migration` | Year-end migration wizard: dry-run → review → commit → result | Server Component | School Admin |
+| 4 | `/school/sections` | Classes/sections manager per session year | Server Component | School Admin |
+| 5 | `/school/sections/[sectionId]` | Section detail + roster + class-teacher assignment | Server Component | School Admin |
+| 6 | `/school/migrations/new` | Year-end migration wizard: dry-run → review → commit → result | Server Component | School Admin |
 
 ## 2. Screen Breakdown
 

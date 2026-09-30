@@ -100,11 +100,11 @@
 
 | # | Migration | Reversible? |
 | --- | --- | --- |
-| 1 | `20261001090000_create_fee_invoices` | ✅ |
-| 2 | `20261009091500_create_payment_transactions` | ✅ |
-| 3 | `20261009092000_create_ledger_entries` (+ append-only rule/trigger) | ✅ (drop trigger + table) |
-| 4 | `20261009092500_create_payment_receipts` | ✅ |
-| 5 | `20261009093000_create_gateway_events` | ✅ |
+| 1 | `20270210090000_create_fee_invoices` | ✅ |
+| 2 | `20270210091500_create_payment_transactions` | ✅ |
+| 3 | `20270210092000_create_ledger_entries` (+ append-only rule/trigger) | ✅ (drop trigger + table) |
+| 4 | `20270210092500_create_payment_receipts` | ✅ |
+| 5 | `20270210093000_create_gateway_events` | ✅ |
 
 ### 1.3 Seed
 
@@ -162,7 +162,7 @@
 | `PATCH /api/v1/school/invoices/{id}/void` | school_admin own school; body `{reason}` | `{invoice}` voided | `CONFLICT` if ≥1 success | default | yes | `PAY-US-012` |
 | `GET /api/v1/school/ledger` | school_admin own school; type/month filters + pagination | `LedgerEntryDTO[]` + totals (server-computed) | standard | default | no | `PAY-US-009` |
 | `GET /api/v1/school/ledger/summary` | school_admin own school; `?month=` | counts + ৳ totals (issued/paid/overdue, collected, outstanding) | standard | default | no | `PAY-US-009`, §8 |
-| `GET /api/v1/school/reconciliation?date=` | super_admin + school_admin (own school slice); `?gateway=` optional | per-gateway settled-vs-ledger + mismatch list | standard | default | no (import is audited) | `PAY-US-010` |
+| `GET /api/v1/school/payments/reconciliation?date=` | super_admin + school_admin (own school slice); `?gateway=` optional | per-gateway settled-vs-ledger + mismatch list | standard | default | no (import is audited) | `PAY-US-010` |
 | `POST /api/v1/payments/callback/{gateway}` | none (gateway browser return); txn token in payload; status re-check vs gateway | 302 → app deep link `/payments/status/{txnId}` (or web receipt) | `PAYMENT_FAILED` surfaces in redirect state, not as an API error to the browser | `payments` | yes (terminal changes only) | `PAY-US-005` |
 | `GET /api/v1/payments/transactions` | authenticate; payer-scoped from claims | own `TransactionDTO[]` newest-first | standard | default | no | `PAY-US-014` |
 | `GET /api/v1/payments/receipts/{txnId}` | payer themself OR school_admin of the txn's school | `{receiptUrl, serialNo, issuedAt}` (immutable R2 URL via 05) | `NOT_FOUND` (not yet generated) · `FORBIDDEN` | default | no | `PAY-US-014` |
@@ -257,6 +257,7 @@ Always include: unauthenticated call denied for every protected entry point (web
 - [ ] `PAY-BE-015` `PaymentGateway` interface + SSLCommerz adapter (first), bKash, Nagad
 - [ ] `PAY-BE-016` webhook middleware + `PAY-BE-005` `ProcessWebhook`
 - [ ] `PAY-BE-004` `Initiate` + `PAY-BE-006` `HandleCallback`
+- [ ] `PAY-BE-000` **Spike first:** Bengali PDF rendering (shaping of conjuncts/vowel signs) — sample bn+en receipt, chosen library recorded as an ADR in `07-progress.md`
 - [ ] `PAY-BE-009` receipt job (with 05 `media.PutObject`) + `PAY-JOB-001/002`
 - [ ] `PAY-JOB-003/004/005` cron jobs + `PAY-BE-007/008/010` cores
 - [ ] `PAY-BE-011/017/018` settlement import + refund adjustment (launch-manual)

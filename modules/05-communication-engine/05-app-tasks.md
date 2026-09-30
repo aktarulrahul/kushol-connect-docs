@@ -10,6 +10,10 @@
 > `docs/tech-stack.md` (app table) are binding: tokens only, every user-facing string in Bengali +
 > English, 360px-first layouts.
 
+> **Visual direction (owner, 2026-09-30):** CircleUp UI kit layout + WhatsApp chat behaviour, in
+> Kushol teal. Chat list, chat screen, composer, group header and notice cards follow
+> `docs/design-reference/README.md` §6.2–§6.3 (reference screens in `docs/design-reference/mobile-circleup/`).
+
 ---
 
 ## 1. Screen Inventory

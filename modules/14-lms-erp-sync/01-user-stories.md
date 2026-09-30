@@ -48,11 +48,11 @@ Gives School Admins two self-serve ways to keep the platform roster in step with
 
 | Module | What this module needs from it |
 | --- | --- |
-| 03 identity-access | Exported user upsert (see 06-integration §3 there) consumed as `auth.UpsertRosterUser`; PENDING/VERIFIED semantics |
+| 03 identity-access | Exported user upsert (see 06-integration §3 there) consumed as `users.UpsertRosterUser`; PENDING/VERIFIED semantics |
 | 04 organization-hierarchy | `hierarchy.CreateEnrollments(batch, source)` + `hierarchy.GetSection`; verified-user group/topic chain |
 | 05 media | Roster file storage (`media_assets` presign + confirm) |
 | 01 foundations | `jobs.Enqueue`/`Register`, `audit.Record`, RFC-7807 envelope, rate-limit middleware |
-| 07 command-center-web + shared | `/school/roster` + `/school/webhooks` nav stubs (14 fills both); `sync.*`/`validation.*` bn + en catalogs |
+| 07 command-center-web + shared | `/school/roster` + `/school/integrations` nav stubs (14 fills both); `sync.*`/`validation.*` bn + en catalogs |
 
 ---
 
@@ -113,7 +113,7 @@ Gives School Admins two self-serve ways to keep the platform roster in step with
 
 **Acceptance criteria**
 
-- **Given** name + HTTPS URL, **when** `POST /api/v1/school/erp/endpoints` is called, **then** an endpoint (v1 secret) is created; the raw secret appears once — only a hash is stored (`LMS-BR-009`).
+- **Given** name + HTTPS URL, **when** `POST /api/v1/school/erp/endpoints` is called, **then** an endpoint (v1 secret) is created; the raw secret appears once — only ciphertext is stored (`LMS-BR-009`).
 - **Given** the reveal modal, **when** shown, **then** the bn+en warning ("never shown again — store it now") requires acknowledgement.
 - **Given** no active sync licence, **when** registering, **then** `FORBIDDEN` with the licence message (`LMS-BR-014`).
 
@@ -136,7 +136,7 @@ Gives School Admins two self-serve ways to keep the platform roster in step with
 
 **Acceptance criteria**
 
-- **Given** a valid `X-Kushol-Signature`, fresh timestamp, new event id, **when** `POST /api/v1/webhooks/erp/{schoolId}` arrives, **then** the event applies via `auth.UpsertRosterUser` (+ 04 for enrollment changes) and is logged `applied` with 200.
+- **Given** a valid `X-Kushol-Signature`, fresh timestamp, new event id, **when** `POST /api/v1/webhooks/erp/{schoolId}` arrives, **then** the event applies via `users.UpsertRosterUser` (+ 04 for enrollment changes) and is logged `applied` with 200.
 - **Given** the student is already VERIFIED, **when** the enrollment changes, **then** groups/topics update via the existing 04/05/06 chain — never by this module directly.
 - **Given** a `{schoolId}` with no ACTIVE endpoint, **when** the event arrives, **then** `INVALID_SIGNATURE`-class rejection + security log (unauthenticated-but-HMAC route by design, module 12 exception pattern).
 
@@ -171,7 +171,7 @@ Gives School Admins two self-serve ways to keep the platform roster in step with
 
 **Acceptance criteria**
 
-- **Given** an ACTIVE endpoint on v1, **when** `POST …/rotate-secret` is called, **then** a v2 secret is generated (raw shown once, hash stored), v1 stays valid until the overlap expires (24 h default).
+- **Given** an ACTIVE endpoint on v1, **when** `POST …/rotate-secret` is called, **then** a v2 secret is generated (raw shown once, ciphertext stored), v1 stays valid until the overlap expires (24 h default).
 - **Given** the overlap expired, **when** a v1-signed event arrives, **then** `INVALID_SIGNATURE`; the log names the failed version.
 
 ### `LMS-US-011` — Delivery log and failed-event redrive
@@ -193,7 +193,7 @@ Gives School Admins two self-serve ways to keep the platform roster in step with
 
 **Acceptance criteria**
 
-- **Given** my school's history, **when** `GET /api/v1/school/reconciliation` is called, **then** it returns last-import totals vs current ACTIVE platform counts per section with drift flagged.
+- **Given** my school's history, **when** `GET /api/v1/school/roster/reconciliation` is called, **then** it returns last-import totals vs current ACTIVE platform counts per section with drift flagged.
 - **Given** no import ever ran, **when** requested, **then** the platform counts return with an explicit "no baseline" state — not an error.
 
 ---
@@ -210,7 +210,7 @@ Gives School Admins two self-serve ways to keep the platform roster in step with
 | `LMS-BR-006` | Match rule: phone = identity key — matched → update, unmatched → create PENDING. `TODO: Confirm` secondary (email) match | Service (03 upsert path) |
 | `LMS-BR-007` | Max 10,000 rows/file (`TODO: Confirm`); > 500 rows async via 01 jobs | Service + job |
 | `LMS-BR-008` | CSV headers are a fixed English-only machine set, validated exactly (names + order); UI/template instructions bn+en | Service (parser) |
-| `LMS-BR-009` | Webhook secrets: HMAC-SHA256, per-endpoint, versioned, rotating; constant-time compare; stored hashed; raw shown exactly once | Service + DB |
+| `LMS-BR-009` | Webhook secrets: HMAC-SHA256, per-endpoint, versioned, rotating; constant-time compare; stored AES-256-GCM encrypted (`ERP_SECRET_KEY`, config module only); raw shown exactly once | Service + DB |
 | `LMS-BR-010` | Replay window: `X-Kushol-Timestamp` within ±5 minutes or rejected `STALE_TIMESTAMP` | Webhook middleware |
 | `LMS-BR-011` | Event idempotency: `X-Kushol-Event-Id` (UUID) UNIQUE per endpoint — duplicates return 200 `duplicate` (original result), no re-application | DB unique index + service |
 | `LMS-BR-012` | Rate: max 60 webhook events/min/school → 429 `RATE_LIMITED` + `Retry-After` | Rate-limit middleware |
@@ -235,7 +235,7 @@ Gives School Admins two self-serve ways to keep the platform roster in step with
 
 | # | Scenario | Expected behaviour |
 | --- | --- | --- |
-| 1 | Unauthenticated call to any `/school/roster/*`, `/school/erp/*`, `/school/reconciliation` | `UNAUTHENTICATED`, no side effect |
+| 1 | Unauthenticated call to any `/school/roster/*`, `/school/erp/*`, `/school/roster/reconciliation` | `UNAUTHENTICATED`, no side effect |
 | 2 | School Admin A addresses school B's import/endpoint/event | `TENANT_MISMATCH` (404 body), nothing leaked |
 | 3 | Webhook to unknown/revoked `{schoolId}` endpoint | `INVALID_SIGNATURE` rejection + security log; nothing applied |
 | 4 | Commit job crashes mid-commit | Resume by row cursor; processed rows skipped (immutable results) |
@@ -248,7 +248,7 @@ Gives School Admins two self-serve ways to keep the platform roster in step with
 ## 8. Reporting Needs
 
 - Import totals (rows/created/updated/skipped/errored) per school — 07 dashboard cards + history table.
-- Reconciliation drift (last import vs platform roster per section) — `GET /school/reconciliation`; flags only, no auto-correction.
+- Reconciliation drift (last import vs platform roster per section) — `GET /school/roster/reconciliation`; flags only, no auto-correction.
 - Endpoint health (`last_success_at`, applied/duplicate/rejected/error counts) — 07 integrations table; feeds module 15 alerting.
 - Security counters (rejected signatures, stale timestamps) — audit log (01) + monitoring; never cross-tenant visible.
 

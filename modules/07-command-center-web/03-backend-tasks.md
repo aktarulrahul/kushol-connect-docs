@@ -55,7 +55,7 @@ design.
 | `status` | `text` | no | `pending` | `pending` \| `approved` \| `rejected` \| `suspended` (CHECK) |
 | `decision_reason` | `text` | yes | — | required (10–500) on reject/suspend; cleared on re-approve |
 | `decided_by` / `decided_at` | `uuid` / `timestamptz` | yes / yes | — | Super Admin user id (reference → 03) / decision time |
-| `portal_user_id` | `uuid` | yes | — | Reference → 03 user; linked when the vendor registers for portal access (module 11 wires the full link) |
+| `portal_user_id` | `uuid` | yes | — | Reference → 03 `users` (role `vendor`); set on approval by calling 03 `users.CreateVendorLogin` with the inquiry's contact email (password set via reset link). Vendor routes (11/13) resolve `vendor_account_id` from this column via 07's `vendors.AccountForUser(userID)` gate |
 | `created_at` / `updated_at` | `timestamptz` | no | `now()` | |
 
 **Constraints:** status CHECK; reject/suspend without reason refused in service (10–500).
@@ -156,7 +156,7 @@ layouts re-check role claims server-side per route group.
 | `WEB-BE-003` | `leads.ListForAdmin` | Super Admin; filters `type`/`status`; cursor pagination 50 | — | No |
 | `WEB-BE-004` | `leads.UpdateStatus` | Super Admin; transition table per INV-001 (`CONFLICT` otherwise); audit `lead.status_changed` | `admin:leads` | Yes |
 | `WEB-BE-005` | `vendors.ListForAdmin` | Super Admin; status filter + trgm name search | — | No |
-| `WEB-BE-006` | `vendors.Approve` / `vendors.Reject` / `vendors.Suspend` | Super Admin; reason 10–500 on reject/suspend; `CONFLICT` on double decision; re-approve path per OQ-5; audit each | `admin:vendors` | Yes |
+| `WEB-BE-006` | `vendors.Approve` / `vendors.Reject` / `vendors.Suspend` + export `vendors.AccountForUser(userID)` / `RequireApprovedVendor()` middleware for 11/13 | Super Admin; approve creates the portal login via 03 `users.CreateVendorLogin` (idempotent: reuse existing `portal_user_id`); suspend calls 03 `sessions.InvalidateForUser`; reason 10–500 on reject/suspend; `CONFLICT` on double decision; re-approve path per OQ-5; audit each | `admin:vendors` | Yes |
 | `WEB-BE-007` | `stats.AdminStats` | Super Admin; own counts + additive 04 export `hierarchy.PlatformCounts()`; revenue placeholder constant | — | No |
 | `WEB-BE-008` | `stats.SchoolStats` | School Admin, claim-scoped; additive exports: 04 `hierarchy.SchoolCounts(schoolID)`, 03 `verification.PendingCount(schoolID)`, 05 `chat.NoticeStats(schoolID)`; partial-payload flags on upstream failure | — | No |
 | `WEB-BE-009` | `auditlog.List` (read endpoint over 01) | Super Admin; filters `entityType`/`entityId`/`schoolId`; pages 50; read-only (no write path exists) | — | No |

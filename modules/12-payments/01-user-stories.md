@@ -33,7 +33,7 @@ The five roles are defined by module 03; verification gates every participatory 
 - Webhook ingestion with signature verification + idempotency (`UNIQUE(gateway, gateway_txn_id)`); browser/app callback as UX-only return path
 - Ledger entries per success (fee_payment + convenience_fee split; commission for orders), manual refunds as adjustments
 - PDF receipt generation (job) → R2 → deep-linked push
-- School ledger dashboard + reconciliation report data (`GET /school/ledger*`, `GET /school/reconciliation`)
+- School ledger dashboard + reconciliation report data (`GET /school/ledger*`, `GET /school/payments/reconciliation`)
 - bn/en string catalogs `payments.*`, `validation.*` entries for this module
 
 **Out of scope** (explicit — prevents scope drift)
@@ -46,9 +46,9 @@ The five roles are defined by module 03; verification gates every participatory 
 | --- | --- |
 | 07 command-center-web | The `/school/ledger` nav stub (WEB-FE-025) that this module fills |
 | 11 campus-commerce | `commerce.OrderAmount(orderId)` + the `payment_transaction_id` attach seam (defined in 11's spec) |
-| 03 identity-access | Auth chain, roles, verification status, guardian↔student link, `users.locale` |
+| 03 identity-access | Auth chain, roles, verification status, guardian↔student link (03 `guardians.IsGuardianOf` / `LinkedStudents`), `users.locale` |
 | 04 organization-hierarchy | `hierarchy.ResolveUserNodes` (school scoping; section→student resolution for bulk invoices) |
-| 05 communication-engine | R2 storage service for generated receipt PDFs (`media.PutObject` — additive export, see `06` §3) |
+| 05 communication-engine | R2 storage service for generated receipt PDFs (`media.PutObject` — declared in 05 `06` §2) |
 | 06 notifications | `notify.SendToUser` — fee-due push w/ deep link; payment-result push → receipt |
 | 01 foundations | `jobs.Enqueue` (receipt generation, reconciliation, sweeps), `audit.Record` (every money mutation) |
 
@@ -108,7 +108,7 @@ The five roles are defined by module 03; verification gates every participatory 
 
 **Priority:** P0 · **Traces:** prd.md §5.4 · prd.md §4B (Marketplace → Pay fees) · **Depends on:** PAY-US-001, 03
 
-**Story** — As a **guardian**, I want a pay screen showing exactly what I owe — fee amount + BDT 15 convenience fee — and a choice of SSLCommerz, bKash or Nagad, so that there are no surprises at the gateway.
+**Story** — As a **guardian**, I want a pay screen showing exactly what I owe — fee amount + any convenience fee (default BDT 0 = none, `brd.md` §7) — and a choice of SSLCommerz, bKash or Nagad, so that there are no surprises at the gateway.
 
 **Acceptance criteria**
 
@@ -116,7 +116,7 @@ The five roles are defined by module 03; verification gates every participatory 
 - **Given** I am not the linked guardian/student of that invoice's school, **when** I open the link, **then** I get `FORBIDDEN` and the screen shows the bn/en refusal — no invoice data rendered.
 - **Given** a gateway is down (health-flagged), **when** the chooser renders, **then** that gateway is hidden/disabled and the others remain selectable.
 
-**Notes** — The convenience-fee default (BDT 15 flat, `prd.md` §7 says 15–20) is shown before any redirect. `TODO: Confirm` — owner Rahul, default 15.
+**Notes** — Convenience fee defaults to BDT 0 (off): `brd.md` §7 removes transaction fees and supersedes `prd.md` §7's BDT 15–20. When config > 0 the fee line is shown before any redirect; when 0 no fee line renders and no `convenience_fee` ledger row is written.
 
 ---
 
@@ -209,7 +209,7 @@ The five roles are defined by module 03; verification gates every participatory 
 **Acceptance criteria**
 
 - **Given** the daily reconciliation job runs, **when** it compares settled amounts per gateway against `ledger_entries`, **then** it produces per-school totals, a match/mismatch flag list, and audit-logs the summary.
-- **Given** a settlement CSV is imported (manual, per gateway — `TODO: Confirm` format), **when** rows disagree with the ledger (missing/extra/amount-delta), **then** each mismatch is listed with txn id, expected vs settled ৳ on the reconciliation screen (`GET /school/reconciliation?date=`).
+- **Given** a settlement CSV is imported (manual, per gateway — `TODO: Confirm` format), **when** rows disagree with the ledger (missing/extra/amount-delta), **then** each mismatch is listed with txn id, expected vs settled ৳ on the reconciliation screen (`GET /school/payments/reconciliation?date=`).
 - **Given** `sum(ledger fee_payment credits) ≠ sum(success transactions)` for a school, **when** the invariant check runs, **then** the school is flagged in the report for investigation.
 
 **Notes** — At launch the comparison runs per imported file; auto-fetch is out of scope (`03` §5 job table).
@@ -285,11 +285,11 @@ The five roles are defined by module 03; verification gates every participatory 
 | `PAY-BR-001` | Every invoice, ledger and receipt row is tenant-scoped by `school_id`; no query without the scope (repository layer) | DB column + tenant-scoped repository |
 | `PAY-BR-002` | Invoice lifecycle: `draft → issued → paid / partially_paid / void / overdue`; void only before any success; overdue only from `issued` past due date | DB CHECK + service state guards |
 | `PAY-BR-003` | Only verified users (03) linked to the student — guardian(s) via the 03 guardian link, or the student — may view/pay that invoice; payer must be `VERIFIED` | Service (auth chain + link check) |
-| `PAY-BR-004` | Every `success` transaction produces balanced ledger entries in the same DB transaction (fee: `fee_payment` + `convenience_fee`; order: `commission` [+ `payout` at settlement]); unbalanced commit is impossible | Service (single tx) + `PAY-IT` balance tests |
+| `PAY-BR-004` | Every `success` transaction produces balanced ledger entries in the same DB transaction (fee: `fee_payment` [+ `convenience_fee` when config > 0]; order: `commission` [+ `payout` at settlement]); unbalanced commit is impossible | Service (single tx) + `PAY-IT` balance tests |
 | `PAY-BR-005` | Webhook idempotency: `UNIQUE(gateway, gateway_txn_id)`; duplicate → 200 `DUPLICATE_WEBHOOK`, zero side effects | DB unique index + handler |
 | `PAY-BR-006` | Webhooks are the one unauthenticated route — signature verified + replay window before any parsing beyond the envelope; invalid → 403 + flagged `gateway_events` row | Webhook middleware (module-owned) |
 | `PAY-BR-007` | Never log or store secrets or raw webhook payloads — log/store ids + amounts only (payload digest, not payload) | `gateway_events` schema + slog redaction + `PAY-UT` |
-| `PAY-BR-008` | Convenience fee: BDT 15 flat per transaction, charged to the payer, shown before redirect (`prd.md` §7 says 15–20). `TODO: Confirm` | Platform config (owner-changeable) |
+| `PAY-BR-008` | Convenience fee: platform config, default **BDT 0 (off)** per `brd.md` §7 (supersedes `prd.md` §7 BDT 15–20); if enabled, flat per transaction, charged to the payer, shown before redirect; zero ⇒ no `convenience_fee` ledger row | Platform config (owner-changeable) |
 | `PAY-BR-009` | One receipt per successful transaction, serial unique per school, issued once; PDF object immutable in R2 | UNIQUE(txn_id) + UNIQUE(school_id, serial_no) |
 | `PAY-BR-010` | Every money mutation (issue, void, initiate, webhook state change, refund adjustment, settlement import) writes an `audit.Record` entry in the same transaction — ids + amounts only | Service + 01 `audit.Record` |
 | `PAY-BR-011` | Refunds are manual (Super/School Admin), recorded as `adjustment` ledger entries; no gateway auto-refund at launch | Service (admin-only, audit-logged) |
@@ -313,7 +313,7 @@ Content accuracy (`prompt.txt` §12): no seeded invoices, amounts or gateway fig
 | initiate `gateway` | ∈ sslcommerz/bkash/nagad; gateway enabled | `validation.payments.gateway` |
 | initiate target | Exactly one of `invoiceId` \| `orderId`; caller entitled to it; payable state | `validation.payments.target` |
 | webhook envelope | Non-empty body; signature header present; timestamp within replay window | `validation.payments.webhook` (internal — never surfaced to end users) |
-| ledger filters | `status ∈ …`, `month` = `YYYY-MM`, `classId` uuid, `date` = `YYYY-MM-DD` | `validation.payments.filter` |
+| ledger filters | `status ∈ …`, `month` = `YYYY-MM`, `classLevel` 1–12 (sections carry class level; no class entity), `date` = `YYYY-MM-DD` | `validation.payments.filter` |
 
 Mirrored exactly by the OpenAPI contract (server validation) and the zod form schemas (web/app) generated from it. Both languages from day one — bn default (e.g. `validation.payments.amount` → bn: "পরিমাণ সঠিক পূর্ণসংখ্যা টাকায় লিখুন (১ থেকে ১০,০০,০০০)" / en: "Enter a valid amount in BDT (1 to 1,000,000)").
 
@@ -348,7 +348,7 @@ Mirrored exactly by the OpenAPI contract (server validation) and the zod form sc
 | # | Question | Owner | Status | Default if unanswered |
 | --- | --- | --- | --- | --- |
 | 1 | Gateway launch order & production accounts | Rahul | Open | SSLCommerz first (cards + internet banking), then bKash and Nagad wallets; sandbox keys until module 15 production cutover |
-| 2 | Convenience fee amount (`prd.md` §7 allows 15–20) | Rahul | Open | **BDT 15 flat** per transaction, charged to the payer, displayed pre-redirect `TODO: Confirm` |
+| 2 | Convenience fee amount (`prd.md` §7 allows 15–20) | Rahul | Open | **BDT 0 (off)** per `brd.md` §7 revised model; owner may enable via config — who bears gateway MDR `TODO: Confirm` |
 | 3 | Settlement report file format per gateway | Rahul | Open | Manual CSV import at launch (one template per gateway); auto-fetch deferred; `TODO: Confirm` exact column specs |
 | 4 | Refund mechanics | Rahul | Open | Manual, Super/School-Admin initiated, `adjustment` ledger entry, no gateway auto-refund at launch |
 | 5 | Partial payments (`partially_paid` state) | Rahul | Open | Full-payment only at launch; `partially_paid` reserved for manual admin adjustments/reconciliation corrections |

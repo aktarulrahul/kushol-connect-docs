@@ -21,7 +21,7 @@ tenant-scope column/rule — unscoped tables are a defect (`prompt.txt` §9).
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | no | uuid v7 | PK |
 | `user_id` | `uuid` | no | — | FK → module 03 `users`; **tenant scope via user** — resolved through the user's enrollment (04), no school column by design |
-| `token` | `text` | no | — | Expo push token (`ExponentPushToken[…]`) or FCM registration token; globally unique (`NTF-BR-002`) |
+| `token` | `text` | no | — | **Native FCM registration token** (from `@react-native-firebase/messaging`, both platforms) — the same token is used for topic subscription and directed sends; Expo push tokens and raw APNs tokens are rejected (`VALIDATION_FAILED`); globally unique (`NTF-BR-002`) |
 | `platform` | `text` | no | — | `ios` / `android` |
 | `app_version` | `text` | no | `''` | e.g. `1.0.3` — targeting + debugging |
 | `last_seen_at` | `timestamptz` | no | `now()` | Refreshed on (re-)registration and app-foreground heartbeats |
@@ -42,18 +42,19 @@ method accepts a caller-supplied `user_id` (jobs operate by row, never across us
 | `id` | `uuid` | no | uuid v7 | PK |
 | `user_id` | `uuid` | no | — | FK → 03 `users`; recipient for directed sends, initiating actor for topic sends |
 | `topic_name` | `text` | yes | — | Set for topic fan-outs (`city-{id}` / `school-{id}` / `section-{id}` from 04 bindings); NULL for directed |
-| `class` | `text` | no | — | `notices` / `chat` / `campaigns` — channel-aligned |
+| `class` | `text` | no | — | `notices` / `chat` / `campaigns` / `account` (invites, resets — email only, not mutable) |
 | `payload_key` | `text` | no | — | i18n key from the `notifications.*` catalog (e.g. `notifications.dm_new`) |
 | `payload_data` | `jsonb` | no | `'{}'` | Ids + string args only — never message bodies (`NTF-BR-003`) |
 | `deep_link` | `text` | no | — | App route per the deep-link map (`05-app-tasks.md` §2.4) |
-| `provider` | `text` | no | — | `fcm` (topic path) / `expo` (directed path) |
+| `channel` | `text` | no | `'push'` | `push` / `email` |
+| `provider` | `text` | no | — | `fcm_topic` / `fcm_token` (push) · `smtp` (email via HestiaCP, `noreply@kusholconnect.com`) |
 | `status` | `text` | no | `'queued'` | `queued` / `sent` / `delivered` / `opened` / `failed` (`NTF-BR-005`, forward-only) |
 | `error` | `text` | yes | — | Provider error summary — redacted, never contains tokens |
 | `sent_at` | `timestamptz` | yes | — | Provider accepted the dispatch |
 | `opened_at` | `timestamptz` | yes | — | User tap (directed rows only; write-once) |
 | `created_at` / `updated_at` | `timestamptz` | no | `now()` | |
 
-**Constraints:** FK `user_id`; `CHECK` on `status`, `class`, `provider`; `CHECK (status =
+**Constraints:** FK `user_id`; `CHECK` on `status`, `class`, `channel`, `provider`; `CHECK (channel='email' ⇒ provider='smtp' AND topic_name IS NULL)`; `CHECK (status =
 'opened' ⇒ topic_name IS NULL)` — opened tracking is directed-only.
 **Tenant scope:** recipient user (03) → enrollment (04); own reads filter `user_id = caller`,
 admin reads tenant-forced by claim via the enrollments join — cross-tenant is `TENANT_MISMATCH`.
@@ -68,6 +69,7 @@ queued/retry scans; `(topic_name, created_at)` → per-topic dispatch audit.
 | `user_id` | `uuid` | no | — | FK → 03 `users`; **tenant scope via user** |
 | `class` | `text` | no | — | `notices` / `chat` / `campaigns` — matches the Android channel strategy (README module 06 default) |
 | `muted` | `boolean` | no | `false` | Server-side gate for directed sends; on-device display gate for topic classes (`NTF-BR-004`) |
+| `email_enabled` | `boolean` | no | `false` | Opt-in email copy of this class (staff default on for `notices` via 07 settings); every non-`account` email carries `List-Unsubscribe` that flips this flag |
 | `created_at` / `updated_at` | `timestamptz` | no | `now()` | |
 
 **Constraints:** unique `(user_id, class)`; FK `user_id`; `CHECK (class IN ('notices','chat','campaigns'))`.
@@ -231,7 +233,7 @@ scope through the authenticated caller (or a claim-forced admin join), never a c
 | `NTF-IT-005` | Auth chain on every endpoint: unauthenticated → `UNAUTHENTICATED`; wrong role on admin routes → `FORBIDDEN`; bad input → `VALIDATION_FAILED` | Integration | 02 §6 security |
 | `NTF-IT-006` | Device register subscribes bound topics when VERIFIED; PENDING device back-fills via `topics.backfill` after verification | Integration | `NTF-US-002`, `NTF-BR-001` |
 | `NTF-IT-007` | Test push: `self`/own-section only; other-tenant section → `TENANT_MISMATCH`; `type=test` in payload; audit row written | Integration | `NTF-US-009`, `NTF-BR-007` |
-| `NTF-IT-008` | Directed lifecycle: `queued → sent → delivered` (receipt) `→ opened`; prune job marks stale tokens; idempotent re-runs | Integration | `NTF-US-007`, `NTF-BR-005`, `NTF-BE-021` |
+| `NTF-IT-008` | Directed lifecycle: `queued → sent` (FCM accepted) `→ delivered` (client ack) `→ opened`; prune job marks stale tokens; idempotent re-runs | Integration | `NTF-US-007`, `NTF-BR-005`, `NTF-BE-021` |
 
 Always include: unauthenticated call denied for every protected entry point; validation rejects
 bad input; cross-tenant read/write returns `TENANT_MISMATCH`/404 for every tenant-scoped table;
@@ -257,5 +259,6 @@ no payload ever carries message bodies (`NTF-UT-001` guards the privacy invarian
 - [ ] `NTF-BE-010`/`012` services: test push + `RefreshTopicSubscriptions` — ____
 - [ ] Entry points: 7 endpoints per §2 (handlers over the services) + OpenAPI spec entries + contract regen — ____
 - [ ] `NTF-BE-020`–`022` jobs: `fanout.send` + `tokens.prune` + `topics.backfill` registered with 01 runner — ____
-- [ ] FCM Admin Go SDK + Expo push API clients (timeouts, retries, redacted logging, env-parsed secrets) — ____
+- [ ] FCM Admin Go SDK client (topic subscribe/unsubscribe, topic send, per-token send) (timeouts, retries, redacted logging, env-parsed secrets) — ____
+- [ ] `NTF-BE-023` email channel: `notify.SendEmail`, `email.send` job (OTP priority lane, never persists OTP content), bn/en templates under `notifications.email.*`, `List-Unsubscribe` → `email_enabled=false`, SMTP client (STARTTLS 587, 10 s timeout) — ____
 - [ ] Tests: `NTF-UT-001`–`005` · `NTF-IT-001`–`008` green in CI — ____

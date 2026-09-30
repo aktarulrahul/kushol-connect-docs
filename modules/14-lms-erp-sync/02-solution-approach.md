@@ -12,7 +12,7 @@
 | --- | --- | --- |
 | `roster_imports` | One uploaded roster file (CSV/XLSX) per school: format, dry-run flag, lifecycle status, totals, `content_sha256` for idempotency, file reference into 05 `media_assets` | Yes |
 | `roster_import_rows` | Per-row record of every imported row: source payload (jsonb), result (`created\|updated\|skipped\|error`), i18n `error_key` + message; immutable once written | Yes |
-| `erp_endpoints` | A school's registered LMS/ERP webhook identity: URL, versioned HMAC secret (hashed), overlap window, `active\|revoked`, `last_success_at` | Yes |
+| `erp_endpoints` | A school's registered LMS/ERP webhook identity: URL, versioned HMAC secret (AES-256-GCM encrypted at rest), overlap window, `active\|revoked`, `last_success_at` | Yes |
 | `erp_sync_events` | Every received webhook event: endpoint ref, `X-Kushol-Event-Id`, type, payload, signature validity, `applied\|rejected\|duplicate\|error`, reject reason | Yes |
 | `users` | Read/written ONLY via 03's exported user upsert (PENDING on create; verification untouched) | No — module 03 |
 | `sections` / `enrollments` | Resolved/upserted only via 04 exports (`GetSection`, `CreateEnrollments`) | No — module 04 |
@@ -26,7 +26,7 @@ schools (04) 1 ──── * roster_imports 1 ──── * roster_import_rows
                     │ file_media_id → media_assets (05)
 schools (04) 1 ──── * erp_endpoints 1 ──── * erp_sync_events
                                               │ payload → applied via
-                                              │   03 users (auth.UpsertRosterUser)
+                                              │   03 users (users.UpsertRosterUser)
                                               │   04 sections/enrollments (CreateEnrollments)
 roster rows / events ── produce ──▶ users (03, PENDING|VERIFIED) ─▶ enrollments (04)
                                                    └ VERIFIED chain: 04→05 groups, 06 topics (existing)
@@ -40,7 +40,7 @@ roster rows / events ── produce ──▶ users (03, PENDING|VERIFIED) ─�
 | `LMS-INV-002` | `(endpoint_id, event_id)` is UNIQUE — one application per event per endpoint | DB unique index |
 | `LMS-INV-003` | `roster_import_rows.result` values are immutable after write (append-only outcomes) | Repository (no UPDATE path) |
 | `LMS-INV-004` | An import reaches `committed` only from `ready`; `ready` only from a dry-run with zero error rows | Service state guard |
-| `LMS-INV-005` | A raw webhook secret never persists — only its hash; raw exists solely in the one-time create/rotate response | Service (create/rotate path) |
+| `LMS-INV-005` | A webhook secret never persists in plaintext — only AES-256-GCM ciphertext under `ERP_SECRET_KEY` (HMAC verification needs the raw secret, so a one-way hash cannot work); plaintext leaves the api solely in the one-time create/rotate response and is never logged | Service (create/rotate path) |
 | `LMS-INV-006` | Every import/endpoint/event query carries the tenant scope — school from claim (admin routes) or from the verified ACTIVE endpoint row (webhook route) | Repository layer |
 | `LMS-INV-007` | Users created by ingestion are PENDING; `verification_requests` is never written here | Service (03 export contract) |
 
@@ -54,11 +54,11 @@ reconciliation report query.
 
 | Module | What | Why not duplicated |
 | --- | --- | --- |
-| 03 identity-access | user upsert — see 06-integration §3 there (consumed as `auth.UpsertRosterUser`; **additive export needed** — 03 §2 does not yet name it, flagged in 06 §3) | Identity, PENDING/VERIFIED semantics and the verification flow are 03's; 14 must never fork them |
+| 03 identity-access | user upsert — see 06-integration §3 there (`users.UpsertRosterUser`, declared in 03 `06` §2 on 2026-09-30) | Identity, PENDING/VERIFIED semantics and the verification flow are 03's; 14 must never fork them |
 | 04 organization-hierarchy | `hierarchy.CreateEnrollments(batch, source)` · `hierarchy.GetSection` | Enrollment rules, idempotency and the verified-user group/topic chain live in 04/05/06 |
 | 05 media | presigned upload + confirm (`media_assets`) for roster files | R2 handling exists once for all modules |
 | 01 foundations | `jobs.Enqueue`/`jobs.Register`, `audit.Record`, rate-limit middleware | No new queue infra (`tech-stack.md`: in-DB jobs, no Kafka) |
-| 07 command-center-web | shell + nav stubs (`/school/roster`, `/school/webhooks` → filled as `/school/integrations`) | Portal chrome is 07's; 14 ships screens into it |
+| 07 command-center-web | shell + nav stubs (`/school/roster`, `/school/integrations`) | Portal chrome is 07's; 14 ships screens into it |
 
 **Cache keys / tags revalidated / consumed:** see `06-integration-tasks.md` §4 (`school:{id}:roster`).
 
@@ -81,7 +81,7 @@ erp_sync_events: received ──verify──▶ applied | rejected (signature/ti
 | validating | job finishes | ready / validated_with_errors | totals + per-row results written | totals cached for the detail view |
 | ready | School Admin commits | committing | `LMS-INV-004`; licence flag | commit job enqueued; `audit.Record` |
 | committing | chunks of 500 applied | committed | per-row tx; cursor resume | users (03) + enrollments (04); audit entry |
-| ACTIVE | rotate-secret | ACTIVE (v+1) | overlap window default 24 h | new hash row version; old hash kept until expiry |
+| ACTIVE | rotate-secret | ACTIVE (v+1) | overlap window default 24 h | new encrypted secret version; previous ciphertext kept until expiry |
 | ACTIVE | revoke | REVOKED | — | subsequent events rejected + logged |
 | received | HMAC + timestamp + event-id pass | applied / duplicate | `LMS-INV-002`; ±5 min window | 03/04 writes; `last_success_at` bumped |
 
@@ -110,7 +110,7 @@ Nothing about this module is publicly cacheable; every response is tenant-scoped
 
 | Entry point | Auth chain | Tenant scope | Rate limit | Notes |
 | --- | --- | --- | --- | --- |
-| `/api/v1/school/roster/*`, `/school/erp/*`, `/school/reconciliation` | authenticate → role claim `SCHOOL_ADMIN` → tenant-scope | school from JWT/session claim only; path ids joined to claim | default class | `FORBIDDEN` without licence (`LMS-BR-014`) |
+| `/api/v1/school/roster/*`, `/school/erp/*`, `/school/roster/reconciliation` | authenticate → role claim `SCHOOL_ADMIN` → tenant-scope | school from JWT/session claim only; path ids joined to claim | default class | `FORBIDDEN` without licence (`LMS-BR-014`) |
 | `POST /api/v1/webhooks/erp/{schoolId}` | **Exception (documented): unauthenticated-but-HMAC-signed**, same pattern as module 12 payment webhooks — no session/JWT exists for ERP systems | `schoolId` from the URL must match an ACTIVE `erp_endpoints` row (`LMS-BR-001`); cross-references fail closed | 60/min/school (`RATE_LIMITED` + `Retry-After`) | constant-time HMAC compare (`LMS-BR-009`); ±5 min timestamp (`STALE_TIMESTAMP`); body cap 1 MB; `audit.Record` on every rejection |
 | Validation/sanitisation | OpenAPI validators on every handler; CSV/XLSX parsed as data only (formulas never evaluated); payload jsonb size-capped | — | — | secrets redacted in slog; raw secret returned exactly once (`LMS-INV-005`) |
 
@@ -173,13 +173,13 @@ commit, test, rotate, redrive all reachable); all strings bn/en from `sync.*`.
 | Disadvantages | Cert issuance/renewal is not self-serve for Bangladeshi school IT; heavy ops | Secret mishandling risk mitigated by show-once + rotation + replay window |
 | Complexity / weight | High (per-tenant certs, proxy TLS routing) | Low — two headers + a hash |
 
-**Recommendation:** B per README default (`erp_endpoints.secret_hash`, rotating, versioned). ADR in `07-progress.md` at build; revisiting to mTLS later affects only this module's middleware.
+**Recommendation:** B per README default (`erp_endpoints.secret_ciphertext`, encrypted, rotating, versioned — revised 2026-09-30: a hash cannot verify HMAC signatures). ADR in `07-progress.md` at build; revisiting to mTLS later affects only this module's middleware.
 
 ## 11. Assumptions & Risks
 
 | # | Assumption / risk | Impact if wrong | Mitigation |
 | --- | --- | --- | --- |
-| 1 | 03 will export the roster user-upsert path (`auth.UpsertRosterUser`) additively | Ingestion cannot create/update users without forking identity logic | Flagged as additive need (06 §3); contract agreed before build; fallback = blocking dependency |
+| 1 | 03 will export the roster user-upsert path (`users.UpsertRosterUser`) additively | Ingestion cannot create/update users without forking identity logic | Resolved 2026-09-30 — declared in 03 `06` §2; contract agreed before build; fallback = blocking dependency |
 | 2 | Phone numbers are reliably present and normalized in school rosters | Match rate collapses; duplicate PENDING users | Strict `01[3-9]\d{8}` validation with row errors; OQ-2 secondary key (`TODO: Confirm`) |
 | 3 | Schools' ERPs can implement HMAC headers correctly | Rejected-event churn | Test-event button, bn+en integration guide, per-endpoint event log with reject reasons |
 | 4 | 10k-row ceiling suffices per term | Large schools need splits | Config ceiling per licence tier (`TODO: Confirm`, OQ-1) |

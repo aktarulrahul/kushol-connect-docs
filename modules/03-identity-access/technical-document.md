@@ -10,7 +10,7 @@
 
 ### 1.1 Purpose
 
-The trust gateway of Kushol Connect: registers and authenticates every user across the five roles
+The trust gateway of Kushol Connect: registers and authenticates every user across the five end-user roles (plus the platform-scoped `vendor` portal login)
 (Super Admin, School Admin, Teacher, Student, Guardian) via phone OTP (local SMS gateway),
 email+password (staff, argon2id) and Google/GitHub SSO, then runs the `PENDING → VERIFIED`
 workflow `prd.md` §5.1 makes mandatory before anyone participates — no post, message, purchase or
@@ -20,7 +20,7 @@ Ambassador is **a flag on a verified student** (`users.is_ambassador`), not a si
 ### 1.2 Scope
 
 **In:** owned tables `users`, `auth_identities`, `otp_codes`, `sessions`, `refresh_tokens`,
-`verification_requests` · registration (language → role → hierarchy → contact → OTP → `PENDING`,
+`verification_requests`, `guardian_links` · registration (language → role → hierarchy → contact → OTP → `PENDING`,
 incl. guardian link evidence) · login paths (phone OTP, staff argon2id password, Google/GitHub
 OIDC; logout / logout-all) · tokens & sessions (15-min JWT + rotating refresh mobile, http-only
 session web) · verification workflow API + SLA reminder job · role guards middleware · web
@@ -28,7 +28,7 @@ session web) · verification workflow API + SLA reminder job · role guards midd
 `verification.*` / `validation.*` catalog keys.
 
 **Out:** hierarchy data/tenant CRUD and `OnUserVerified` internals (04) · the queue UI
-`/school/verifications` (built in 07 on this module's API) · push delivery infrastructure (06) ·
+`/school/users` (built in 07 on this module's API) · push delivery infrastructure (06) ·
 roster CSV upload (14) · participation features (05/08/10/11).
 
 ### 1.3 Dependencies
@@ -59,7 +59,7 @@ roster CSV upload (14) · participation features (05/08/10/11).
 ### 3.1 Component diagram
 
 ```text
-web /login /verification-pending   app onboarding / settings   07 /school/verifications
+web /login /verification-pending   app onboarding / settings   07 /school/users
         │ openapi-fetch (cookie+CSRF)   │ tokens → secure store   │ generated client
         ▼                              ▼                         ▼
 api chi: /auth/* (public, class auth) · /me · /verification-requests · /school/users
@@ -73,17 +73,17 @@ users · auth_identities · otp_codes · sessions     SMS gateway (HTTPS) · Goo
 refresh_tokens · verification_requests             Redis (limits, session:{hash}, status:{userId})
         │ behind interfaces
         ▼
-01: audit.Record · jobs.Enqueue/worker   04: hierarchy.Get* + OnUserVerified   06: notifications.Send
+01: audit.Record · jobs.Enqueue/worker   04: hierarchy.Get* + OnUserVerified   06: notify.SendToUser
 ```
 
 ### 3.2 Boundary
 
-**Owns (tables / services):** the six owned tables; the auth middleware chain; token/session
+**Owns (tables / services):** the seven owned tables; the auth middleware chain; token/session
 lifecycle; the user status machine; rate-limit counters for the `auth` class.
 
 **Reads (via exported service functions only):** 04 hierarchy reads + `OnUserVerified` via the
 provisioning job · 01 `audit_log` append + `jobs` enqueue/worker + error envelope · 06
-`notifications.Send` (requested by 03's job, delivered by 06). 03 never writes enrollments or
+`notify.SendToUser` (requested by 03's job, delivered by 06). 03 never writes enrollments or
 hierarchy rows.
 
 ### 3.3 Request / data flows
@@ -119,7 +119,7 @@ Mirror of `03-backend-tasks.md` §1 — column detail stays there. uuid v7 PKs, 
 
 | Table | Purpose | Tenant scope | Key indexes | Notes |
 | --- | --- | --- | --- | --- |
-| `users` | one row per person: role, status, locale, school scope, phone/email, argon2id hash, ambassador flag | `school_id` direct (NULL = platform scope, super_admin only — BR-011) | unique partial `phone_e164`, unique partial `email` · `(school_id, role, status)` · partial `(status)` on PENDING | CHECK role/status/locale enums; `is_ambassador` ⇒ role='student' |
+| `users` | one row per person: role (incl. platform-scoped `vendor`), status, locale, school scope, phone/email, argon2id hash, ambassador flag, Kushol Pro `plan` | `school_id` direct (NULL = platform scope, super_admin only — BR-011) | unique partial `phone_e164`, unique partial `email` · `(school_id, role, status)` · partial `(status)` on PENDING | CHECK role/status/locale enums; `is_ambassador` ⇒ role='student' |
 | `auth_identities` | provider links per user: phone / password / google / github | via owning user's `school_id` | `user_id` · `(provider, provider_account_id)` UNIQUE | FK → users ON DELETE CASCADE |
 | `otp_codes` | issued OTPs (hashed), purpose, expiry, attempt counter, consumption | pre-auth — scoped by phone + IP counters instead of tenant | `(phone_e164, created_at DESC)` · partial on unconsumed+unexpired | `code_hmac` = HMAC-SHA256(code, `OTP_PEPPER`); `request_ip` for abuse analysis |
 | `sessions` | web http-only sessions (opaque token, SHA-256 stored) | via owning user's `school_id` | `token_hash` UNIQUE · `(user_id, expires_at)` · partial `(expires_at)` for cleanup | 30-day expiry, sliding `last_seen_at`; device metadata for device list (P1) |
@@ -138,9 +138,10 @@ School" accounts, excluded from prod builds.
 
 | # | Method · Path | Roles | Purpose | Key errors | Stories |
 | --- | --- | --- | --- | --- | --- |
-| 1 | POST `/api/v1/auth/register` | public (+ OTP code; class `auth` 10/h/IP) | create user `PENDING` + verification request in one tx; hierarchy re-validated server-side | `VALIDATION_FAILED` · `CONFLICT` · `RATE_LIMITED` · `INTERNAL` | US-001/002/013 |
-| 2 | POST `/api/v1/auth/otp/request` · `/resend` · `/verify` | public; class `auth` | issue/resend/verify 6-digit OTP; request always `202` (enumeration-safe); verify issues tokens or `{status:"unknown_phone"}` | `VALIDATION_FAILED` (one generic message) · `RATE_LIMITED` (60s cooldown, 5/h/phone, 20/h/IP, 3/code, 10/h verify) | US-001/003 |
+| 1 | POST `/api/v1/auth/register` | public (+ OTP code; class `auth` 100/h/IP — CGNAT/school Wi-Fi) | create user `PENDING` + verification request in one tx; hierarchy re-validated server-side | `VALIDATION_FAILED` · `CONFLICT` · `RATE_LIMITED` · `INTERNAL` | US-001/002/013 |
+| 2 | POST `/api/v1/auth/otp/request` · `/resend` · `/verify` | public; class `auth` | issue/resend/verify 6-digit OTP by SMS (primary) or email (`noreply@`, staff/vendors, SMS-delay fallback); request always `202` (enumeration-safe); verify issues tokens or `{status:"unknown_phone"}` | `VALIDATION_FAILED` (one generic message) · `RATE_LIMITED` (60s cooldown, 5/h/phone, 20/h/IP, 3/code, 10/h verify) | US-001/003 |
 | 3 | POST `/api/v1/auth/login/password` | public; class `auth` | staff argon2id login; web gets session cookie, app tokens; PENDING still gets a session | `UNAUTHENTICATED` (generic, enumeration-safe) · `VALIDATION_FAILED` · `RATE_LIMITED` (10/h/account, 30/h/IP) | US-004/013 |
+| 3a | POST `/api/v1/auth/password/forgot` · `/password/reset` | public; class `auth` | staff/vendor reset via 6-digit email OTP from `noreply@`; reset revokes all sessions | `VALIDATION_FAILED` · `RATE_LIMITED` | IDT-US-015 |
 | 4 | POST `/api/v1/auth/refresh` | public (refresh in body) | single-use rotation, claims re-read from DB | `UNAUTHENTICATED` (reuse ⇒ family revoked + audit) · `VALIDATION_FAILED` | US-003, BR-012 |
 | 5 | POST `/api/v1/auth/logout` · `/logout-all` | authenticate | kill current session+token / everything, audited | `UNAUTHENTICATED` | US-012 |
 | 6 | GET `/api/v1/auth/google/start` + `/callback` · `/github/*` | public; 20/h/IP per provider | OIDC round-trip (state+PKCE); link-on-verified-email; SSO never verifies | redirect with error param (never raw 5xx) | US-005 |
@@ -172,6 +173,12 @@ No WebSocket channels of its own; status changes force client re-auth (06 deep l
 | `auth.RequireVerified()` | participatory routes (05/08/10/11) | wrapped handler | `NOT_VERIFIED` (DB-authoritative, Redis 30 s) |
 | `sessions.InvalidateForUser(userID)` | suspend/reinstate here; future admin tooling | nil | — |
 | `verification.EnqueueProvisioning(userID)` | approve flow | job id → 04 `OnUserVerified` | `INTERNAL`; idempotent per user |
+| `verification.PendingCount(schoolID)` | 07 | int | `FORBIDDEN` |
+| `users.GetWithSelection(userID)` | 04 | `UserSelection{UserID, Role, Status, SchoolID, SectionID}` | `NOT_FOUND` |
+| `users.UpsertRosterUser(schoolID, in)` | 14 | `{UserID, Created}` — PENDING only, never auto-verify | `VALIDATION_FAILED`, `CONFLICT` |
+| `users.PlanOf(userID)` / `users.SetPlan(actor, userID, tier, expiresAt)` | 08 (read) · 07/12 (write) | Kushol Pro tier | `FORBIDDEN` |
+| `users.CreateVendorLogin(actor, in)` | 07 vendor approval | vendor user id | `CONFLICT`, `FORBIDDEN` |
+| `guardians.LinkedStudents` / `GuardiansOf` / `IsGuardianOf` | 04 · 05 · 12 · 14 | ACTIVE `guardian_links` | — |
 
 Exports return DTOs; `Principal` and middleware signatures are frozen for 04–14
 (`06-integration-tasks.md` §7).
@@ -187,7 +194,7 @@ Exports return DTOs; `Principal` and middleware signatures are frozen for 04–1
 | `/login` | Login (bn-default): LanguageToggle, LoginTabs (Phone OTP default / Password staff), OTP auto-advance boxes + resend countdown, SsoButtons, PendingNotice; delayed-SMS + rate-limit states | Server shell + client island | Public |
 | `/verification-pending` | Pending-verification status: numbered steps bn+en, rejected state (`decision_reason` + fix & resubmit), logout; mid-view verify routes onward | Client Component (`GET /me`, no-store) | Authenticated (`PENDING`) |
 | `/auth/sso/return` | SSO return landing: consumes one-time result code → `GET /me` → route per role/status | Client Component | Public |
-| `/school/verifications` | Verification queue UI — **built by 07-command-center-web** on this module's APIs; hand-off note `IDT-FE-010`, no layout duplicated here | — | school_admin / ambassador / super_admin |
+| `/school/users` | Verification queue UI — **built by 07-command-center-web** on this module's APIs; hand-off note `IDT-FE-010`, no layout duplicated here | — | school_admin / ambassador / super_admin |
 
 ### 6.2 Mobile (detail in `05-app-tasks.md`)
 
@@ -243,7 +250,7 @@ post-P1.
 | Auth chain | `authenticate → load role claims → tenant-scope → RequireRole → RequireVerified` (verified gate only on participatory routes); `/auth/*` public but rate-limited (class `auth`) |
 | Role matrix | BR-005: School Admin → everything in own school · Student Ambassador (verified student + flag) → same-school student/guardian requests, approve-only, daily-capped · Super Admin → everything (school_id NULL); reject is admin/super_admin only |
 | Tenant scope | `users`/`verification_requests`: direct `school_id` column (super_admin bypass audited) · `sessions`/`refresh_tokens`/`auth_identities`: scoped via owning user · `otp_codes`: pre-auth, phone/IP counters; cross-tenant attempts → `TENANT_MISMATCH`/404, no rows leaked (INV-6) |
-| Rate limits | class `auth`: register 10/h/IP · OTP 60s cooldown, 5/h/phone, 20/h/IP, 3 attempts/code, 10 verifies/h/phone · password 10/h/account, 30/h/IP · SSO 20/h/IP per provider · `/me` 60/min/user · ambassador approvals capped/day |
+| Rate limits | class `auth`: register 10/h/IP · OTP 60s cooldown, 5/h per phone or email, 200/h/IP (CGNAT), 3 attempts/code, 10 verifies/h per target · password 10/h/account, 100/h/IP · password reset 5/h/email · SSO 20/h/IP per provider · `/me` 60/min/user · ambassador approvals capped/day |
 | Audit events | BR-010: register, first login per device, approve, reject, suspend, reinstate, logout-all, refresh-reuse detection, SSO link, ambassador flag grant/revoke — via 01 `audit.Record` |
 | Privacy / minors | phone numbers masked in logs and API responses; OTPs/tokens/secrets never logged; argon2id staff-only; sessions SHA-256-only, `__Host-kushol_session` (HttpOnly, Secure, SameSite=Lax) + CSRF double-submit; minimal PII at auth (name, phone, school placement — no photos); guardian data never crosses schools; enumeration-safe: OTP request always `202`, password login identical body + timing (dummy verify) |
 
@@ -316,7 +323,7 @@ keep their `TODO: Confirm` marker.
 | 1 | Student Ambassador criteria / verification SLA | queue trust + speed | Rahul | Open | any verified ambassador of the same school verifies same-school student/guardian requests; SLA 48 h with auto-reminder |
 | 2 | SMS gateway vendor (`TODO: Confirm` vendor + contract); nationwide within-seconds delivery | OTP delivery; onboarding churn | Rahul | Open | SSLWireless-class local gateway behind `SMS_GATEWAY_*` env; `auth.smsDelayed` copy, resend, SSO + password alternatives; vendor SLA in contract |
 | 3 | Guardian↔student linking proof | guardian trust | Rahul | Open | guardian enters school + class + student ID; admin approves in queue; module 14 enables automatic matching later |
-| 4 | Shared registrable domain for web + api (session cookie scope) (`TODO: Confirm` final domain) | web auth redesign if split | Rahul | Open | one domain, cookie scoped `.kushol.com.bd`; fallback SameSite=None + strict CSRF |
+| 4 | Shared registrable domain for web + api (session cookie scope) | web auth redesign if split | Rahul | **Resolved 2026-09-30** | `kusholconnect.com`: web on the apex with same-origin `/api/*` proxy → host-only `__Host-` session cookie; mobile on `api.kusholconnect.com` with JWT + refresh tokens |
 | 5 | Ambassadors mass-approving outsiders | trust erosion with schools | Rahul | Mitigated | same-school + student/guardian only, approve-only, daily cap, full audit, instant flag revocation, admin spot-checks |
 | 6 | argon2id CPU on shared 2-vCPU VPS · token theft on mobile | login spikes; account takeover | Rahul | Mitigated | staff-only passwords (low volume), OTP avoids argon2id, attempt caps · 15-min access TTL, single-use refresh + reuse detection, device list (P1), logout-all |
 | 7 | 04 hierarchy endpoints land after 03 starts building | registration blocked | Rahul | Mitigated | hierarchy consumed behind an interface with fakes (`06` §3); contract agreed before either builds |
@@ -333,7 +340,7 @@ keep their `TODO: Confirm` marker.
 | `IDT-BR-006` SSO never verifies · `IDT-BR-012` refresh rotation + reuse detection | §5.1; prompt §9 | US-005, US-003/012 | IDT-BE-013/015/026, IDT-INT-008, IDT-AP-009 | IDT-IT-002/005, IDT-UT-003/004 |
 | `IDT-BR-007` status change revokes sessions · `IDT-BR-010` audit all security events | §5.1; brd §6 | US-007/010/012 | IDT-BE-014/019/020, INT-005/011 | IDT-IT-007/009 |
 | `IDT-BR-008` bn default locale · `IDT-BR-009` reject reason + resubmit | prompt §2(6); §5.1 | US-011, US-009 | IDT-BE-011/016/018/027, IDT-FE-001, IDT-AP-002 | IDT-E2E-001/002, IDT-IT-007 |
-| — (full set) | §5.1, §5.3; brd §2 Goal 1 | IDT-US-001…014 | IDT-BE-001…032 · FE-001…010 · AP-001…014 · INT-001…012 | IDT-UT-001…007 · IT-001…012 · E2E-001…002 |
+| — (full set) | §5.1, §5.3; brd §2 Goal 1 | IDT-US-001…015 | IDT-BE-001…035 · FE-001…010 · AP-001…014 · INT-001…012 | IDT-UT-001…007 · IT-001…012 · E2E-001…002 |
 
 ---
 
@@ -342,3 +349,5 @@ keep their `TODO: Confirm` marker.
 | Date | Change | Author |
 | --- | --- | --- |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
+| 2026-09-30 | Email OTP channel (`otp_codes.channel`/`email`, `reset` purpose) sent from `noreply@kusholconnect.com` via 06; staff/vendor forgot-password endpoints (`IDT-US-015`); per-IP limits raised for CGNAT/school Wi-Fi (per-target caps remain primary) | Claude |
+| 2026-09-30 | Cross-module consistency pass: `vendor` role, `plan`/`plan_expires_at`, `verification_requests.requested_section_id`, `guardian_links` table + migration `20261001090030`, FKs to 04 tables deferred to 04's `20261002090007`; `classId` removed from registration; exports added for 04/07/08/12/14 | Claude |

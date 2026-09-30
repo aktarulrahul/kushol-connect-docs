@@ -12,13 +12,13 @@ declared here (`docs/prompt/prompt-build.md` §6).
 
 | # | Counterparty | Direction | Mechanism | Failure is… |
 | --- | --- | --- | --- | --- |
-| I-1 | `08-ai-study-hub` | we call them | `ai.AttemptStats(sectionId, week)` — failed-MCQ aggregates from `ai_test_answers` (P0 source) | degraded per section — week publishes EMPTY; job retries; never fabricated |
+| I-1 | `08-ai-study-hub` | we call them | `ai.AttemptStats(sectionID, weekStart, weekEnd)` — failed-MCQ aggregates from `ai_test_answers` (P0 source) | degraded per section — week publishes EMPTY; job retries; never fabricated |
 | I-2 | `08-ai-study-hub` | we call them | `ai.ClassifyChatQueries(ctx, Samples, Locale)` — sampled section-group queries → topic tags (P1 source) | degraded — MCQ-only matrix published with neutral note + audit |
-| I-3 | `05-communication-engine` | we call them | `chat.GroupMembers(groupID)` — official section group + distinct authors; **aggregates only, no raw message content ever leaves the aggregation boundary** | degraded — chat source skipped that week (MCQ-only) |
+| I-3 | `05-communication-engine` | we call them | `chat.SectionQuestionSamples(sectionID, weekStart, weekEnd, 200)` — anonymized, PII-masked text samples (no author ids) passed straight to 08 `ClassifyChatQueries`, never stored; `chat.GroupMembers(groupID)` for distinct-author counts; **no raw message content persists beyond the job, and nothing leaves the aggregation boundary** | degraded — chat source skipped that week (MCQ-only) |
 | I-4 | `04-organization-hierarchy` | we call them | `hierarchy.ResolveUserNodes(userId)` (teacher → own sections; school_admin → school) + `hierarchy.GetSection(sectionID)` | fatal to reads — refuse `INTERNAL`, never guess scope; job sections skipped + retried |
 | I-5 | `03-identity-access` | they gate us | `auth.RequireRole` + verified-status claims on every route | fatal by design — `UNAUTHENTICATED` / `FORBIDDEN` / `NOT_VERIFIED` |
 | I-6 | `01-foundations` | we call them | `jobs.Enqueue` + weekly worker (Sunday 00:00 Asia/Dhaka), `audit.Record`, Redis limiter | degraded — refresh unavailable, weekly schedule catches up on worker restart |
-| I-7 | `06-notifications` (P1) | we call them | per-user push export (export name fixed in 06's spec; referenced here as `notifications.SendToUser`) — Monday teacher summary | degraded, never fatal — matrix still in-app/web; push skipped |
+| I-7 | `06-notifications` (P1) | we call them | per-user push export `notify.SendToUser` — Monday teacher summary | degraded, never fatal — matrix still in-app/web; push skipped |
 | I-8 | `07-command-center-web` | they call us | REST §2 of `03-backend-tasks.md` + exports §2 below for the Command Center AI-matrix section | degraded — dashboard shows error/empty state |
 | I-9 | DeepSeek (external) | indirect only | all model calls live behind 08's `AIService`; 09 holds no `DEEPSEEK_API_KEY` | degraded via I-1/I-2 paths |
 
@@ -42,14 +42,14 @@ HTTP; signature changes are additive first. Web/app never import these — they 
 
 | We call | Owner | On failure |
 | --- | --- | --- |
-| `ai.AttemptStats(sectionId, week)` — per-topic failed/total aggregates | 08 | Section publishes EMPTY; job retry ×5 backoff; alarm after dead-letter; prior weeks keep serving |
+| `ai.AttemptStats(sectionID, weekStart, weekEnd)` — per-topic failed/total aggregates | 08 | Section publishes EMPTY; job retry ×5 backoff; alarm after dead-letter; prior weeks keep serving |
 | `ai.ClassifyChatQueries(ctx, Samples, Locale="bn")` — tags for the capped message sample | 08 | MCQ-only rows published; `status = "PARTIAL"` + neutral note; audit `analytics.week_degraded_mcq_only` |
-| `chat.GroupMembers(groupID)` — section-group boundary + distinct authors (metadata only) | 05 | Chat source skipped (MCQ-only); never a blocker — chat is P1 |
+| `chat.SectionQuestionSamples(sectionID, from, to, limit)` — anonymized chat text for classification (in-memory only) · `chat.GroupMembers(groupID)` — distinct authors (metadata only) | 05 | Chat source skipped (MCQ-only); never a blocker — chat is P1 |
 | `hierarchy.ResolveUserNodes(userId)` — teacher → own sections; school_admin → school | 04 | Reads refuse `INTERNAL`; job marks section skipped + retries; scope is never approximated |
 | `hierarchy.GetSection(sectionID)` — section identity/label | 04 | `NOT_FOUND` propagates; archived section blocks refresh only |
 | `auth.RequireRole` + verified claims | 03 | `UNAUTHENTICATED` / `FORBIDDEN` / `NOT_VERIFIED` — the gate is the feature |
 | `jobs.Enqueue` + weekly worker · `audit.Record` · Redis limiter | 01 | Refresh returns 503-style problem (`INTERNAL`) with bn/en copy; weekly run catches up; audit falls back to log-only |
-| `notifications.SendToUser(userId, payload)` (P1, name per 06's spec) | 06 | Push skipped; once-per-week marker prevents re-spam; in-app matrix unaffected |
+| `notify.SendToUser(userId, payload)` (P1) | 06 | Push skipped; once-per-week marker prevents re-spam; in-app matrix unaffected |
 
 ## 4. Cache-Tag Contract
 
@@ -130,7 +130,7 @@ a migration note here. The suppression threshold is configuration, never a contr
 
 - [ ] `ANL-INT-001` Implement + export `analytics.WeeklyMatrix` / `analytics.SchoolMatrix` (DTOs, suppression applied) — ____
 - [ ] `ANL-INT-002` Consume 08: `AttemptStats` wiring + classify call with capped sample + Locale="bn" — ____
-- [ ] `ANL-INT-003` Consume 04/05/03: `ResolveUserNodes`/`GetSection` scoping, `GroupMembers` boundary, `auth.RequireRole` gates — ____
+- [ ] `ANL-INT-003` Consume 04/05/03: `ResolveUserNodes`/`GetSection` scoping, `SectionQuestionSamples` + `GroupMembers`, `auth.RequireRole` gates — ____
 - [ ] `ANL-INT-004` Register `analytics.weekly_matrix` (Sun 00:00 Asia/Dhaka) + `analytics.refresh_section` with 01 worker — ____
 - [ ] `ANL-INT-005` P1 Monday push step via 06 (`SendToUser`), once-per-week marker — ____
 - [ ] `ANL-INT-006` Cache tags `school:{id}:matrix:{week}` + `…:matrix:index`; invalidation on both compute paths — ____

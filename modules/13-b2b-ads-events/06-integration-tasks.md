@@ -15,7 +15,7 @@
 | I-1 | `06-notifications` | we call them | exported `notify.BroadcastTopic(topic, payload)` per expanded topic at dispatch (`city-{id}`/`school-{id}`/`section-{id}` — targeting IS topic selection); `notify.SendToUser` for event-cancel buyer notices | degraded — `campaign.dispatch` job retries; campaign stays `running` with pending dispatch |
 | I-2 | `07-command-center-web` | we call them | `vendors.Approve` status gate before every `/vendor/*` mutation (BR-001); `leads.Create` reuse for the ads inquiry funnel | degraded — vendor mutations blocked fail-closed with clear copy |
 | I-3 | `07-command-center-web` | they consume us | REST (§2): `/vendor/ads|events*` vendor portal screens, `/admin/moderation` queue (fills 07's stub), `/admin/ads` overview, public `/events*` | degraded — portal sections + queue show API error states; nothing else affected |
-| I-4 | `04-organization-hierarchy` | we call them | sections-by-city+grade reads + aggregated `hierarchy.AudienceCount` (additive, 04 §7 additive-first) for estimates and dispatch expansion | degraded — estimate `unknown`; dispatch retries; never fatal |
+| I-4 | `04-organization-hierarchy` | we call them | sections-by-city+grade+stream reads + aggregated `hierarchy.AudienceCount` (declared in 04 `06` §2) for estimates and dispatch expansion | degraded — estimate `unknown`; dispatch retries; never fatal |
 | I-5 | `12-payments` | they call us | seam: 12 fills `event_tickets.payment_transaction_id` then calls `events.MarkTicketPaid(ticketID, txID)` | degraded — tickets stay `reserved` ("payment pending"); sweep at event start |
 | I-6 | `05-communication-engine` | we call them | `media_assets` presign/confirm for creative images | degraded — text-only push still dispatchable; native slot placeholder |
 | I-7 | `01-foundations` | we call them | `jobs.Enqueue` (`campaign.dispatch`, `campaign.complete`, `ads.daily_aggregate`, `tickets.sweep`), `audit.Record` (decisions, dispatches, cancels), RFC-7807 envelope, `default` limiter class | degraded — dispatches queue; audit failure aborts the wrapped decision by design |
@@ -56,7 +56,7 @@ HTTP; signature changes are additive first.
 | --- | --- | --- |
 | `notify.BroadcastTopic` / `notify.SendToUser` | 06 | `campaign.dispatch` retries w/ backoff; buyer notices re-queued; push never sent unlabeled |
 | `vendors.Approve` gate + `leads.Create` | 07 | Fail-closed: vendor mutations refused with `FORBIDDEN` copy; funnel degrades to 07's lead form |
-| Sections reads + `hierarchy.AudienceCount` (additive — coordinate with 04 §7) | 04 | Estimate `unknown`; dispatch expansion retries; never invent counts |
+| Sections reads + `hierarchy.AudienceCount` (declared in 04 `06` §2) | 04 | Estimate `unknown`; dispatch expansion retries; never invent counts |
 | `media_assets` presign/confirm | 05 | Creative save blocked with retry; text-only push unaffected |
 | `jobs.Enqueue` + worker runtime, `audit.Record` | 01 | Dispatches queue in job table; audit failure aborts decision (by design) |
 | Auth chain + VERIFIED status | 03 | Entry points refuse (`UNAUTHENTICATED`/`FORBIDDEN`) |
@@ -101,7 +101,9 @@ HTTP; signature changes are additive first.
 Schema changes expand/contract; JSON shapes versioned; the OpenAPI spec is the single source —
 regenerate Go + TS contract code on every spec change. Frozen for Phase-3 consumers: the four §2
 export signatures (06-independent, 07/12-facing) and the REST surface 07's shell renders against.
-The 04 `hierarchy.AudienceCount` request is **additive** per 04 §7 — until merged, the estimate
+`hierarchy.AudienceCount(filter{CityIDs, SchoolIDs, ClassLevels, Streams, Roles})` is declared in 04 `06` §2
+(2026-09-30); stream (`science`/`business_studies`/`humanities`) comes from 04 `sections.stream`, so BR-05's
+"Class 12 Science in Chattogram" resolves to the matching `section-{id}` topics. If 04 errors, the estimate
 endpoint returns `count: null` (`ADS-IT-009` proves the fallback). The `type=campaign` push payload
 follows 06 §7's frozen v1 schema (additive type value; unknown types fall back home in old clients).
 Event `status` carries moderation states beyond the spec base set (Open Question #7) — public reads
@@ -143,7 +145,7 @@ expose only `published`/`cancelled`, so the public contract is stable regardless
 - [ ] `ADS-INT-002` Implement + export `ads.CanServeToUser` (pseudized trailing-window lookup) — ____
 - [ ] `ADS-INT-003` Implement + export `events.ListByCity` (published-only) + `events.MarkTicketPaid` (12 seam, idempotent) — ____
 - [ ] `ADS-INT-004` Consume 07 gate (`vendors.Approve`) + fill `/admin/campaigns` stub route with the moderation queue — ____
-- [ ] `ADS-INT-005` Coordinate additive `hierarchy.AudienceCount` with 04; ship `count: null` fallback — ____
+- [ ] `ADS-INT-005` Consume 04 `hierarchy.AudienceCount` (incl. `Streams`, small-count suppression); ship `count: null` fallback — ____
 - [ ] `ADS-INT-006` Register 4 jobs with 01 worker; wire `audit.Record` on decisions/dispatch/cancels — ____
 - [ ] `ADS-INT-007` Cache tags `events:city:{id}` + no-store enforcement on vendor/admin/serve reads — ____
 - [ ] `ADS-INT-008` Tests `ADS-UT-007`, `ADS-IT-007`–`012`, `ADS-E2E-001`–`002` green in CI (Playwright + axe) — ____

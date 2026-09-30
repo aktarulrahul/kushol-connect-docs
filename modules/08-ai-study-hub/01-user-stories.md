@@ -49,7 +49,7 @@ Provides the DeepSeek-powered study layer of Kushol Connect: the **Notes Scanner
 | --- | --- |
 | 01 foundations | `jobs.Enqueue`/worker (all AI calls run async), `audit.Record`, RFC-7807 error envelope, rate-limiter base |
 | 02 design-system | bn/en catalogs (`ai.*`, `validation.*`), tokens, RN primitives |
-| 03 identity-access | `auth.RequireVerified` (AI is verified-only), users: locale + plan flag (Kushol Pro) |
+| 03 identity-access | `auth.RequireVerified` (AI is verified-only), users: locale + `users.PlanOf` (Kushol Pro, `users.plan` column) |
 | 04 organization-hierarchy | `hierarchy.ResolveUserNodes` (section/school scope for archive visibility + class tests) |
 | 05 communication-engine | `media.PresignUpload`/`ConfirmUpload` (scan images ride 05's R2 upload service) |
 | 06 notifications | Push on scan-ready + test-published (deep links) |
@@ -177,7 +177,7 @@ Provides the DeepSeek-powered study layer of Kushol Connect: the **Notes Scanner
 
 **Acceptance criteria**
 
-- **Given** attempts exist on my published test, **when** I open its results, **then** I see attempt count, average score and per-question miss % (computed by `analytics.AttemptStats`, exported for 09).
+- **Given** attempts exist on my published test, **when** I open its results, **then** I see attempt count, average score and per-question miss % (computed by `ai.AttemptStats`, exported for 09).
 - **Given** another teacher's or another school's test, **when** I request its stats, **then** I get `FORBIDDEN`/404 — creator + same-tenant section only.
 
 ---
@@ -240,7 +240,7 @@ Provides the DeepSeek-powered study layer of Kushol Connect: the **Notes Scanner
 ## 8. Reporting Needs
 
 - **Module 07 (web):** monthly AI cost totals, cost per active user, per-feature/per-tenant split — served by `GET /ai/admin/cost-report` (US-010); 07 renders the cards when data exists.
-- **Module 09 (analytics):** weekly per-section attempt aggregates (`ai.AttemptStats(sectionId, week)`) + `ClassifyChatQueries` topic tags over samples 09 supplies.
+- **Module 09 (analytics):** weekly per-section attempt aggregates (`ai.AttemptStats(sectionID, weekStart, weekEnd)`) + `ClassifyChatQueries` topic tags over samples 09 supplies.
 - **Operational:** weekly scans/tests/attempt volumes per tenant for capacity + cost forecasting (slog metrics + ledger).
 
 ## 9. Open Questions
@@ -253,4 +253,4 @@ Provides the DeepSeek-powered study layer of Kushol Connect: the **Notes Scanner
 | 4 | Platform-wide daily AI cost cap for the circuit breaker | Rahul | Open (`TODO: Confirm`) | USD 10/day platform-wide, Asia/Dhaka day boundary |
 | 5 | Scans default share-OFF with explicit opt-in share (minors' safety) | Rahul | Open (`TODO: Confirm` — safety decision) | Private by default; share per-scan toggle, off |
 | 6 | MCQ defaults: questions per test (proposed 10, range 5–30) and options per question (proposed 4) | Rahul | Open (`TODO: Confirm`) | 10 questions, 4 options, explanations required |
-| 7 | How users obtain the Kushol Pro flag before module 12 billing ships | Rahul | Open | Ops/Super Admin sets the plan flag (module 03 data) manually until 12 lands |
+| 7 | How users obtain the Kushol Pro flag before module 12 billing ships | Rahul | Open | Super Admin sets `users.plan` via 03 `users.SetPlan` (07 action) until 12 billing lands |

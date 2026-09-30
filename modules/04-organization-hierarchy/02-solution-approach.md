@@ -60,7 +60,7 @@ Fixed depth of three levels — no recursive tree. Class grouping is an attribut
 | Module | What | Why not duplicated |
 | --- | --- | --- |
 | 03 | `users.GetWithSelection(userId)` — VERIFIED status + registered section choice | Identity and verification are 03's domain; 04 never decides verification |
-| 05 | `chat.JoinSectionGroups(userId)` · `chat.ArchiveSectionGroups(schoolId, sessionYear)` | Groups are 05's; 04 only triggers membership lifecycle |
+| 05 | `chat.JoinSectionGroups(userID, enrollment)` · `chat.ArchiveSectionGroups(schoolId, sessionYear)` | Groups are 05's; 04 only triggers membership lifecycle |
 | 01 | `jobs.Enqueue(name, payload)` + worker runtime | Migration apply and back-fill run on the shared queue, not a bespoke scheduler |
 
 **Cache keys / tags revalidated / consumed:** see `06-integration-tasks.md` §4.
@@ -71,7 +71,7 @@ Fixed depth of three levels — no recursive tree. Class grouping is an attribut
 03 verify handler
   └─► hierarchy.OnUserVerified(userId)                 (exported by 04)
         ├─ tx: insert enrollment (idempotent) + upsert fcm_topic_bindings (section, school, city)
-        ├─► 05 chat.JoinSectionGroups(userId)           (05 owns groups; join failure is non-fatal)
+        ├─► 05 chat.JoinSectionGroups(userID, enrollment)           (05 owns groups; join failure is non-fatal)
         │     └─ on failure: enqueue jobs `hierarchy.backfill` → retried; user stays VERIFIED
         └─► 06 reads fcm_topic_bindings and subscribes the user's device tokens (06 owns devices)
 ```

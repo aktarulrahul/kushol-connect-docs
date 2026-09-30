@@ -224,7 +224,7 @@ Common errors on every route (RFC-7807 `application/problem+json`): `UNAUTHENTIC
 
 N/A — this module ships no web UI. Consumers behind the generated `openapi-fetch` client (never
 the database directly): module 07 renders the Super/School Admin cost cards from endpoint #16;
-module 09 renders teacher analytics from the `analytics.AttemptStats` export (`06` §2) plus its
+module 09 renders teacher analytics from the `ai.AttemptStats` export (`06` §2) plus its
 own aggregation of classified chat queries. Cache tags these surfaces subscribe to are declared
 in `06` §4.
 
@@ -236,7 +236,7 @@ in `06` §4.
 | --- | --- | --- | --- | --- |
 | `AIH-BE-001` | Schema: migrations 1–4 + sqlc generate + trgm extension | CHECKs per §1.1; every query tenant-scoped | — | — |
 | `AIH-BE-002` | `ai.Adapter` — DeepSeek HTTP client behind `AIService` | Model IDs from config; timeouts 30 s (vision) / 60 s (gen); retry ×2 + exp backoff; `response_format` JSON; output validated against versioned JSON schemas; 1 repair attempt on validation failure; prompt registry (code constants + `prompt_version` logged per call) | — | slog: feature, model, tokens, cost, prompt_version (no content) |
-| `AIH-BE-003` | `aiquota.Reserve(userID, feature) / Refund(userID, feature)` | Conditional ledger upsert (`count < limit` in UPDATE … WHERE) — atomic last-slot race (INV-2); plan-aware limits (Pro = ∞ via 03 plan flag); refund decrements on terminal job failure | `ai:usage:{userId}` | No |
+| `AIH-BE-003` | `aiquota.Reserve(userID, feature) / Refund(userID, feature)` | Conditional ledger upsert (`count < limit` in UPDATE … WHERE) — atomic last-slot race (INV-2); plan-aware limits (Pro = ∞ via 03 `users.PlanOf` (`users.plan`, expiry-aware)); refund decrements on terminal job failure | `ai:usage:{userId}` | No |
 | `AIH-BE-004` | `aiusage.QuotaState(userID)` | Per-feature used/limit/week_start + plan; source for `GET /ai/usage` and app quota chips | read-through `ai:usage:{userId}` TTL 30 s | No |
 | `AIH-BE-005` | `notes.CreateScan(owner, imageAssetID)` | Verified; asset confirmed + owned (INV-3); `shared=false` default (BR-006); quota reserve; `jobs.Enqueue("ai-scan-tagging")` | `ai:tags:school:{id}` | No |
 | `AIH-BE-006` | `notes.ListScans / GetScan / SearchScans / SetShare / DeleteScan` | Visibility matrix (INV-1); search = pg_trgm(summary) ∧ normalized-tag filter ∧ scope; share/delete owner-only + `audit.Record` | `ai:tags:school:{id}` | Yes (share/delete) |
@@ -247,7 +247,7 @@ in `06` §4.
 | `AIH-BE-011` | `attempts.Start / SaveAnswer / Submit` | Start: section member + published/ready + no prior attempt; SaveAnswer: in_progress + own + question-of-test (upsert); Submit: transactional deterministic grade (chosen vs `correct_index`), score, `graded`, duplicate → `CONFLICT`; result releases key | — | No |
 | `AIH-BE-012` | `aicost.Guard / SetBannerState` | Daily ledger cost sum vs configured cap (BR-012); Redis flag `ai:breaker:state` (open/closed + reason); generation paths consult before call; auto-reset at Asia/Dhaka midnight | `ai:breaker:state` | Yes (trip/reset) |
 | `AIH-BE-013` | `reports.CostReport(month, actor)` | Super Admin: all tenants; School Admin: own; returns per-feature totals, active users, per-tenant split — the module-07 stub (US-010) | — | No |
-| `AIH-BE-014` | `analytics.AttemptStats(sectionID, week)` + `ai.ClassifyChatQueries` wrapper | Aggregates for 09 (attempts, avg, per-question miss %); classify = adapter call with `feature=classify` ledger write, no user quota (system-initiated) | — | slog ledger |
+| `AIH-BE-014` | `ai.AttemptStats(sectionID, from, to)` + `ai.ClassifyChatQueries` wrapper | Aggregates for 09 (attempts, avg, per-question miss %); classify = adapter call with `feature=classify` ledger write, no user quota (system-initiated) | — | slog ledger |
 
 ## 4. Repository Tasks
 
@@ -260,7 +260,7 @@ in `06` §4.
 | `AIH-BE-019` | `InsertAttempt / GetAttempt / UpdateAttemptStatus / ListAttemptsByTest` | UNIQUE (test, student); status-guarded transitions | `(test_id, status)` · `(student_id, status)` |
 | `AIH-BE-020` | `UpsertAnswer / ListAnswersByAttempt / GradeSubmit` | GradeSubmit: one UPDATE … FROM join on questions setting `correct` + score + status (transactional) | UNIQUE `(attempt_id, question_id)` · `(question_id)` |
 | `AIH-BE-021` | `ReserveQuota / RefundQuota / SumDailyCost / CostReportAggregates` | Reserve: `INSERT … ON CONFLICT (user_id, feature, week_start) DO UPDATE SET count = count+1 … WHERE ai_usage_ledger.count < $limit` | UNIQUE quota key · `(updated_at)` · `(week_start)` |
-| `AIH-BE-022` | `AttemptStatsBySection(sectionID, weekStart)` | Aggregates: attempts, avg score, per-question miss counts joined via attempts | `(test_id, status)` · `(question_id)` |
+| `AIH-BE-022` | `AttemptStatsBySection(sectionID, from, to)` | Aggregates: attempts, avg score, per-question miss counts + per-topic (test subject/chapter/topic) answered/failed joined via attempts | `(test_id, status)` · `(question_id)` |
 
 ## 5. Jobs
 

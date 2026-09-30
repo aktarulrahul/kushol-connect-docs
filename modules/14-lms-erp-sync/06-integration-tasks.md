@@ -12,11 +12,11 @@ declared here (`docs/prompt/prompt-build.md` §6).
 
 | # | Counterparty | Direction | Mechanism | Failure is… |
 | --- | --- | --- | --- | --- |
-| I-1 | `03 identity-access` | we call them | exported user-upsert path — see 06-integration §3 there; consumed here as `auth.UpsertRosterUser` (**additive export** — 03 §2 does not yet name it; agreed before build) | per-row `error` in the import/event report; import completes; redrive recovers |
+| I-1 | `03 identity-access` | we call them | exported user-upsert path — see 06-integration §3 there; consumed here as `users.UpsertRosterUser` (declared in 03 `06` §2, 2026-09-30) | per-row `error` in the import/event report; import completes; redrive recovers |
 | I-2 | `04 organization-hierarchy` | we call them | exported `hierarchy.CreateEnrollments(batch, source="ROSTER")` + `hierarchy.GetSection` | fatal per row (row-level error reported); never fatal to the import/job |
 | I-3 | `05 media` | we call them | presigned upload + confirm (`media_assets`) for roster files | import `failed` with reason; re-upload |
 | I-4 | `01 foundations` | we call them | `jobs.Enqueue`/`jobs.Register` (process/commit workers) · `audit.Record` · rate-limit middleware | jobs degraded (QUEUED + retry); audit failure aborts the wrapped destructive action |
-| I-5 | `07 command-center-web` | they host us | `/school/roster` + `/school/webhooks` nav stubs — 14 fills them (wizard, history, `/school/integrations`) | portal shell down = screens unreachable; api unaffected |
+| I-5 | `07 command-center-web` | they host us | `/school/roster` + `/school/integrations` nav stubs — 14 fills them (wizard, history, `/school/integrations`) | portal shell down = screens unreachable; api unaffected |
 | I-6 | Schools' LMS/ERP systems (external) | they call us | inbound HTTPS `POST /api/v1/webhooks/erp/{schoolId}` (HMAC-signed, unauthenticated-by-design exception) | rejected per event (`INVALID_SIGNATURE`/`STALE_TIMESTAMP`/`RATE_LIMITED`); ERP retries; never fatal to the platform |
 | I-7 | `04/05/06` verified-user chain (indirect) | we trigger | enrollment upserts for VERIFIED users propagate groups/topics via the existing chain | degraded — import completes, groups/topics converge via chain retries (06 §8) |
 
@@ -48,7 +48,7 @@ HTTP; signature changes are additive first.
 
 | We call | Owner | On failure |
 | --- | --- | --- |
-| `auth.UpsertRosterUser` — user upsert (03-identity-access exported user upsert; see 06-integration §3 there) | 03 | row-level `error` (row + event survive for redrive); **additive need flagged**: 03 §2 lists no upsert export today — agreed additive signature: upsert by phone, create PENDING, never touch `verification_requests`, never alter existing `status` |
+| `users.UpsertRosterUser` — user upsert (03-identity-access exported user upsert; see 06-integration §3 there) | 03 | row-level `error` (row + event survive for redrive); declared in 03 `06` §2 (2026-09-30) |
 | `hierarchy.CreateEnrollments(batch, "ROSTER")` | 04 | per-row `created/exists/error` from 04's contract (`ORG-IT-008`); error rows reported, never silently dropped |
 | `hierarchy.GetSection(sectionID)` | 04 | row error `sync.row.section_unknown`; redrive after the section exists |
 | 05 media presign/confirm (`media_assets`) | 05 | import `failed` + `sync.import.file_missing`; re-upload path |
@@ -69,7 +69,7 @@ HTTP; signature changes are additive first.
 | --- | --- |
 | `GET /school/roster/imports*` | `school:{id}:roster` (admin reads fresh; no-store) |
 | `GET /school/erp/endpoints*` | `school:{id}:roster` (no-store) |
-| `GET /school/reconciliation` | `school:{id}:roster` + 5-min Redis memo of computed counts (drift tolerance) |
+| `GET /school/roster/reconciliation` | `school:{id}:roster` + 5-min Redis memo of computed counts (drift tolerance) |
 | template / error CSV streams | none (`no-store`) |
 
 ## 5. External Systems
@@ -95,7 +95,7 @@ HTTP; signature changes are additive first.
 | Commit button | `POST /api/v1/school/roster/imports/{id}/commit` | 202 `committing` → poll to terminal; `CONFLICT` → state hint |
 | Endpoints table + modals | `POST/GET /api/v1/school/erp/endpoints`, `…/rotate-secret`, `…/test` | raw secret only in create/rotate responses (`sync.secret.warning` modal) |
 | Event log drawer + redrive | `GET /api/v1/school/erp/endpoints/{id}/events`; redrive via `POST /api/v1/school/erp/endpoints/{id}/events/{eventId}/redrive` | paged log; redrive result toast |
-| Reconciliation screen | `GET /api/v1/school/reconciliation` | baseline/platform/drift DTO; no-baseline state handled |
+| Reconciliation screen | `GET /api/v1/school/roster/reconciliation` | baseline/platform/drift DTO; no-baseline state handled |
 
 ## 7. Contract Stability
 
@@ -139,7 +139,7 @@ are additive; unknown types are rejected `VALIDATION_FAILED` (ERP upgrades after
 ## 10. Task Checklist
 
 - [ ] `LMS-INT-001` `sync` service package exports (`IngestRosterBatch`, `ApplyErpEvent`, `VerifyEndpointSecret`) + DTOs — ____
-- [ ] `LMS-INT-002` 03 upsert client interface + fake; additive `auth.UpsertRosterUser` signature agreed with 03 and recorded in `07-progress.md` — ____
+- [ ] `LMS-INT-002` 03 upsert client interface + fake; additive `users.UpsertRosterUser` signature agreed with 03 and recorded in `07-progress.md` — ____
 - [ ] `LMS-INT-003` 04 client wiring (`CreateEnrollments`/`GetSection`) against frozen ORG exports — ____
 - [ ] `LMS-INT-004` 05 presign/confirm integration for roster files — ____
 - [ ] `LMS-INT-005` jobs registered on the 01 worker (`roster.import.process`, `roster.import.commit`, `erp.test.dispatch`) — ____

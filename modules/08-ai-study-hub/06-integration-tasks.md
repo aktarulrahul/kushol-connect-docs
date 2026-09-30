@@ -17,7 +17,7 @@
 | I-3 | `03-identity-access` | we call them | `auth.RequireVerified` middleware; users locale + plan flag (Kushol Pro) | fatal to all AI actions by design (`NOT_VERIFIED`); plan-flag read failure → safe default (free limits) |
 | I-4 | `04-organization-hierarchy` | we call them | `hierarchy.ResolveUserNodes(userId)` (teacher sections for class tests; school scope for archive) | fatal to class-test create (cannot verify section) — refuse `FORBIDDEN`, never guess |
 | I-5 | `06-notifications` | we call them | push dispatch on `scan_ready` + `class_test` (topic/payload per §5) | degraded — in-app polling still reveals state; 06 owns retry |
-| I-6 | `09-teacher-analytics` | they call us | exported fns `ai.ClassifyChatQueries`, `ai.QuotaState`, `analytics.AttemptStats` (§2) | degraded — 09 skips the week's classify/aggregation |
+| I-6 | `09-teacher-analytics` | they call us | exported fns `ai.ClassifyChatQueries`, `ai.QuotaState`, `ai.AttemptStats` (§2) | degraded — 09 skips the week's classify/aggregation |
 | I-7 | `07-command-center-web` | they call us | REST `GET /api/v1/ai/admin/cost-report` (generated client) | degraded — 07 renders zeros/error state |
 | I-8 | DeepSeek (external) | outbound | HTTPS JSON API (vision + chat, JSON-schema-validated output) | degraded — jobs queue + retry; breaker may pause (§8) |
 | I-9 | `applications/ai` (external, later) | outbound | internal HTTP FastAPI adapter behind the same `AIService` interface; Compose-internal network only, never client-exposed | degraded — same as I-8 (adapter swap is transparent) |
@@ -29,7 +29,7 @@ ai.GenerateMCQs(ctx context.Context, scope ChapterScope, count int, locale strin
 ai.TagNoteImage(ctx context.Context, imageRef ImageRef, locale string) (NoteTags, error)
 ai.ClassifyChatQueries(ctx context.Context, samples []ChatQuerySample, locale string) (TopicTags, error)
 ai.QuotaState(userID uuid.UUID) (QuotaStateDTO, error)
-analytics.AttemptStats(sectionID uuid.UUID, weekStart time.Time) (AttemptStatsDTO, error)
+ai.AttemptStats(sectionID uuid.UUID, from, to time.Time) (AttemptStatsDTO, error)   // [from, to) window chosen by the caller (09 uses Sun→Sat Asia/Dhaka; independent of 08's Monday quota week)
 ```
 
 Contract shapes (versioned JSON schemas, additive evolution):
@@ -40,7 +40,7 @@ MCQ          { stem string; options [4]string; correct_index int 0..3; explanati
 NoteTags     { summary string; tags []{ level: subject|chapter|topic; value, normalized string } }
 TopicTags    { topics []{ value, normalized string; confidence float } }
 QuotaStateDTO{ plan string; features []{ feature scan|mcq_gen|classify; used, limit int; week_start date } }
-AttemptStatsDTO{ attempts int; avg_score float; per_question []{ question_id; miss_count; miss_pct } }
+AttemptStatsDTO{ attempts int; avg_score float; per_question []{ question_id; miss_count; miss_pct }; per_topic []{ subject; chapter; topic; answered int; failed int; fail_rate float } }   // per_topic keyed by the test's generation scope (topic may be empty → chapter level)
 ImageRef     { assetID uuid; r2Key string }   // 05-confirmed asset only
 ```
 
@@ -50,7 +50,7 @@ ImageRef     { assetID uuid; r2Key string }   // 05-confirmed asset only
 | `ai.TagNoteImage` | internal (scan-tagging job) | `NoteTags` (schema-validated) | same | Vision model; image must be a 05-confirmed asset; ledger `scan` |
 | `ai.ClassifyChatQueries` | 09 | `TopicTags` | same | Samples supplied by 09; ledger `classify` (no user quota — system feature); **aggregates only — 09 must not persist chat text** |
 | `ai.QuotaState` | 09 (context for matrix), 07 (cost context) | `QuotaStateDTO` | `NOT_FOUND` | DTO only, never ledger rows |
-| `analytics.AttemptStats` | 09 | `AttemptStatsDTO` | `FORBIDDEN` (non-tenant section) | Aggregate-only — per-student identity never leaves |
+| `ai.AttemptStats` | 09 | `AttemptStatsDTO` | `FORBIDDEN` (non-tenant section) | Aggregate-only — per-student identity never leaves |
 
 Rules: exports return DTOs (never sqlc row structs); admin-only exports require role claims in the
 context; services return domain errors (mapped to the problem envelope at the handler), never raw
@@ -154,7 +154,7 @@ contract of `applications/ai` must mirror these schemas exactly (never client-ex
 - [ ] `AIH-INT-004` Wire 06 push on `scan_ready` + `class_test` (payload = ids + type, deep links per `05-app-tasks.md` §1)
 - [ ] `AIH-INT-005` Consume 03 verified gate + locale + plan flag (fail-closed free limits)
 - [ ] `AIH-INT-006` Consume 04 `hierarchy.ResolveUserNodes` (teacher sections, archive school scope)
-- [ ] `AIH-INT-007` Export `ai.ClassifyChatQueries`, `ai.QuotaState`, `analytics.AttemptStats` for 09 + `cost-report` endpoint for 07; verify 07/09 handoff (`AIH-FE-001/002`)
+- [ ] `AIH-INT-007` Export `ai.ClassifyChatQueries`, `ai.QuotaState`, `ai.AttemptStats` for 09 + `cost-report` endpoint for 07; verify 07/09 handoff (`AIH-FE-001/002`)
 - [ ] `AIH-INT-008` Daily cost circuit breaker: Redis flag `ai:breaker:state` + ledger sum + banner copy (bn/en) + reset job
 - [ ] `AIH-INT-009` Cache-tag contract live (`ai:usage:{userId}`, `ai:tags:school:{id}`) + app query keys aligned
 - [ ] `AIH-INT-010` AI output JSON schemas versioned + embedded contract version in `questions_snapshot`; FastAPI adapter contract documented for the later swap (`AI_PROVIDER` switch)
