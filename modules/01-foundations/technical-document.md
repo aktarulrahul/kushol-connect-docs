@@ -355,3 +355,4 @@ keep their `TODO: Confirm` marker.
 | 2026-09-30 | Owner: "complete 01-foundations for api, web and app" — web and app repo scaffolds return to 01 (`FND-FE-001`, `FND-AP-001`; were 02 `DSN-FE-000`/`DSN-AP-000`), `FND-INT-006` back in 01; web/app env vars added to §8.1; jobs `run_at` now uses the database clock (bug found by `FND-IT-003`) | Claude |
 | 2026-09-30 | §8.1: local development on Postgres `kc` (localhost) with ports api 5433 · web 4433 · ai 8433 (reserved) via `applications/dev-start.sh`; production database is the Neon project `kushol-connect-db` (Singapore, Postgres 18) | Claude |
 | 2026-09-30 | §5.1: Swagger UI at `/docs` and the spec at `/openapi.json` outside production (owner request) | Claude |
+| 2026-09-30 | App: development builds + EAS, never Expo Go (owner); `com.kusholconnect.app`; `eas.json` (15 `OPS-AP-001`) pulled forward; local iOS scene-life-cycle plugin for iOS 27 (07-progress ADR-16/17) | Claude |

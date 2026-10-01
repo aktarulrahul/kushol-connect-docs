@@ -30,8 +30,8 @@ Rows marked `verify` belong to modules not yet built. Aligned with `prd.md` §6 
 | UI runtime | React Native + React | latest stable `verify` | Hermes engine |
 | Navigation | **expo-router** (file-based) | latest `verify` | Typed routes; deep links for payment/notification payloads |
 | Language | TypeScript (strict) | latest `verify` | |
-| Styling | **NativeWind** (Tailwind for RN) + shared tokens | latest `verify` | Tokens from each app's `src/theme` mapped to the brand system (`design-reference/README.md`) |
-| Components | shadcn-style hand-written RN primitives on **zeego**/radix-primitives where useful | `verify` | |
+| Styling | **NativeWind** (Tailwind for RN) + shared tokens | 4.2.7 + Tailwind 3.4.19 (02) | Tokens from each app's `src/theme` mapped to the brand system (`design-reference/README.md`); NativeWind 5 (Tailwind 4) was still a release candidate at 02 |
+| Components | shadcn-style RN primitives: **React Native Reusables** on `@rn-primitives` (radix-primitives for RN), vendored in `src/components/ui/` | 1.5.x (02) | zeego not needed so far: Select/menus come from `@rn-primitives` |
 | Icons | lucide-react-native | latest | |
 | Fonts | **Hind Siliguri** (Bengali UI + display) · **Inter** (Latin) via @expo-google-fonts | bundled | Bangla glyphs are a launch requirement, not an add-on |
 | State (server) | **TanStack Query** | 5.x | Chat + marketplace lists |
@@ -76,6 +76,13 @@ eslint-plugin-react-hooks 7.1.1 · Prettier 3.9.9 · Vitest 5.0.2 · Playwright 
 @axe-core/playwright 4.13.0 · openapi-typescript 7.13.0 · openapi-fetch 0.17.0 · zod 4.6.5 ·
 pnpm 11.8.0. `eslint-config-next` is not used (its bundled plugins don't declare ESLint 10 support
 yet). Vitest 5.0.3 was published on 2026-09-30, inside pnpm's minimum release age, so 5.0.2 is pinned.
+
+**Pinned at 02 (2026-10-01, `applications/web`):** shadcn CLI 4.21.0 (Radix base, `nova` style;
+components vendored in `src/components/ui/`) · `cn` 0.4.0 · radix-ui 1.6.7 · class-variance-authority
+0.7.1 · lucide-react 1.49.0 · **TanStack Table 9.2.4** (v9 `useTable` + feature registry) · **TanStack
+Query 5.104.0** · sonner 2.0.8 · vaul 1.1.2 · cmdk 1.1.1 · input-otp 1.5.0 · react-day-picker 10.0.1 ·
+date-fns 4.4.0 · tw-animate-css 1.4.0 · axe-core 4.13.0. Fonts: Hind Siliguri `bengali` subset only
+(Latin from Inter) — 02 `07-progress.md` ADR-7.
 
 ## applications/api — Backend (Go)
 
