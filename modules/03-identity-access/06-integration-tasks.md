@@ -60,6 +60,7 @@ HTTP; signature changes are additive first.
 | --- | --- | --- |
 | `hierarchy.GetCities/GetSchools/GetSections` (read; no class entity — class level is a section attribute) | 04 | degraded — 5-min stale cache; registration blocked with `validation.hierarchy.invalid` if placement can't be proven |
 | `hierarchy.OnUserVerified(userID)` (write; hand-off target) | 04 (04 orchestrates enrollment, chat group joins, FCM topic subs) | provisioning job retries ×5 with backoff + alert; user stays VERIFIED |
+| `hierarchy.CreateSchool` (write; owner 2026-10-02 ADR-2 — recorded in 04 `06` §1 I-8/§2) | school-request approve handler | approval provisions the institution before the POC admin is created; failure surfaces to the Super Admin, request stays PENDING |
 | `audit.Append(event)` | 01 | audit write retried inline; approval never blocked by audit failure alone (logged + alerted) |
 | `jobs.Enqueue / worker runtime` | 01 | job table is 01-owned; enqueue failure surfaces as `INTERNAL` |
 | `notify.SendToUser(userID, payload)` (approved/rejected/reminder) | 06 | skipped + retried next SLA tick; never blocks the decision |

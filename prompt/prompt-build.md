@@ -4,14 +4,16 @@ One prompt for every module. Set the parameters, then run it with an AI coding a
 by hand).
 
 ```text
-MODULE   = 01-foundations          # folder name under docs/modules/
-APP      = web                     # api · web · app · shared — comma-separate if several (e.g. api,web,app)
-TODAY    = 2026-09-30              # ISO date used when ticking checklist items and in progress notes
+MODULE   = 04-organization-hierarchy         # folder name under docs/modules/
+TODAY    = 2026-10-01              # ISO date used when ticking checklist items and in progress notes
 APPROVAL = required                # required → stop after the Stage 1 plan · pre-approved → continue after planning
 ```
 
-**Set all four before starting.** Everything below refers to `<MODULE>`. Gates 1–3 are **always**
-manual, whatever `APPROVAL` says — `pre-approved` only skips the stop after Stage 1.
+**Set all three before starting.** `APP` no longer exists: every module is built for **api, web,
+app and integration** — the module's own `03`/`04`/`05`/`06` checklists decide which surfaces
+apply, and a surface with no checklist items is recorded as "N/A — <reason>" in `07-progress.md`.
+Everything below refers to `<MODULE>`. Gates 1–3 are **always** manual, whatever `APPROVAL` says —
+`pre-approved` only skips the stop after Stage 1.
 
 ---
 
@@ -35,7 +37,7 @@ Read the named sections, not whole documents, unless the ✅ column says "all".
 | always        | `docs/prd.md`                                           | the sections your module implements (note the "Superseded" call-outs in §3 and §7)                                                                                           |
 | always        | `docs/modules/<MODULE>/01…06` + `technical-document.md` | **all** — this is the work                                                                                                                                                   |
 | always        | `docs/modules/README.md`                                | the module's row, dependencies, blocked-before-build defaults, **Cross-module registries**                                                                                   |
-| always        | `docs/tech-stack.md`                                    | the rows for the app(s) in `<APP>`                                                                                                                                           |
+| always        | `docs/tech-stack.md`                                    | the api, web and app rows — plus §Infrastructure when building module 15                                                                                                     |
 | always        | every dependency's `06-integration-tasks.md` §2         | the exact export signatures you will call                                                                                                                                    |
 | UI work       | `docs/design-reference/README.md`                       | all — palette, typography, logo rules, **§6 mobile (CircleUp + WhatsApp)**, **§7 web (professional)**; look at `docs/design-reference/mobile-circleup/*.png` for app screens |
 | schema / data | the module's `03-backend-tasks.md` §1 (Database Design) | tenant scoping is mandatory for every table                                                                                                                                  |
@@ -71,11 +73,12 @@ reported; do not edit another module's code.
 - [ ] Every name you will introduce is checked against the README **Cross-module registries**:
       migration version block, error codes, i18n namespaces, Go export packages, web routes,
       API paths, env variables. Anything new is added to the registry in Stage 3.
-- [ ] Repository state is known **for every app in `<APP>`**: each of `applications/api`,
-      `applications/web`, `applications/app`, `applications/ai` is its **own git repository** — no
-      root repo, no shared package, nothing imported across app folders. In each touched repo:
-      current branch, clean working tree, work on a branch `module/<MODULE>`; never commit to
-      `main` directly. (Commit only when the owner has asked for commits in this session.)
+- [ ] Repository state is known **for every repo the module touches**: each of
+      `applications/api`, `applications/web`, `applications/app` (and `applications/ai` when the
+      module's checklist names it) is its **own git repository** — no root repo, no shared
+      package, nothing imported across app folders. In each touched repo: current branch, clean
+      working tree, work on a branch `module/<MODULE>`; never commit to `main` directly.
+      (Commit only when the owner has asked for commits in this session.)
 - [ ] For UI modules: brand assets exist in `docs/design-reference/brand/` — otherwise use a
       typographic fallback ("কুশল CONNECT" in Hind Siliguri + Inter) and record it as a gap.
 - [ ] Library versions marked `latest verify` in `docs/tech-stack.md` are checked against the
@@ -116,8 +119,9 @@ Complete **every unticked checklist item** of `<MODULE>`, in this **UI-first** o
 Objective      one paragraph in your own words
 Defaults used  open-question defaults + any precedence decisions (§1.1)
 Conflicts      anything you must ask the owner about (or "none")
-Files          create/change list per app repo: applications/api (incl. openapi/openapi.yaml) ·
-               applications/web · applications/app — nothing outside the app folders
+Files          create/change list per repo: applications/api (incl. openapi/openapi.yaml) ·
+               applications/web · applications/app (+ applications/ai when the module owns it) —
+               nothing outside the app folders; "N/A — reason" for untouched surfaces
 Contracts      exports you implement (06 §2) · exports you consume (with the owner module)
 Data           tables + migration file names/versions (from the README registry)
 Impact         tenant isolation · security · bn/en · quota/cost · a11y · performance
@@ -166,14 +170,16 @@ database may proceed: sqlc codegen against the migration files, tenant-scoped re
 services, unit tests — testcontainers integration tests apply migrations themselves, so they do
 not depend on this gate. After confirmation: entry points, jobs, seeds, and the api checks
 (`gofmt`, `golangci-lint`, `go vet`, `go test ./...`, integration tests incl. cross-tenant
-isolation).
+isolation). Every api service lands with its unit tests (§4.1) in the same commit as the code.
 
 **Stage 5 — Integration (`06`).** Replace the Stage-2 fixtures with the generated OpenAPI client
 (`openapi-fetch` / typed WS), wire cache invalidation (`06` §4) and externals, run E2E
-(Playwright / Maestro). Regenerate contract code after any `applications/api/openapi/` change and confirm
-zero drift: api `make contracts-check`; in web and app `pnpm sync:api-spec && pnpm generate:api`
-then `git diff --exit-code` (each client's spec copy must match the api's). Run the full check
-suite in each touched repo (api + web + app).
+(Playwright / Maestro — §4.1: golden-path specs written in Stage 2 now run against the local
+stack; no stack without the owner's say-so). Regenerate contract code after any
+`applications/api/openapi/` change and confirm zero drift: api `make contracts-check`; in web
+and app `pnpm sync:api-spec && pnpm generate:api` then `git diff --exit-code` (each client's
+spec copy must match the api's). Run the full check suite in each touched repo
+(api + web + app): lint · typecheck · **unit tests** · contracts drift · build.
 🚦 **GATE 3 — manual approval of the integrated flows.** Stop and give the owner a numbered list
 of the module's golden paths (from `01` user stories) to click through end-to-end on real data,
 with the seed accounts to use.
@@ -203,6 +209,40 @@ owner for final verification** before marking the module `🟢 Delivered`.
 7. **Evidence over claims:** every "done" is backed by a command output, test count or
    screenshot recorded in `07-progress.md`. If a check fails, say so with the output.
 
+### 4.1 Testing — unit and e2e (mandatory in every module)
+
+Every module ships its own tests. Writing the feature without its tests is an unfinished
+checklist item.
+
+**Unit tests — written in the same stage as the code they cover:**
+
+| Repo | Command     | What must be covered                                                                                                                                                                                   |
+| ---- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| api  | `make test` | Table-driven unit tests per service: validators/normalizers, token/OTP/HMAC logic and expiry, rotation + reuse, role/verified guard matrices, problem mapping, cursor paging, CSRF. `-race` must pass. |
+| web  | `pnpm test` | Vitest per touched unit: forms/state machines (happy + invalid + rate-limited + delayed), problem+json mapping, phone/validation utils, i18n parity, fixture seam behaviour.                           |
+| app  | `pnpm test` | jest per touched unit: stores/reducers and guards, validation schemas, OTP state machine, token store + single-flight refresh, navigation gating, i18n parity.                                         |
+
+Rules: colocate tests with the code (`*.test.ts(x)` / `_test.go`); no network in unit tests
+(clocks, gateways and providers are injected fakes); a bug fix ships with the test that would
+have caught it; `make test` / `pnpm test` green is checked after every stage, not only at the
+end.
+
+**E2E tests — written in Stage 2 (specs, against fixtures) and run for real in Stage 5
+(against the local stack):**
+
+| Repo | Runner                       | Scope                                                                                                                                                                                   |
+| ---- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| web  | Playwright (`pnpm test:e2e`) | One spec per module golden path (from `01` user stories): public + authenticated routes, bn default + language toggle, one error path per critical form; axe checks on touched pages.   |
+| app  | Maestro (`.maestro/*.yaml`)  | One flow per golden path with fixture mode ON. If the Maestro CLI or a device is unavailable, the spec is still written and the run is recorded as a gap with the exact command to run. |
+
+E2E runs need the local dev stack (`applications/dev-start.sh`). The agent does **not** start
+servers on its own: either the owner has approved running the stack in this session, or the
+agent writes the specs and hands the owner the exact commands, recording "e2e pending owner run"
+in `07-progress.md` and `08-gaps.md`.
+
+**Triage rule:** a red test is never skipped, deleted or `fixme`-d to get green — fix the code,
+or (when the test is wrong) change the test with a written reason in `07-progress.md`.
+
 ## 5. Definition of done
 
 - [ ] All checklist items ticked with `— <TODAY>` or deferred in `08-gaps.md` with a reason
@@ -213,6 +253,11 @@ owner for final verification** before marking the module `🟢 Delivered`.
 - [ ] No fixture data paths remain — every screen talks to the real API through the generated
       client (fixtures deleted or moved behind test-only flags)
 - [ ] Contract drift check clean (api's generated Go matches `applications/api/openapi/openapi.yaml`; each client's spec copy and generated TS client match it)
+- [ ] **Unit tests** for every new service/util/store (api `make test`, web `pnpm test`, app
+      `pnpm test`) pass with `-race`/strict flags — counts recorded in `07-progress.md`
+- [ ] **E2E specs exist for every module golden path** (web Playwright, app Maestro) and pass
+      against the local stack — or the run is recorded as a pending-owner gap with the exact
+      commands (§4.1)
 - [ ] Unit, integration and E2E tests pass; **cross-tenant isolation tests pass** for any data
       module
 - [ ] i18n parity check passes (identical bn/en key sets; namespaces from the 02 registry)
@@ -251,12 +296,14 @@ owner for final verification** before marking the module `🟢 Delivered`.
 ## 7. Final report (reply format)
 
 ```text
-Module: <MODULE> (<APP>)            Date: <TODAY>
+Module: <MODULE>                     Date: <TODAY>
 Stage:     1 plan · 2 UI · 3 docs · 4 backend · 5 integration · 6 gaps   → <current stage>
 Gates:     1 UI ✓/pending/N/A · 2 SQL run ✓/pending · 3 integration ✓/pending · final ✓/pending
 Done:      <ticked IDs>
-Verified:  go vet/lint ✓ (api) · typecheck ✓ (web/app) · unit N/N · integration N/N · e2e N/N ·
-           axe ✓ · tenant-isolation ✓ · contract drift ✓ · i18n parity ✓
+Verified:  api: vet/lint ✓ · unit N/N · integration N/N · contracts ✓
+           web: typecheck/lint ✓ · unit N/N · e2e N/N (or pending owner run) · axe ✓
+           app: typecheck/lint ✓ · unit N/N · e2e N/N (or pending owner run / gap)
+           tenant-isolation ✓ · i18n parity ✓
 Defaults relied on: <open-question defaults + §1.1 precedence decisions>
 Waiting on owner:   <gate / question, or "nothing">
 Gaps:      <IDs in 08-gaps.md, one line each>

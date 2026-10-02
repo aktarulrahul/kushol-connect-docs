@@ -19,11 +19,13 @@ declared here (`docs/prompt/prompt-build.md` §6).
 | I-5 | `01 foundations` | we call them | `jobs.Enqueue` + shared worker for `migration.run` / `hierarchy.backfill` | degraded — commit returns, apply retries via job |
 | I-6 | `07 command-center-web`, `09 teacher-analytics`, `13 b2b-ads-events` | they call us | read-only exports `hierarchy.ResolveUserNodes` / `GetSection` / `PlatformCounts` / `SchoolCounts` / `AudienceCount` | degraded — empty segments; never fatal to those modules |
 | I-7 | FCM (external) | indirect only | topic naming contract `city-{id}` / `school-{id}` / `section-{id}`; all FCM SDK calls live in 06 | degraded, never fatal — 04 holds no FCM credentials |
+| I-8 | `03 identity-access` (owner decision 2026-10-02, ADR-2) | they call us | 03's school-request approve handler calls `hierarchy.CreateSchool` inline — approving a public school-request provisions the institution (school + `school-{id}` binding + audit in one tx); 03 then provisions the request's POC as pre-verified School Admin via its own `users.CreateProvisionedAdmin` | fatal for the approval click — 03 surfaces the error; the request stays PENDING and can be retried |
 
 ## 2. Exported Contract
 
 ```text
 hierarchy.OnUserVerified(userId uuid) (EnrollmentDTO, error)
+hierarchy.CreateSchool(ctx, actor Principal, in CreateSchoolInput{RequestID?, CityID, Type, NameBn, NameEn, Address?, Admin?}) (SchoolDTO, AdminProvision?, error)
 hierarchy.ResolveUserNodes(userId uuid) (UserNodes{CityID, SchoolID, SectionIDs, TopicNames}, error)
 hierarchy.GetSection(sectionID uuid) (SectionDTO, error)
 hierarchy.CreateEnrollments(batch []EnrollmentInput, source string) ([]EnrollmentResult, error)
@@ -37,6 +39,7 @@ hierarchy.AudienceCount(ctx, filter AudienceFilter{CityIDs, SchoolIDs, ClassLeve
 | Export | Callers | Returns | Throws | Notes |
 | --- | --- | --- | --- | --- |
 | `OnUserVerified(userId)` | 03 verify handler | the (idempotent) enrollment created from the registration-time section choice | `NOT_FOUND` (no selection), `VALIDATION_FAILED` | The BR-01 seam (02 §2): tx enrollment + bindings → 05 join → back-fill job on failure; safe to call repeatedly |
+| `CreateSchool(ctx, actor, in)` | 03 school-request approval (I-8), 07 tenant wizard via `POST /admin/schools` | school DTO (+ provisioned admin id when `Admin` supplied) | `CONFLICT` (duplicate name / decided request race), `NOT_FOUND` (city), `FORBIDDEN`, `VALIDATION_FAILED` | Super-Admin gated; one tx: school + `school-{id}` binding + audit (`school.created` carries `requestId` for traceability — no schema change to 03) |
 | `ResolveUserNodes(userId)` | 05 (rooms), 06 (topics), 09, 13 | city/school/active-section ids + topic names | `NOT_FOUND` | Read-only; powers rooms, subscriptions, analytics and ad segments |
 | `GetSection(sectionID)` | 05, 09, 13 | section identity (class level, name, session, school) | `NOT_FOUND` | Cached read |
 | `CreateEnrollments(batch, source)` | 14 roster ingestion | per-row result (created / exists / error) | `VALIDATION_FAILED` (whole-batch shape) | Batch, idempotent per (user, section, role, session); rows never partially silently dropped |

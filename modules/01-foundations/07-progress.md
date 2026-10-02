@@ -2,7 +2,7 @@
 
 **Module:** `01-foundations` · **Apps:** `api` · `web` · `app` · **Repos:** `applications/api`,
 `applications/web`, `applications/app` (each its own git repo, branch `module/01-foundations`,
-nothing committed yet) · **Last updated:** 2026-09-30
+nothing committed yet) · **Last updated:** 2026-10-02
 
 ## Stages & gates
 
@@ -39,6 +39,7 @@ nothing committed yet) · **Last updated:** 2026-09-30
 | ADR-15 | **Web holding page** (owner, 2026-09-30: "fix the web") | `/` was an unstyled `<h1>` in the corner. Now a centred brand name in deep teal on paper (`docs/design-reference` §2; tokens and Hind Siliguri still arrive with 02). Under `next dev` only, a card shows `/readyz` status and links the api docs; production builds stay static and omit it |
 | ADR-16 | **Development builds + EAS, never Expo Go** (owner, 2026-09-30: "don't use expo go"; "use expo eas … Google Play and Apple App Store through TestFlight") | `expo-dev-client` 57.0.19 added; `ios.bundleIdentifier` / `android.package` = `com.kusholconnect.app` (owner choice, closes G-7). `app/eas.json` pulled forward from 15 (`OPS-AP-001`): `development`, `development-simulator`, `preview` (APK, `https://api.kusholconnect.com`), `production` (store, auto-increment); submit → Play internal track (draft) and App Store Connect/TestFlight. `dev-start.sh` now starts the app by default: builds the dev client locally with Xcode (`expo prebuild --clean` + `expo run:ios`, no Expo account needed), rebuilds only when `app.json`/lockfile change or `--rebuild`, opens it on an iPhone simulator. App `/` gets the same holding treatment as web (ADR-15) with a `__DEV__`-only api status card |
 | ADR-17 | **UIScene life cycle via a local config plugin** | The first development build crashed at launch on iOS 27 (UIKit trap `_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`). Expo 57.0.26 ships `ExpoAppSceneDelegate` for exactly this, but the SDK 57 prebuild template (57.0.28) doesn't use it. `app/plugins/with-ios-scene-lifecycle.js` adds `UIApplicationSceneManifest` → `EXExpoAppSceneDelegate` and moves window creation out of `AppDelegate` on every prebuild (fails loudly if the template changes). Remove when Expo's template adopts scenes (G-9) |
+| ADR-18 | **Composed server: unbuilt operations answer 501** (2026-10-02) | `httpx.Server` embeds each module's handler (`*health.Handler` today) and, one level deeper, the generated `api.Unimplemented`. When `openapi.yaml` gains operations before their handlers (03 added its contract first), the api still compiles and those routes return 501 until the module embeds its handler. `TestEmbeddedMigrations` now checks up/down pairs + 01's block instead of pinning 01's last version |
 
 ## Defaults relied on
 
@@ -85,6 +86,21 @@ pnpm/action-setup v6 · upload-artifact v7. Full list in `docs/tech-stack.md`.
 | app | `dev-start.sh --detach`, iOS Simulator (Xcode 27, iOS 27.0, iPhone 18 Pro) | development build (`com.kusholconnect.app`) built with Xcode and installed; first launch crashed (ADR-17) → with the plugin it launches, loads the bundle from Metro and shows the holding screen with api `ready` (postgres + redis ok) over the LAN IP; Expo Go closed — only the development build running. `app.json` change triggered an automatic rebuild; restart without native changes took 12 s with no rebuild; `dev-stop.sh` closes the app |
 | app | `dev-start.sh` in the foreground | Metro starts with its key help; opening the app **not yet observed** — Docker (Redis) was stopped by the owner mid-test |
 | app | `pnpm gate` after ADR-16/17 | format · lint · typecheck green; 11 tests; `contracts: no drift`; `eas.json` parsed by `@expo/eas-json` for all profiles (`eas config` itself needs an Expo login) |
+
+## Re-verification after 02/03 stacked on the same repos (2026-10-02)
+
+All three repos now carry the 02 + 03 work uncommitted on `module/03-identity-access` (01's work
+was never committed). Fast checks re-run to keep the Gate 2/3 handoff honest:
+
+| Repo | Check | Result |
+| --- | --- | --- |
+| api | `make fmt-check contracts-check vet test` | exit 0 — all unit packages ok, contracts no drift |
+| web | `pnpm test` | 140/140 (16 files) |
+| app | `pnpm test` | 153/153 (23 suites) |
+| api | migration files on disk | 01 block `20260930000001–000003` + 03 block `20261001090000–090035` — one `migrate up --confirm` applies all 11 (Gate 2 now covers both blocks) |
+
+Full gate suites (`make gate` incl. testcontainers integration; web/app lint+typecheck+build) were
+green during the 03 build gate on 2026-10-01 and have not been re-run here.
 
 ## Developer golden paths (Gate 3)
 
