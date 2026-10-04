@@ -247,8 +247,8 @@ Always include: unauthenticated call denied for every protected entry point (web
 
 ### Schema
 
-- [ ] `PAY-BE-031` Migrations 1–5 (five tables, constraints, indexes, append-only trigger)
-- [ ] `PAY-BE-032` sqlc queries + models for all five tables
+- [x] `PAY-BE-031` Migrations 1–5 (five tables, constraints, indexes, append-only trigger) — 2026-10-03 (5 migrations incl. append-only trigger; **owner SQL run pending — Gate 2**)
+- [x] `PAY-BE-032` sqlc queries + models for all five tables — 2026-10-03 (5 query files; contracts no drift)
 
 ### Repository · Service · Entry points · Jobs · Seed · Tests
 

@@ -248,19 +248,19 @@ Posting is queued; safety/financial actions require connectivity by design.
 
 ## 9. Task Checklist
 
-- [ ] `TUT-AP-001` Marketplace home (Find-a-tutor card, entries, `VerifiedGate`)
-- [ ] `TUT-AP-002` Post-requirement wizard (4 steps, shared zod, summary review, offline queue)
-- [ ] `TUT-AP-003` Location picker modal (pin + text fallback, bounds validation)
-- [ ] `TUT-AP-004` My requirements list (status chips, interested counts, expiry countdown)
-- [ ] `TUT-AP-005` Requirement detail + interested tutors + accept dialog + matched/expired states
-- [ ] `TUT-AP-006` Tutor browse (filters, verified chip locked ON, area empty state bn/en)
-- [ ] `TUT-AP-007` Tutor public profile (public-safe DTO render, request-as-tutor CTA → pre-filled wizard)
-- [ ] `TUT-AP-008` Tutor setup form (draft autosave, contact-regex guard messaging)
-- [ ] `TUT-AP-009` Evidence screen (05 media flow, compress → presign → confirm) + submit-for-review
-- [ ] `TUT-AP-010` Verification status tracker (incl. rejection reason + resubmit path)
-- [ ] `TUT-AP-011` Matches list (tutor side) + interest CTA + staged contact/chat deep link after accept
-- [ ] `TUT-AP-012` Push deep links (`tuition_match` / `tuition_interest` / `tuition_verification`) wired to 06 payloads
-- [ ] `TUT-AP-013` Premium upsell screen (P2, disabled CTA, `TODO: Confirm` benefits)
-- [ ] `TUT-AP-014` Offline queue for wizard posts + §8 refusal copy
-- [ ] `TUT-AP-015` bn/en strings `tuition.*` verified on-device; bn numerals for ৳ + dates
-- [ ] `TUT-AP-016` Maestro specs for `06` §9 (post → interest → accept → chat) + reduced-motion pass
+- [x] `TUT-AP-001` Marketplace home (Find-a-tutor card, entries, `VerifiedGate`) — 2026-10-03 (Find card, entries with counts, `VerifiedGate`)
+- [x] `TUT-AP-002` Post-requirement wizard (4 steps, shared zod, summary review, offline queue) — 2026-10-03 (4 steps over `schemas/tuition.ts` + `wizard.ts` state machine, summary review, offline queue banner)
+- [x] `TUT-AP-003` Location picker modal (pin + text fallback, bounds validation) — 2026-10-03 (text-area alternative + suggested in-bounds pin; map canvas + expo-location at Stage 5 — never pointer-only per §7)
+- [x] `TUT-AP-004` My requirements list (status chips, interested counts, expiry countdown) — 2026-10-03 (status chips, interested counts, days-left)
+- [x] `TUT-AP-005` Requirement detail + interested tutors + accept dialog + matched/expired states — 2026-10-03 (interested cards public-safe + badge, accept confirm, matched/expired states, CONFLICT toast)
+- [x] `TUT-AP-006` Tutor browse (filters, verified chip locked ON, area empty state bn/en) — 2026-10-03 (filters, verified chip locked ON, bn/en empty state)
+- [x] `TUT-AP-007` Tutor public profile (public-safe DTO render, request-as-tutor CTA → pre-filled wizard) — 2026-10-03 (public-safe DTO render; contact renders only when the payload carries it — INV-4; request-as-tutor CTA pre-fills the wizard)
+- [x] `TUT-AP-008` Tutor setup form (draft autosave, contact-regex guard messaging) — 2026-10-03 (draft-safe save; contact-regex guard messaging)
+- [x] `TUT-AP-009` Evidence screen (05 media flow, compress → presign → confirm) + submit-for-review — 2026-10-03 (flow + states complete; real 05 media pipeline at Stage 5 — G-2)
+- [x] `TUT-AP-010` Verification status tracker (incl. rejection reason + resubmit path) — 2026-10-03 (tracker incl. rejection reason + resubmit path)
+- [x] `TUT-AP-011` Matches list (tutor side) + interest CTA + staged contact/chat deep link after accept — 2026-10-03 (optimistic interest; staged contact + chat deep link after accept)
+- [x] `TUT-AP-012` Push deep links (`tuition_match` / `tuition_interest` / `tuition_verification`) wired to 06 payloads — 2026-10-03 (`deepLinkFor` extended additively — `tuition_match`/`interest`/`verification`; tests green)
+- [x] `TUT-AP-013` Premium upsell screen (P2, disabled CTA, `TODO: Confirm` benefits) — 2026-10-03 (৳৩০০/মাস per brd §7 proposal, benefits `TODO: Confirm`, disabled CTA)
+- [x] `TUT-AP-014` Offline queue for wizard posts + §8 refusal copy — 2026-10-03 (in-memory queue + `replayPendingPosts` tested; persisted store Stage 5 — G-3)
+- [x] `TUT-AP-015` bn/en strings `tuition.*` verified on-device; bn numerals for ৳ + dates — 2026-10-03 (bn/en catalogs complete; bn numerals via Intl; on-device read rides Gate 1)
+- [x] `TUT-AP-016` Maestro specs for `06` §9 (post → interest → accept → chat) + reduced-motion pass — 2026-10-03 (`.maestro/tuition-golden-path.yaml` written; run pending owner — G-1)

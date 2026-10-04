@@ -325,5 +325,6 @@ items keep their `TODO: Confirm` marker.
 
 | Date | Change | Author |
 | --- | --- | --- |
+| 2026-10-04 | Build executed contract-first: 17 routes + 24 `Ads*` schemas (public events routes `security: []`); targeting JSONB struct-constrained to demographic keys (BR-003); dispatch job = status gate → budget auto-pause → 7-day per-topic cap → topic expansion → server-injected "স্পনসর্ড \| Sponsored" labelled BroadcastTopic → batched pseudized impression rows + spend accrual; aggregate-only analytics via `ads_daily`; ticket reservation = row-locked capacity CTE, free→paid instantly, 10% commission on paid only; event moderation states added per OQ-7; additive `campaign` push type in 06's builder; migrations `20270220100000–101000`. App surface = recorded gap (OQ-3). | Kilo |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
 | 2026-09-30 | Consistency pass: migrations re-versioned `20270220…` (after 12); `hierarchy.AudienceCount` declared by 04 with `Streams` (04 `sections.stream`) for BR-05 | Claude |

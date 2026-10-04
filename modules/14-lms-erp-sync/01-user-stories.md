@@ -3,13 +3,32 @@
 **Module:** `14-lms-erp-sync`
 **Status:** 📝 Spec drafted 2026-09-30
 **Owner:** Rahul (product owner)
-**Last updated:** 2026-09-30
+**Last updated:** 2026-10-03
 
 ---
 
 ## 1. Purpose
 
-Gives School Admins two self-serve ways to keep the platform roster in step with the school's own systems (`brd.md` §4 in-scope LMS/ERP sync, PRD §3 Phase 2/3): a portal-generated CSV/Excel upload with dry-run validation, and inbound REST webhooks for live sync. Both are idempotent, produce row-level reconciliation reports, and sit behind the B2B SaaS licence gate (`brd.md` §7).
+Gives **Institution Admins** **three** self-serve ways to keep the platform roster in step with an
+**educational institution’s** own systems (`brd.md` §4 in-scope LMS/ERP sync, PRD §3 Phase 2/3).
+Product noun = educational institution (UI **Institution** / **প্রতিষ্ঠান**); types via
+`institution_type` — see [`terminology-institution.md`](./terminology-institution.md).
+
+1. Portal-generated CSV/Excel upload with dry-run validation.
+2. Inbound REST webhooks (LMS → Kushol) for event-driven sync.
+3. **LMS pull connector** (Kushol → LMS): Institution Admin configures the LMS API base URL, auth
+   (Bearer or API key), optional per-resource method/path overrides, cron schedule + **Sync now**;
+   Kushol fetches `/teachers`, `/students`, `/sections` (classes nested), `/sections/{id}`
+   (teacher/student ids), and optionally `/notices`, then upserts people + enrollments and ensures
+   **section chat groups** have the class teacher as admin and enrolled students as members.
+   (`institution_type` is set on the Kushol tenant, not pulled.)
+
+All paths are idempotent, produce reconciliation evidence, and sit behind the B2B SaaS licence gate
+(`brd.md` §7). Partner brief: [`vendor-lms-api-spec.md`](./vendor-lms-api-spec.md). Plan:
+[`lms-pull-integration-plan.md`](./lms-pull-integration-plan.md).
+
+> **Note:** Older stories below may still say “School Admin” / `/school/…` / `schoolId` — those are
+> **deferred renames** (terminology §5). New pull work uses Institution wording.
 
 ## 2. Actors
 
@@ -19,8 +38,8 @@ Gives School Admins two self-serve ways to keep the platform roster in step with
 | School Admin | Downloads the template, uploads CSV/Excel, reviews dry-run reports, commits imports, registers/tests/rotates ERP endpoints, reads event logs + reconciliation |
 | Super Admin | No routine surface — owns the per-school sync licence flag (via 07) and reads audit trails |
 | Vendor / EdTech brand | No access — nothing in this module is vendor-reachable |
-| School's LMS/ERP system | External counterparty: POSTs HMAC-signed events (`student.upserted`, `enrollment.changed`, `staff.upserted`) to `POST /api/v1/webhooks/erp/{schoolId}` |
-| System (jobs, webhooks) | Runs import validation/commit jobs (01 `jobs`), records audit entries, enforces replay window + rate limits |
+| School's LMS/ERP system | (a) Exposes the vendor pull API for Kushol to GET; and/or (b) POSTs HMAC-signed events to `POST /api/v1/webhooks/erp/{schoolId}` |
+| System (jobs, webhooks) | Runs import validation/commit jobs, **LMS pull sync jobs**, records audit entries, enforces replay window + rate limits |
 
 ## 3. Scope
 
@@ -34,14 +53,16 @@ Gives School Admins two self-serve ways to keep the platform roster in step with
 - ERP webhook endpoints: register (secret shown once, bn+en warning), test event, rotation (versioned + overlap), revoke, delivery log, redrive (P1).
 - Inbound webhook ingestion — unauthenticated-but-HMAC-signed (documented exception, module 12 pattern): HMAC-SHA256, ±5-min window, 60 events/min/school.
 - Monthly reconciliation report (last import vs platform roster, drift flagged); bn/en i18n (`sync.*`, `validation.*`).
+- **LMS pull connector** (plan 2026-10-03): encrypted connection config, test probe, scheduled + Sync-now pull against vendor API, map/upsert via 03/04, section group admin/members via 04→05 chain; stories outline `LMS-US-013`–`019` in `lms-pull-integration-plan.md` §10 (fold into this file at build).
 
 **Out of scope** (explicit — prevents scope drift)
 
 - Verification decisions — module 03 (`verification_requests` never written here).
 - Enrollment/group/topic application internals — the 04/05/06 chain (14 calls 04 exports only).
-- Outbound sync to schools' systems — inbound only at launch.
+- Pushing Kushol chat/notice data **into** the school's LMS (roster pull only).
 - Fee/payment, ads, marketplace sync — modules 12/13/10/11.
 - mTLS/OAuth webhook auth — HMAC-SHA256 chosen (README default); revisit needs an ADR.
+- Interactive OAuth browser flows for school LMS (v1 = Bearer / API key only).
 - Mobile app screens — web-only (README scope `api` `web`).
 
 **Depends on**
@@ -263,3 +284,6 @@ Gives School Admins two self-serve ways to keep the platform roster in step with
 | 5 | Idempotency — `X-Kushol-Event-Id` (UUID); duplicates return the original result as 200 `duplicate` | Rahul | Open (default accepted) | Exactly the default (`LMS-BR-011`) |
 | 6 | Rate ceiling 60 events/min/school; 429 + `Retry-After` beyond | Rahul | Open (default accepted) | Exactly the default (`LMS-BR-012`) |
 | 7 | Licence-flag provisioning UX (07 tenants screen?) + pilot defaults | Rahul | Open | Flag ON for pilot schools; managed via 07 (`LMS-BR-014`) |
+| 8 | LMS partner default: pull API vs inbound webhook | Rahul | Open (default accepted 2026-10-03) | **Pull** for new LMS partners; webhook remains supported; vendor brief = `vendor-lms-api-spec.md` |
+| 9 | Kushol admin route style for LMS connections | Rahul | Open | Prefer claim-scoped `…/lms/connections*`; path prefix `/school/` → `/institution/` when terminology migration runs |
+| 10 | Rename FCM `school-{id}` → `institution-{id}` | Rahul | Open — follow-up gap (module 06) | Defer; requires device resubscribe / backfill; do not block LMS vendor brief |

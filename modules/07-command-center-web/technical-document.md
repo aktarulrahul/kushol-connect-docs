@@ -307,3 +307,4 @@ All errors surface as RFC-7807 `application/problem+json`; user-visible messages
 | --- | --- | --- |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
 | 2026-09-30 | Consistency pass: vendor portal login = 03 `vendor` role created by `users.CreateVendorLogin` on approval; exports `vendors.AccountForUser` + `RequireApprovedVendor` for 11/13; stub routes renamed to owners' names (`/school/ai-matrix` — Teacher access to own sections, `/school/integrations`), `/school/sections/[sectionId]` added; UI direction = professional SaaS landing + admin console (`docs/design-reference/README.md` §7) | Claude |
+| 2026-10-03 | Build Stages 2–4: fixture UI for landing/admin/school/vendor; migrations `20261015090000–091000`; `leads`/`vendors`/`webconsole` services + console handlers; unit tests green; Gate 2 pending owner migrate | Cursor |

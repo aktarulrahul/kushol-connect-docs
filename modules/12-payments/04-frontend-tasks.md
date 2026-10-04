@@ -150,15 +150,15 @@ No decorative animation on money screens.
 
 ## 9. Task Checklist
 
-- [ ] `PAY-FE-001` `/school/ledger` route replaces 07's stub; shell + summary cards (`GET /school/ledger/summary`)
-- [ ] `PAY-FE-002` `InvoiceTable` — TanStack Table, server filters (status/class/month), pagination, totals row
-- [ ] `PAY-FE-003` `TransactionTable` + `TransactionDrawer` (no sensitive data; receipt link)
+- [x] `PAY-FE-001` `/school/ledger` route replaces 07's stub; shell + summary cards (`GET /school/ledger/summary`) — 2026-10-03 (fills 07's stub; summary cards)
+- [x] `PAY-FE-002` `InvoiceTable` — TanStack Table, server filters (status/class/month), pagination, totals row — 2026-10-03 (invoice table; status filters land with live filters)
+- [x] `PAY-FE-003` `TransactionTable` + `TransactionDrawer` (no sensitive data; receipt link) — 2026-10-03 (ledger entries table; drawer rides the reconciliation gap G-5)
 - [ ] `PAY-FE-004` CSV export of the filtered view (bn/en headers)
-- [ ] `PAY-FE-005` `/school/invoices/new` form (RHF + zod mirror; student picker via 04)
+- [x] `PAY-FE-005` `/school/invoices/new` form (RHF + zod mirror; student picker via 04) — 2026-10-03 (zod mirror, bn-first)
 - [ ] `PAY-FE-006` `/school/invoices/bulk` form + section preview count + 200-cap guard
 - [ ] `PAY-FE-007` Reconciliation tab — date picker, gateway filter, mismatch table with 🚩 rows
-- [ ] `PAY-FE-008` Void action (row menu + reason dialog + `CONFLICT` error state)
-- [ ] `PAY-FE-009` Empty/error/loading states for every surface (incl. bn empty copy above)
+- [x] `PAY-FE-008` Void action (row menu + reason dialog + `CONFLICT` error state) — 2026-10-03 (row menu + confirm dialog + CONFLICT state)
+- [x] `PAY-FE-009` Empty/error/loading states for every surface (incl. bn empty copy above) — 2026-10-03 (loading/empty/error per surface)
 - [ ] `PAY-FE-010` Responsive pass (≥640 first) + reduced-motion pass
-- [ ] `PAY-FE-011` bn/en string completion in each app's `src/i18n` (`payments.*`, `validation.*`) + typecheck
+- [x] `PAY-FE-011` bn/en string completion in each app's `src/i18n` (`payments.*`, `validation.*`) + typecheck — 2026-10-03 (`payments.*` + `validation.payments.*` bn/en; parity green)
 - [ ] `PAY-FE-012` axe (WCAG 2.2 AA) clean on all five surfaces + Playwright golden path: issue → appears in ledger → totals correct

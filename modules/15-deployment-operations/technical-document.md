@@ -363,6 +363,7 @@ Unconfirmed items keep their `TODO: Confirm` marker.
 
 | Date | Change | Author |
 | --- | --- | --- |
+| 2026-10-04 | Part B built (code-complete): `ops/{backup,restore,redaction-probe,uptime-check,maintenance}.sh`, `docs/{backups,secret-rotation,prod-wiring}.md`, maintenance mode end-to-end (Nginx 503 flag + web page + `NEXT_PUBLIC_MAINTENANCE_MODE`), EAS CI workflow, web-image CI reorder (G-12); deploy tests 77/77. Executions owner-run | Kilo |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
 | 2026-09-30 | Aligned with `docs/infra/architecture-and-deployment.md`: deploy never migrates (read-only `migrate-status` check; owner runs SQL — Gate 2); gate/smoke failure auto-rolls back (old containers are replaced by `compose up -d`); `worker` container; caps api 512m / worker 256m / web 512m / redis 256m; ports 8180/3100 (configurable); one server stack promoted pilot → prod; host-prep runbook `OPS-BE-016`; HestiaCP mail backups | Claude |
 | 2026-09-30 | Domain set: `kusholconnect.com` (web, apex; `www` 301 → apex) + `api.kusholconnect.com` (mobile API + WebSocket); web host also proxies `/api/*` → api so the web session cookie stays same-origin. Hostinger Docker Manager does not support the HestiaCP OS image — deploy with Docker Engine + Compose over SSH | Claude |

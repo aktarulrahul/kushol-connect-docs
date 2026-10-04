@@ -328,5 +328,6 @@ Consolidated from `01` §9 and `02` §11 — the table to review in module readi
 
 | Date | Change | Author |
 | --- | --- | --- |
+| 2026-10-03 | Build executed contract-first: 11 routes (incl. the `security: []` webhook exception with the verification order in-spec) + 24 schemas; webhook pipeline = signature+replay FIRST → envelope dedupe (UNIQUE gateway+event_id) → txn idempotency (UNIQUE gateway+gateway_txn_id) → server-to-server FetchStatus confirm → one tx (txn→success + balanced ledger + invoice→paid / 11-attach + receipt job); ledger append-only via trigger; convenience fee defaults 0/off (PAY-BR-008); `SandboxGateway` HMAC adapter exact + offline-testable, real adapters gated on merchant docs (ADR-1, G-2); receipts behind a `ReceiptRenderer` port (bn shaping spike = G-4); env `PAYMENTS_WEBHOOK_SECRET` added to config + tests; migrations `20270210090000–093000`. | Kilo |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
 | 2026-09-30 | Consistency pass: migrations re-versioned `20270210…` (after 11); convenience fee default BDT 0 per `brd.md` §7; success requires server-to-server `FetchStatus` confirmation (gateway webhook schemes `TODO: Confirm`); route `/school/payments/reconciliation` (was colliding with 14); guardian entitlement via 03 `guardians.IsGuardianOf`; `media.PutObject` now declared by 05 | Claude |

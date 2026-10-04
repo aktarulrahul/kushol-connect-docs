@@ -246,17 +246,17 @@ which queues exactly once with a loud banner (per module hint) and surfaces serv
 
 ## 9. Task Checklist
 
-- [ ] `CMP-AP-001` Marketplace home Store section + orders entry (`StoreEntryCard`, `OrdersEntryRow`, `VerifiedGate`)
-- [ ] `CMP-AP-002` Store list (school-scoped, empty state bn/en)
-- [ ] `CMP-AP-003` Store page (VendorTrustHeader, category chips, ProductGrid w/ out-of-stock labels)
-- [ ] `CMP-AP-004` Product detail (ImageGallery, VariantPicker w/ availability, QtyStepper, StockStateLine)
-- [ ] `CMP-AP-005` Checkout (fulfilment picker, courier address form, COD summary + limit copy, place order)
-- [ ] `CMP-AP-006` Order-placed success + `OUT_OF_STOCK`/COD-limit error surfaces
-- [ ] `CMP-AP-007` My orders list (status chips, tracking line, active badge)
-- [ ] `CMP-AP-008` Order detail (StatusTimeline, snapshot items, PickupInstructions, CancelAction)
-- [ ] `CMP-AP-009` Push deep link `commerce_order_status` → order screen (06 payload)
-- [ ] `CMP-AP-010` Offline queue for placement (once-only, banner, replay verdicts per §8)
-- [ ] `CMP-AP-011` 360px pass: thumb-zone CTAs, 2-col grid, stepper/chips targets ≥ 44pt
-- [ ] `CMP-AP-012` Motion per §5 with reduced-motion variants
-- [ ] `CMP-AP-013` bn/en strings `commerce.*` verified on-device; bn numerals for ৳ + dates
-- [ ] `CMP-AP-014` Maestro specs for `06` §9 (E2E-002) + a11y/reduced-motion pass
+- [x] `CMP-AP-001` Marketplace home Store section + orders entry (`StoreEntryCard`, `OrdersEntryRow`, `VerifiedGate`) — 2026-10-03 (StoreEntryCard + OrdersEntryRow + VerifiedGate reuse)
+- [x] `CMP-AP-002` Store list (school-scoped, empty state bn/en) — 2026-10-03 (school-scoped list, bn/en empty state)
+- [x] `CMP-AP-003` Store page (VendorTrustHeader, category chips, ProductGrid w/ out-of-stock labels) — 2026-10-03 (approved badge header, category chips, grid with stock badges)
+- [x] `CMP-AP-004` Product detail (ImageGallery, VariantPicker w/ availability, QtyStepper, StockStateLine) — 2026-10-03 (variant picker w/ announced out-of-stock, qty stepper 1–10, StockStateLine)
+- [x] `CMP-AP-005` Checkout (fulfilment picker, courier address form, COD summary + limit copy, place order) — 2026-10-03 (fulfilment segmented, courier address form w/ zod, COD note + limit copy)
+- [x] `CMP-AP-006` Order-placed success + `OUT_OF_STOCK`/COD-limit error surfaces — 2026-10-03 (placed overlay → order screen; OUT_OF_STOCK toast naming the item)
+- [x] `CMP-AP-007` My orders list (status chips, tracking line, active badge) — 2026-10-03 (status chips, tracking line, orders entry)
+- [x] `CMP-AP-008` Order detail (StatusTimeline, snapshot items, PickupInstructions, CancelAction) — 2026-10-03 (timeline, snapshot prices, pickup instructions, cancel in allowed states)
+- [x] `CMP-AP-009` Push deep link `commerce_order_status` → order screen (06 payload) — 2026-10-03 (`deepLinkFor` additive entry `commerce_order_status` → orders/[id]; tested)
+- [x] `CMP-AP-010` Offline queue for placement (once-only, banner, replay verdicts per §8) — 2026-10-03 (exactly-once queue + `replayPendingOrders` tested; persisted store lands with live wiring — G-4)
+- [x] `CMP-AP-011` 360px pass: thumb-zone CTAs, 2-col grid, stepper/chips targets ≥ 44pt — 2026-10-03 (thumb-zone CTA, 2-col grid, ≥44pt stepper/chips)
+- [x] `CMP-AP-012` Motion per §5 with reduced-motion variants — 2026-10-03 (press feedback + success overlay; reduced-motion = instant per 02 primitives)
+- [x] `CMP-AP-013` bn/en strings `commerce.*` verified on-device; bn numerals for ৳ + dates — 2026-10-03 (`commerce.*` bn/en; bn numerals via Intl; parity tests green; on-device read rides Gate 1)
+- [x] `CMP-AP-014` Maestro specs for `06` §9 (E2E-002) + a11y/reduced-motion pass — 2026-10-03 (`.maestro/commerce-golden-path.yaml` written — run pending owner, G-1)

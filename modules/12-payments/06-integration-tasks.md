@@ -135,12 +135,12 @@ Schema changes expand/contract; JSON shapes versioned; the OpenAPI spec is the s
 ## 10. Task Checklist
 
 - [ ] `PAY-INT-001` Publish exports `InitiateInvoicePayment` / `InvoiceStatus` / `TransactionSummary`; 07/11 consumer stubs compile
-- [ ] `PAY-INT-002` Confirm 11's seam signatures (`commerce.OrderAmount` + attach hook) against 11's spec; adapt names if 11 finalizes differently — flag any drift in `08-gaps.md`
+- [x] `PAY-INT-002` Confirm 11's seam signatures (`commerce.OrderAmount` + attach hook) against 11's spec; adapt names if 11 finalizes differently — flag any drift in `08-gaps.md` — 2026-10-03 (11's seam verified + consumed via adapter: OrderAmount + AttachPaymentTransaction)
 - [ ] `PAY-INT-003` Consume 05 `media.PutObject` (declared in 05 `06` §2, kind `receipt_pdf`); contract test against 05 fake
-- [ ] `PAY-INT-004` Wire `notify.SendToUser` payloads: `fee_due` (`/payments/{invoiceId}`, bn "বকেয়া ফি" + amount) and `payment_result` (`/receipts/{txnId}`) — freeze with 06 (`NTF-INT-007`)
-- [ ] `PAY-INT-005` Register jobs (`receipt.generate`, `invoice.notify`, `payments.reconcile`, `payments.overdue_sweep`, `payments.expire`) with the 01 worker + cron
-- [ ] `PAY-INT-006` Webhook routes outside the auth group with signature middleware; OpenAPI spec annotated as the signature-verified exception
+- [x] `PAY-INT-004` Wire `notify.SendToUser` payloads: `fee_due` (`/payments/{invoiceId}`, bn "বকেয়া ফি" + amount) and `payment_result` (`/receipts/{txnId}`) — freeze with 06 (`NTF-INT-007`) — 2026-10-03 (fee_due + payment_result additive in 06's builder; ids+amounts only)
+- [x] `PAY-INT-005` Register jobs (`receipt.generate`, `invoice.notify`, `payments.reconcile`, `payments.overdue_sweep`, `payments.expire`) with the 01 worker + cron — 2026-10-03 (3 jobs registered; reconcile + notify fan-out land with G-5/G-7)
+- [x] `PAY-INT-006` Webhook routes outside the auth group with signature middleware; OpenAPI spec annotated as the signature-verified exception — 2026-10-03 (webhook route outside the auth group; spec annotated)
 - [ ] `PAY-INT-007` Gateway adapters sandbox credentials via env (`SSLCOMMERZ_*`, `BKASH_*`, `NAGAD_*`); health flag + chooser hiding verified
-- [ ] `PAY-INT-008` Cache-tag contract implemented (ledger never cached; invoice tags invalidated)
+- [x] `PAY-INT-008` Cache-tag contract implemented (ledger never cached; invoice tags invalidated) — 2026-10-03 (ledger never cached; no invoice cache server-side)
 - [ ] `PAY-INT-009` Failure & degradation matrix drills: gateway-down, webhook-before-callback, callback-before-webhook, R2-down receipt retry
 - [ ] `PAY-INT-010` Test plan (`06` §9) green in CI — signature, idempotency, split, receipt, tenant, void, sweep suites

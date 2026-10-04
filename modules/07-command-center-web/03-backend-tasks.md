@@ -203,18 +203,18 @@ publish guard blocks `TODO:`; public reads never return drafts.
 
 ### Schema
 
-- [ ] `WEB-BE-001`–`WEB-BE-002` migrations 1–2 (`landing_leads`, `vendor_accounts`)
-- [ ] `WEB-BE-011`–`WEB-BE-012` sqlc queries + repositories (status-guarded transitions)
+- [x] `WEB-BE-001`–`WEB-BE-002` migrations 1–2 (`landing_leads`, `vendor_accounts`) — 2026-10-03
+- [x] `WEB-BE-011`–`WEB-BE-012` sqlc queries + repositories (status-guarded transitions) — 2026-10-03
 - [ ] `WEB-BE-014` seed loader (fictional demo data)
 
 ### Repository · Service · Entry points · Seed · Tests
 
-- [ ] `WEB-BE-010` OpenAPI paths #1–#9 + schemas; regenerate Go + TS clients
-- [ ] `WEB-BE-003`/`WEB-BE-004` leads admin services + `PATCH /admin/leads/{id}`
-- [ ] `WEB-BE-001` public `POST /leads` (+ `leads` rate-limit class wired to 01 limiter)
-- [ ] `WEB-BE-002` `POST /vendor/register` atomic create
-- [ ] `WEB-BE-005`/`WEB-BE-006` vendor list + approve/reject/suspend with audit
-- [ ] `WEB-BE-007`/`WEB-BE-008` stats services + additive count exports agreed with 03/04/05
-- [ ] `WEB-BE-009` `GET /admin/audit-log` over 01's scoped list queries
-- [ ] `WEB-BE-013` stats aggregates
-- [ ] Tests `WEB-UT-001`–`005`, `WEB-IT-001`–`006` green in CI
+- [x] `WEB-BE-010` OpenAPI paths #1–#9 + schemas; regenerate Go + TS clients — 2026-10-03
+- [x] `WEB-BE-003`/`WEB-BE-004` leads admin services + `PATCH /admin/leads/<built-in function id>` — 2026-10-03
+- [x] `WEB-BE-001` public `POST /leads` (+ `leads` rate-limit class wired to 01 limiter) — 2026-10-03
+- [x] `WEB-BE-002` `POST /vendor/register` atomic create — 2026-10-03
+- [x] `WEB-BE-005`/`WEB-BE-006` vendor list + approve/reject/suspend with audit — 2026-10-03
+- [x] `WEB-BE-007`/`WEB-BE-008` stats services + additive count exports agreed with 03/04/05 — 2026-10-03
+- [x] `WEB-BE-009` `GET /admin/audit-log` over 01's scoped list queries — 2026-10-03
+- [x] `WEB-BE-013` stats aggregates — 2026-10-03
+- [x] Tests `WEB-UT-001`–`005` unit green — 2026-10-03; `WEB-IT-001`–`006` pending owner (containers)

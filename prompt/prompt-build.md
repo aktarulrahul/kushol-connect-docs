@@ -4,8 +4,8 @@ One prompt for every module. Set the parameters, then run it with an AI coding a
 by hand).
 
 ```text
-MODULE   = 05-communication-engine         # folder name under docs/modules/
-TODAY    = 2026-10-01              # ISO date used when ticking checklist items and in progress notes
+MODULE   = 11-campus-commerce         # folder name under docs/modules/
+TODAY    = 2026-10-03              # ISO date used when ticking checklist items and in progress notes
 APPROVAL = required                # required → stop after the Stage 1 plan · pre-approved → continue after planning
 ```
 

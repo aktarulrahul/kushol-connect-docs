@@ -20,9 +20,9 @@
 | VPS | Hostinger **KVM 2**, id `1100749`, `srv1100749.hstgr.cloud`, 2 vCPU / 8 GB RAM / 100 GB disk, IPv4 `72.61.114.20`, IPv6 `2a02:4780:5e:99d7::1`, running since 2025-11-02 | Hostinger VPS API |
 | VPS OS image | "Ubuntu 24.04 with HestiaCP" — shared with 2 other applications | Hostinger VPS API + `tech-stack.md` |
 | Docker Manager | **Not available** on this image (`[VPS:2044] Currently installed operating system does not support Docker Manager`) | Hostinger VPS API |
-| VPS data centre | id `21` — **location not yet confirmed** (API check blocked) | `TODO: Confirm` in hPanel → VPS → Overview |
+| VPS data centre | id `21` = **Kuala Lumpur, Malaysia** (~5–10 ms to Neon Singapore) | Hostinger VPS API, 2026-10-02 |
 | Domain | `kusholconnect.com`, registrar Hostinger, created 2026-09-29, expires 2029-09-29, auto-renew on | WHOIS + billing API |
-| Domain DNS today | **Parked**: NS `horizon.dns-parking.com` / `orbit.dns-parking.com`; `@` and `www` → `2.57.91.91` (Hostinger parking); no MX; no `api` record | `dig` |
+| Domain DNS today | **Parked**: NS `horizon.dns-parking.com` / `orbit.dns-parking.com` — these are **Hostinger's DNS nameservers**, the zone is editable in hPanel/API; `@ A 2.57.91.91` (parking), `www CNAME kusholconnect.com`; no MX; no `api` record | `dig` + Hostinger DNS API (2026-10-02) |
 | Other subscriptions | Premium Web Hosting (in trial, renews 2026-11-09) — not used for Kushol | Hostinger billing API |
 | Email | **Owner decision 2026-09-30: mail for `kusholconnect.com` is managed by HestiaCP's mail server on the KVM 2** (Exim + Dovecot, webmail) | owner |
 | Code | Each application is its own git repo (`applications/api`, `web`, `app`, `ai`; no shared package — owner 2026-09-30). The api, web and app repos are scaffolded by module 01 (nothing committed yet); nothing deployable yet | workspace |
@@ -34,7 +34,7 @@ Severity: **H** = would break or cause an outage/security issue · **M** = real 
 
 | # | Sev | Finding | Resolution | Status |
 | --- | --- | --- | --- | --- |
-| F1 | H | VPS ↔ Neon latency: every api request makes several DB round trips; if the VPS is not in Asia, each costs ~150–250 ms | Put Neon in the region nearest the VPS (Neon region is a project setting; moving the shared VPS is not) | **Decision** after confirming VPS location |
+| F1 | H | VPS ↔ Neon latency: every api request makes several DB round trips; if the VPS is not in Asia, each costs ~150–250 ms | Put Neon in the region nearest the VPS (Neon region is a project setting; moving the shared VPS is not) | **Resolved 2026-10-02**: VPS in Kuala Lumpur, Neon in Singapore |
 | F2 | H | 15's `deploy.sh` runs `migrate up`, contradicting "owner runs SQL manually" (Gate 2) | Deploy **verifies** DB schema version ≥ the image's expected version and refuses otherwise; never applies migrations | Applied (§9) |
 | F3 | H | Rollback claim "old containers keep serving" is false — `compose up -d` replaces them before the gate | Pilot: accept a short restart blip + automatic rollback on gate failure. Later: blue/green slots (§5.7) | Applied (§9) |
 | F4 | H | Web auth across subdomains: 03's host-only `__Host-` session cookie set by `api.` cannot be read by the web server on another host; `NEXT_PUBLIC_API_URL` bakes the API host into the image | Same-origin: `kusholconnect.com/api/*` → api; server-side calls via `API_INTERNAL_URL` | **Done in docs** (03, 07, 15) |
@@ -51,7 +51,7 @@ Severity: **H** = would break or cause an outage/security issue · **M** = real 
 | F15 | L | `@react-native-firebase` means EAS development builds (no Expo Go) | State in tech-stack | Applied (§9) |
 | F16 | L | Consider River (Postgres job queue for Go) instead of hand-building 01's `jobs` | Evaluated in 01 Stage 1: keep the spec'd hand-built queue (River brings its own schema/migration tooling and maintenance loops that clash with owner-run migrations and Neon idle) | Decided (01, 2026-09-30) |
 | F17 | M | Self-hosted mail on a shared VPS: deliverability depends on reverse DNS, SPF/DKIM/DMARC and the IP's reputation; ClamAV/SpamAssassin use RAM on the same 8 GB box | §7.2 checklist (PTR = `mail.kusholconnect.com`, DKIM from HestiaCP, DMARC), include the mail stack in the memory budget, verify outbound port 25 is open on the VPS | Owner actions §8 |
-| F18 | M | With one repo per application there is no monorepo home for `docker-compose.yml`, `deploy/hestia/` templates, `ops/` scripts and the release log | Options: keep them in the api repo under `deploy/` (simplest), or a small separate `ops` repo; each app repo's CI builds and pushes only its own image | Owner decision (§8 #9) |
+| F18 | M | With one repo per application there is no monorepo home for `docker-compose.yml`, `deploy/hestia/` templates, `ops/` scripts and the release log | Options: keep them in the api repo under `deploy/` (simplest), or a small separate `ops` repo; each app repo's CI builds and pushes only its own image | **Default taken 2026-10-02**: api repo `deploy/` (15 ADR-1); owner may still move it |
 | F19 | M | Behind Docker port publishing the api sees the bridge gateway (not 127.0.0.1) as the TCP peer, so a loopback-only proxy trust list would ignore Nginx's `X-Forwarded-For` and rate-limit everyone as one IP | 01 adds `TRUSTED_PROXIES` (IPs/CIDRs, default loopback); 15's Compose sets it to the project network CIDR (fixed subnet in `docker-compose.yml`) | Applied in 01; 15 to set |
 
 ## 3. Target architecture
@@ -126,6 +126,12 @@ pre-release checks.
 
 ## 5. Deployment plan — Hostinger KVM 2 (Docker Engine + Compose, behind HestiaCP)
 
+> **Built 2026-10-02 (module 15 Part A).** The implementation and its documentation live in the api
+> repo: runbook `applications/api/deploy/DEPLOYMENT.md`; reference `deploy/docs/images.md` (build +
+> GHCR), `stack.md` (Compose, layout, config, security), `scripts.md`, `hestia.md` (Nginx, TLS, mail).
+> This section keeps the planning rationale; where they differ, the built files and those documents
+> win (decisions: `docs/modules/15-deployment-operations/07-progress.md` ADR-1…13).
+
 ### 5.1 One-time host checks (owner, via SSH)
 
 ```bash
@@ -141,16 +147,20 @@ Record results in `docs/modules/15-deployment-operations/07-progress.md` when mo
 
 ### 5.2 Host preparation
 
-1. **Docker Engine + Compose plugin** from Docker's official apt repository (not the snap).
-   Enable log rotation in `/etc/docker/daemon.json`: `json-file`, `max-size 10m`, `max-file 5`.
+1. **Docker Engine + Compose plugin** from Docker's official apt repository (not the snap) — installed
+   by `host/prepare-host.sh` only when missing. Log rotation (`json-file`, 10 MB × 5) is set per
+   service in `compose.yaml`, not in `/etc/docker/daemon.json`, so Docker is never restarted under the
+   co-tenant apps (15 ADR-5).
 2. **Deploy user** `kushol` (non-root, in the `docker` group), SSH key-only; HestiaCP fail2ban
    already covers SSH.
 3. **Swap file** 2 GB if none exists (protects co-tenants from OOM spikes).
-4. **Directories:** `/opt/kushol/` → `docker-compose.yml`, `.env` (chmod 600, owner root),
-   `ops/` scripts, `releases.log`.
-5. **GHCR pull token** (read-only) in `/opt/kushol/.env`; `docker login ghcr.io`.
+4. **Directories:** `/opt/kushol/` → `compose.yaml`, `env/{stack,api,web}.env` (0600 in a 0700 dir,
+   owned by the deploy user — 15 ADR-3), `ops/` scripts, `state/` (`release.env`, `releases.log`,
+   `incidents.log`).
+5. **GHCR pull token** (classic PAT, `read:packages`): `docker login ghcr.io` as the deploy user —
+   stored in its Docker config, not in an env file.
 
-### 5.3 Compose file (shape — final file lands with module 15 Part A)
+### 5.3 Compose file (planning shape — final file: `applications/api/deploy/compose.yaml`)
 
 ```yaml
 name: kushol
@@ -213,11 +223,14 @@ services:
 | Step | Where | Detail |
 | --- | --- | --- |
 | Quality gate | GitHub Actions | api: `gofmt`, `golangci-lint`, `go vet`, `go test`, testcontainers ITs · web/app: lint, typecheck, test, build · contract drift check · gitleaks |
-| Images | GitHub Actions → GHCR, one workflow per app repo | `kushol-api` (api repo), `kushol-web` (web repo); tag `main-<sha7>` (immutable); multi-arch not needed (amd64); base images pinned by digest |
-| Deploy | Operator runs `ops/deploy.sh <tag>` over SSH (manual, pilot) | Optional later: GitHub Actions job with an SSH key restricted to that script |
+| Images | GitHub Actions → GHCR, one workflow per app repo | `kushol-api` (api repo), `kushol-web` (web repo); tag `main-<sha7>` (immutable) + `latest`; `linux/amd64`; base images pinned by digest. **Built 2026-10-02**: job `image` in each repo's `ci.yml`, after gate + gitleaks (+ deploy-bundle in api) — `deploy/docs/images.md` |
+| Deploy | Operator runs `ops/deploy.sh pilot api=<tag> web=<tag>` over SSH as `kushol` (manual, pilot) | Optional later: GitHub Actions job with an SSH key restricted to that script |
 | Mobile | EAS Build/Submit | profiles development/preview/production; `EXPO_PUBLIC_API_URL=https://api.kusholconnect.com` for preview/production |
 
 ### 5.6 Deploy script behaviour (fixes F2)
+
+Built as `ops/deploy.sh <env> [api=<tag>] [web=<tag>]` (two tags — one per repo); full behaviour in
+`deploy/docs/scripts.md`. Planning outline:
 
 ```text
 ops/deploy.sh <tag>
@@ -279,13 +292,13 @@ or approves when the `hostinger-dns` connector is reconnected):
 | A | `@` | `72.61.114.20` | web |
 | A | `www` | `72.61.114.20` | redirect to apex |
 | A | `api` | `72.61.114.20` | mobile API + WebSocket + webhooks |
-| AAAA | `@`, `www`, `api` | `2a02:4780:5e:99d7::1` | IPv6 (optional; only if Nginx listens on IPv6) |
+| AAAA | `@`, `www`, `api` | — **not added** | HestiaCP's vhosts listen on IPv4 only (15 ADR-6) |
 | A | `mail` | `72.61.114.20` | HestiaCP mail host (SMTP/IMAP, Let's Encrypt cert) |
 | A | `webmail` | `72.61.114.20` | HestiaCP webmail |
 | MX | `@` | `10 mail.kusholconnect.com` | inbound mail to HestiaCP |
-| TXT | `@` | `v=spf1 a mx ip4:72.61.114.20 ip6:2a02:4780:5e:99d7::1 -all` (drop `ip6` if mail isn't sent over IPv6) | SPF — **one** record only |
+| TXT | `@` | `v=spf1 mx ip4:72.61.114.20 ip6:2a02:4780:5e:99d7::1 -all` (keep `ip6`: the host has IPv6 and Exim uses it) | SPF — **one** record only |
 | TXT | `mail._domainkey` | public key HestiaCP generates for the mail domain (Mail → domain → DNS records / DKIM) | DKIM |
-| PTR (set in hPanel/VPS API, not in the zone) | `72.61.114.20` (+ IPv6) | `mail.kusholconnect.com` | reverse DNS — currently `srv1100749.hstgr.cloud`; **shared with the 2 co-tenant apps**, so check whether they send mail under another name before changing it |
+| PTR (not in the zone) | `72.61.114.20` (+ IPv6) | **unchanged: `srv1100749.hstgr.cloud`** | Decided 2026-10-02 (15 ADR-6): it already resolves back to the server on IPv4 and IPv6 (FCrDNS passes), it is shared with the 2 co-tenant apps, and SPF + DKIM carry the `kusholconnect.com` identity |
 | TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:dmarc@kusholconnect.com` → tighten to `quarantine` after 2–4 weeks of clean reports | DMARC |
 | CAA (optional) | `@` | `0 issue "letsencrypt.org"` | restrict certificate issuers |
 
@@ -315,7 +328,8 @@ Mail for `kusholconnect.com` runs on the KVM 2 under HestiaCP (Exim for SMTP, Do
 webmail, optional SpamAssassin/ClamAV). It is independent of Docker: the Kushol containers never
 bind ports 25/465/587/993.
 
-**Setup checklist (owner — the agent does not create accounts or set passwords):**
+**Setup checklist (owner — the agent does not create accounts or set passwords).** Steps 1–5, 7 and the
+DNS values are scripted in `applications/api/deploy/hestia/setup-mail.sh` (runbook `deploy/DEPLOYMENT.md` §5):
 
 1. HestiaCP → **Mail** → *Add mail domain* `kusholconnect.com` — enable DKIM, anti-spam, and
    (if RAM allows) anti-virus; enable SSL (Let's Encrypt) for `mail.kusholconnect.com`.
@@ -326,12 +340,11 @@ bind ports 25/465/587/993.
    shared privately with each person; set a quota per mailbox).
 4. Create `hello` as a **forwarder/alias** to the people who answer enquiries (or a mailbox if a
    shared login is preferred). Add `dmarc`, `postmaster` and `abuse` as forwarders.
-5. Create `noreply` as a **mailbox** (the app authenticates to SMTP with it — §7.3); set an
-   autoreply ("this address is not monitored — write to hello@kusholconnect.com") or discard
-   filter.
-6. Reverse DNS: set the PTR of `72.61.114.20` to `mail.kusholconnect.com` (hPanel → VPS → Settings,
-   or the Hostinger VPS API) — **coordinate with the 2 co-tenant apps** first, because one IP has
-   only one PTR.
+5. Create `noreply` as a **mailbox** (the app authenticates to SMTP with it — §7.3) with a small
+   quota and **no autoreply** — autoreplies to spam would send backscatter from the shared IP
+   (15 ADR-7); app mail carries `Reply-To: hello@kusholconnect.com` instead.
+6. Reverse DNS: **leave the PTR as `srv1100749.hstgr.cloud`** (decided 2026-10-02, 15 ADR-6) — it
+   already resolves back to the server on IPv4 and IPv6 and is shared with the 2 co-tenant apps.
 7. Check outbound port 25 is open from the VPS (`nc -vz gmail-smtp-in.l.google.com 25`); if the
    provider blocks it, request unblocking or relay via a smarthost.
 8. Verify: send to a Gmail and an Outlook address, check headers for `spf=pass`, `dkim=pass`,
@@ -397,3 +410,5 @@ for mail as well as the app.
 | 2026-09-30 | Email switched to HestiaCP's mail server per owner (§7.2 checklist, SMTP-based app mail, F17, mail DNS/PTR records) | Claude |
 | 2026-09-30 | Isolated application repos (owner): per-repo image builds, F18 (home for deploy files), F19 (`TRUSTED_PROXIES` behind Docker), F16 decided | Claude |
 | 2026-09-30 | §8 item 1: Neon project created in Singapore (Postgres 18); Neon tooling (`neon.ts`, link context) lives in the api repo | Claude |
+| 2026-10-02 | Module 15 Part A built (`applications/api/deploy/`, runbook `DEPLOYMENT.md`): VPS location confirmed (F1 closed), F18 default, PTR left unchanged, SPF keeps `ip6`, no AAAA for web names, DNS stays at Hostinger | Claude |
+| 2026-10-02 | §5 points to the built implementation and its reference docs (`deploy/docs/`); §5.2 updated (per-service log rotation, env file ownership, GHCR login) | Claude |

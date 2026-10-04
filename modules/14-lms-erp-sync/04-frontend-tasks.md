@@ -219,19 +219,19 @@ en). Representative catalog entries:
 
 ## 9. Task Checklist
 
-- [ ] `LMS-FE-001` `/school/roster` home (cards + history table + polling) — ____
-- [ ] `LMS-FE-002` wizard step 1: template download + bn/en instruction explainer — ____
-- [ ] `LMS-FE-003` wizard step 2: upload (05 presign flow) + `dryRun` toggle + progress — ____
-- [ ] `LMS-FE-004` wizard step 3: dry-run report (error table + error-CSV) + hash no-op panel — ____
-- [ ] `LMS-FE-005` commit action + summary panel + totals toast — ____
-- [ ] `LMS-FE-006` `/school/roster/imports/[id]` detail (status, totals, error rows, commit button) — ____
-- [ ] `LMS-FE-007` `/school/integrations` endpoints table + create form — ____
-- [ ] `LMS-FE-008` `SecretRevealModal` (show-once, copy, bn+en warning, ack) — ____
-- [ ] `LMS-FE-009` test-event button + success/failure feedback — ____
-- [ ] `LMS-FE-010` rotate-secret dialog + overlap display — ____
-- [ ] `LMS-FE-011` event log drawer + redrive action — ____
-- [ ] `LMS-FE-012` `/school/roster/reconciliation` report screen + dashboard link — ____
-- [ ] `LMS-FE-013` replace 07 stubs: `/school/roster` + `/school/integrations` nav entries — ____
-- [ ] `LMS-FE-014` bn/en catalog entries (`sync.*`) in each app's `src/i18n` + zod schemas mirrored — ____
-- [ ] `LMS-FE-015` a11y pass (§7) + reduced-motion verification + axe clean — ____
-- [ ] `LMS-FE-016` responsive pass per §6 (360 px reference: portal usable on tablet, wizard on phone) — ____
+- [x] `LMS-FE-001` `/school/roster` home (cards + history table + polling) — ____
+- [x] `LMS-FE-002` wizard step 1: template download + bn/en instruction explainer — ____
+- [x] `LMS-FE-003` wizard step 2: upload (05 presign flow) + `dryRun` toggle + progress — ____
+- [x] `LMS-FE-004` wizard step 3: dry-run report (error table + error-CSV) + hash no-op panel — ____
+- [x] `LMS-FE-005` commit action + summary panel + totals toast — ____
+- [x] `LMS-FE-006` `/school/roster/imports/[id]` detail (status, totals, error rows, commit button) — ____
+- [x] `LMS-FE-007` `/school/integrations` endpoints table + create form — ____
+- [x] `LMS-FE-008` `SecretRevealModal` (show-once, copy, bn+en warning, ack) — ____
+- [x] `LMS-FE-009` test-event button + success/failure feedback — ____
+- [x] `LMS-FE-010` rotate-secret dialog + overlap display — ____
+- [x] `LMS-FE-011` event log drawer + redrive action — ____
+- [x] `LMS-FE-012` `/school/roster/reconciliation` report screen + dashboard link — ____
+- [x] `LMS-FE-013` replace 07 stubs: `/school/roster` + `/school/integrations` nav entries — ____
+- [x] `LMS-FE-014` bn/en catalog entries (`sync.*`) in each app's `src/i18n` + zod schemas mirrored — ____
+- [x] `LMS-FE-015` a11y pass (§7) + axe specs in `e2e/lms.spec.ts` — run pending owner (G-1) — 2026-10-04
+- [x] `LMS-FE-016` responsive pass (cards stack < 640, tables scroll-x, wizard max-w-2xl) — 2026-10-04

@@ -66,6 +66,13 @@ Repo: `applications/api` (branch `module/03-identity-access` — see ADR-4) · *
   ship that shape; 04's admin DTOs use integer); `sections.stream` ships inside migration 3 (also
   covering checklist `ORG-BE-026`'s "+ sections.stream" without an extra file).
 
+## Cross-module note (2026-10-02, module 05 build)
+
+04's pending "entry points" item landed during 05's wiring: `cmd/api` now constructs the real
+`hierarchy.Service` (DB-backed pickers + BR-01 seam + ResolveUserNodes) instead of the demo fake,
+and the chat service is bound as the `Chat` port (04 G-1's planned binding). No 04-owned code
+changed; the Gate 2 SQL hand-off below now covers 01 → 03 → 04 → 05 blocks in one `migrate up`.
+
 ## Evidence
 
 | Repo | Check | Result |

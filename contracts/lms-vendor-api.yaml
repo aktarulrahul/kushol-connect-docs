@@ -1,0 +1,374 @@
+openapi: 3.1.0
+info:
+  title: Kushol Connect — Vendor LMS / Educational Institution ERP API (external)
+  description: |
+    Read API that an educational institution's LMS or ERP exposes for Kushol Connect to **pull**
+    teachers, students, classes-with-sections, section membership (teacher/student ids), and notices.
+
+    Product noun: educational institution (UI: Institution / প্রতিষ্ঠান). Do not use school/college
+    as the generic org noun. See docs/modules/14-lms-erp-sync/terminology-institution.md.
+
+    This is **not** Kushol's own `/api/v1` surface. Kushol is the HTTPS client.
+    Human-readable brief: `docs/modules/14-lms-erp-sync/vendor-lms-api-spec.md`.
+    Shareable GET + JSON response examples: `docs/modules/14-lms-erp-sync/vendor-lms-api-response-examples.md`.
+
+    MVP endpoints:
+      1. GET /teachers
+      2. GET /students
+      3. GET /sections          (classes with nested sections)
+      4. GET /sections/{sectionId}  (teacher_ids + student_ids)
+      5. GET /notices
+  version: "1.0.0"
+  contact:
+    name: Kushol Connect
+    email: integrations@kusholconnect.com
+servers:
+  - url: https://lms.example-institution.edu.bd/api/kushol/v1
+    description: Example educational-institution LMS base URL (configured per Institution in Kushol)
+tags:
+  - name: People
+  - name: Sections
+  - name: Notices
+security:
+  - BearerAuth: []
+  - ApiKeyAuth: []
+paths:
+  /teachers:
+    get:
+      tags: [People]
+      operationId: listTeachers
+      summary: Teachers list with teacher details (MVP)
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/UpdatedSince"
+      responses:
+        "200":
+          description: Paged teachers
+          headers:
+            Kushol-LMS-API:
+              schema: { type: string, example: "1" }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeacherPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /students:
+    get:
+      tags: [People]
+      operationId: listStudents
+      summary: Students list with student details (MVP)
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/UpdatedSince"
+      responses:
+        "200":
+          description: Paged students
+          headers:
+            Kushol-LMS-API:
+              schema: { type: string, example: "1" }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /sections:
+    get:
+      tags: [Sections]
+      operationId: listClassesWithSections
+      summary: Classes list with nested sections (MVP)
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/UpdatedSince"
+      responses:
+        "200":
+          description: Paged classes, each with sections[]
+          headers:
+            Kushol-LMS-API:
+              schema: { type: string, example: "1" }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassWithSectionsPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /sections/{sectionId}:
+    get:
+      tags: [Sections]
+      operationId: getSectionMembership
+      summary: Section teacher ids and student ids (MVP)
+      parameters:
+        - name: sectionId
+          in: path
+          required: true
+          description: Section external_id
+          schema: { type: string, maxLength: 128, example: sec-10-a }
+      responses:
+        "200":
+          description: Section membership
+          headers:
+            Kushol-LMS-API:
+              schema: { type: string, example: "1" }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SectionMembership"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /notices:
+    get:
+      tags: [Notices]
+      operationId: listNotices
+      summary: Notices (institution and/or section scoped)
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/UpdatedSince"
+        - name: scope
+          in: query
+          schema:
+            type: string
+            enum: [institution, section]
+        - name: section_external_id
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Paged notices
+          headers:
+            Kushol-LMS-API:
+              schema: { type: string, example: "1" }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoticePage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Preferred. Authorization Bearer token (read-only roster + notices scope).
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: Alternate. Header name may be remapped in Kushol connection config.
+
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+      description: Opaque pagination cursor from previous next_cursor
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
+    UpdatedSince:
+      name: updated_since
+      in: query
+      schema: { type: string, format: date-time }
+      description: Incremental sync filter (Full)
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+    NotFound:
+      description: Unknown sectionId or path
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+    RateLimited:
+      description: Too many requests
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+
+  schemas:
+    ErrorBody:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, example: unauthorized }
+            message: { type: string }
+            request_id: { type: string }
+
+    Teacher:
+      type: object
+      required: [external_id, full_name, roles, active]
+      properties:
+        external_id: { type: string, maxLength: 128 }
+        full_name: { type: string }
+        full_name_bn: { type: string }
+        phone: { type: string, example: "01712345678" }
+        email: { type: string, format: email, nullable: true }
+        employee_code: { type: string }
+        roles:
+          type: array
+          items:
+            type: string
+            enum: [teacher, class_teacher, admin]
+        active: { type: boolean }
+        updated_at: { type: string, format: date-time }
+
+    Student:
+      type: object
+      required: [external_id, full_name, active]
+      properties:
+        external_id: { type: string, maxLength: 128 }
+        full_name: { type: string }
+        full_name_bn: { type: string }
+        phone: { type: string, example: "01898765432" }
+        email: { type: string, format: email, nullable: true }
+        student_code: { type: string }
+        guardian_phone: { type: string, nullable: true }
+        active: { type: boolean }
+        updated_at: { type: string, format: date-time }
+
+    NestedSection:
+      type: object
+      required: [external_id, name, active]
+      properties:
+        external_id: { type: string, maxLength: 128 }
+        name: { type: string, example: A }
+        name_bn: { type: string }
+        display_name: { type: string }
+        display_name_bn: { type: string }
+        active: { type: boolean }
+        updated_at: { type: string, format: date-time }
+
+    ClassWithSections:
+      type: object
+      required: [external_id, class_level, name, sections, active]
+      properties:
+        external_id: { type: string, maxLength: 128 }
+        class_level: { type: integer, minimum: 1, maximum: 12 }
+        name: { type: string }
+        name_bn: { type: string }
+        stream:
+          type: string
+          nullable: true
+          enum: [science, business_studies, humanities, null]
+        active: { type: boolean }
+        updated_at: { type: string, format: date-time }
+        sections:
+          type: array
+          items: { $ref: "#/components/schemas/NestedSection" }
+
+    SectionMembership:
+      type: object
+      required: [external_id, teacher_ids, student_ids, active]
+      properties:
+        external_id: { type: string, maxLength: 128 }
+        teacher_ids:
+          type: array
+          items: { type: string, maxLength: 128 }
+          description: Teacher external_id values from GET /teachers
+        student_ids:
+          type: array
+          items: { type: string, maxLength: 128 }
+          description: Student external_id values from GET /students
+        class_teacher_id:
+          type: string
+          nullable: true
+          maxLength: 128
+          description: Primary class teacher (section chat group admin); MUST be in teacher_ids when set
+        active: { type: boolean }
+        updated_at: { type: string, format: date-time }
+
+    Notice:
+      type: object
+      required: [external_id, scope, title, body, published_at, active]
+      properties:
+        external_id: { type: string, maxLength: 128 }
+        scope:
+          type: string
+          enum: [institution, section]
+        section_external_id:
+          type: string
+          nullable: true
+          maxLength: 128
+          description: Required when scope=section; null when scope=institution
+        title: { type: string, maxLength: 120 }
+        title_bn: { type: string, nullable: true, maxLength: 120 }
+        body: { type: string, maxLength: 5000 }
+        body_bn: { type: string, nullable: true, maxLength: 5000 }
+        pinned: { type: boolean, default: false }
+        published_at: { type: string, format: date-time }
+        active: { type: boolean }
+        updated_at: { type: string, format: date-time }
+
+    TeacherPage:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Teacher" }
+        next_cursor: { type: string, nullable: true }
+        page: { type: integer }
+        page_size: { type: integer }
+        total: { type: integer }
+
+    StudentPage:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Student" }
+        next_cursor: { type: string, nullable: true }
+
+    ClassWithSectionsPage:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/ClassWithSections" }
+        next_cursor: { type: string, nullable: true }
+
+    NoticePage:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Notice" }
+        next_cursor: { type: string, nullable: true }

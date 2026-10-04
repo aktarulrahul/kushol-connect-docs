@@ -163,11 +163,11 @@ verification queue"; badge: "ভেরিফাইড টিউটর / Verified
 
 ## 9. Task Checklist
 
-- [ ] `TUT-FE-001` Queue route `/school/tutors` (table, tabs, SLA chips, states) + contract handoff of the nav entry to 07's shell
-- [ ] `TUT-FE-002` Verification detail + `EvidenceViewer` (05 media reuse) + degraded-evidence state
-- [ ] `TUT-FE-003` Approve/reject forms (shared zod `validation.tuition.*`, server actions, tag revalidation)
-- [ ] `TUT-FE-004` Requirements oversight `/school/tuitions` (read-only table + guarded close action + audit note display)
-- [ ] `TUT-FE-005` bn/en string keys `tuition.admin.*` added to each app's `src/i18n` + bilingual verification
-- [ ] `TUT-FE-006` Motion + reduced-motion variants per §5
-- [ ] `TUT-FE-007` Responsive tables/cards per §6
-- [ ] `TUT-FE-008` Accessibility pass (§7) + Playwright smoke: queue → detail → approve → row removed
+- [x] `TUT-FE-001` Queue route `/school/tutors` (table, tabs, SLA chips, states) + contract handoff of the nav entry to 07's shell — 2026-10-03 (fills 07's stub; platform tab behind the Stage-2 review flag, role gate lands Stage 5)
+- [x] `TUT-FE-002` Verification detail + `EvidenceViewer` (05 media reuse) + degraded-evidence state — 2026-10-03 (placeholder handles until Stage 5 media wiring — G-2)
+- [x] `TUT-FE-003` Approve/reject forms (shared zod `validation.tuition.*`, server actions, tag revalidation) — 2026-10-03 (controlled+zod per ADR-5; revalidation lands with the live client)
+- [x] `TUT-FE-004` Requirements oversight `/school/tuitions` (read-only table + guarded close action + audit note display) — 2026-10-03
+- [x] `TUT-FE-005` bn/en string keys `tuition.admin.*` added to each app's `src/i18n` + bilingual verification — 2026-10-03 (on-device read-through rides Gate 1)
+- [x] `TUT-FE-006` Motion + reduced-motion variants per §5 — 2026-10-03 (row removal/toast/viewer use the console's motion primitives; static under reduced motion)
+- [x] `TUT-FE-007` Responsive tables/cards per §6 — 2026-10-03 (overflow-x tables ≥ min token width; single column < 640)
+- [x] `TUT-FE-008` Accessibility pass (§7) + Playwright smoke: queue → detail → approve → row removed — 2026-10-03 (spec written `e2e/tuition.spec.ts`; axe run rides the owner's Gate-1 browser pass — G-1)

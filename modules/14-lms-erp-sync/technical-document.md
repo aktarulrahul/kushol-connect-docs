@@ -4,10 +4,12 @@
 **Version:** 0.1
 **Status:** 📝 Draft 2026-09-30
 **Owner:** Rahul (product owner)
-**Last updated:** 2026-09-30
+**Last updated:** 2026-10-03
 
 Single engineer-facing reference compressing this module's spec set (`01`–`06`). When this file
-drifts, the spec files win.
+drifts, the spec files win. LMS pull + Institution terminology: `vendor-lms-api-spec.md`,
+`vendor-lms-api-response-examples.md` (shareable GET samples), `lms-pull-integration-plan.md`,
+`terminology-institution.md`.
 
 ---
 
@@ -15,10 +17,12 @@ drifts, the spec files win.
 
 ### 1.1 Purpose
 
-Gives School Admins two self-serve ways to keep the platform roster in step with the school's own
-systems (`brd.md` §4 in-scope LMS/ERP sync, PRD §3 Phase 2/3): a portal-generated CSV/Excel upload
-with dry-run validation, and inbound REST webhooks for live sync. Both are idempotent, produce
-row-level reconciliation reports, and sit behind the B2B SaaS licence gate (`brd.md` §7).
+Gives **Institution Admins** ways to keep the platform roster in step with an **educational
+institution’s** systems (`brd.md` §4, PRD §3): CSV/Excel upload, inbound HMAC webhooks, and
+**(planned)** LMS **pull** connector (base URL + token/key, schedule / Sync now → teachers,
+students, classes-with-sections, section membership ids, optional notices → section groups with
+teacher admin). Idempotent; licence-gated
+(`brd.md` §7). Org noun + `institution_type` enum: `terminology-institution.md` (binding 2026-10-03).
 
 ### 1.2 Scope
 
@@ -34,9 +38,10 @@ HMAC-SHA256, ±5-min window, 60 events/min/school; monthly reconciliation report
 
 **Out:** verification decisions (03 owns; `verification_requests` never written here);
 enrollment/group/topic application internals (the 04/05/06 chain — 14 calls 04 exports only);
-outbound live sync to schools' systems (inbound only at launch); fee/payment/ads/marketplace sync
-(modules 12/13/10/11); mTLS/OAuth webhook auth (HMAC chosen per README default; revisit needs an
-ADR); mobile app screens (web-only, README scope `api` `web`).
+pushing Kushol chat data **into** the institution LMS (roster **pull** is planned — see
+`lms-pull-integration-plan.md`); fee/payment/ads/marketplace sync (modules 12/13/10/11);
+mTLS/OAuth webhook auth (HMAC chosen); interactive OAuth for LMS; mobile app screens (web-only).
+Full path/DB/role/`school-*` FCM topic renames to Institution wording are **deferred** (terminology §5).
 
 ### 1.3 Dependencies
 
@@ -337,3 +342,5 @@ Unconfirmed items keep their `TODO: Confirm` marker.
 | --- | --- | --- |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
 | 2026-09-30 | Consistency pass: webhook secrets encrypted (AES-256-GCM, `ERP_SECRET_KEY`) instead of hashed — HMAC verification needs the raw secret; migrations re-versioned `20270301…`; routes `/school/roster/reconciliation` (was colliding with 12) and `/school/integrations`; consumes 03 `users.UpsertRosterUser` + `guardians.*` | Claude |
+| 2026-10-03 | LMS pull plan + vendor API; binding Institution terminology (`institution_type`); FCM `school-*` rename deferred to 06 | Agent |
+| 2026-10-04 | Built contract-first: 22 operations + 28 `Lms*` schemas; webhook route is the documented unauthenticated-but-HMAC exception (BR-009/INV-005: constant-time HMAC, ±5-min window, versioned AES-256-GCM secrets under `ERP_SECRET_KEY`, show-once raw); imports are always dry-run-first with content-hash no-op and chunked commits (03 upsert = PENDING creates only, 04 enrollments with ROSTER source); 3 migrations consolidate §1.2's four (registry `20270301090001–090003`) + licence flag + pull tables; pull connector = `VendorClient` port, interval schedule presets, single running sync per institution, `lms_external_ids` map, additive 04 export `EnsureExternalSection`; CSV P0 (xlsx rejected at upload); reconciliation = baseline vs ACTIVE counts with drift flags, no-store reads. App surface: N/A by design. Gaps: G-1…G-9 (IT harness, licence UI, withdrawal export, notices pull, xlsx, SSRF allowlist, Redis memo, e2e runs) | Kilo |

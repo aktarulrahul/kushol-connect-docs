@@ -245,20 +245,20 @@ no payload ever carries message bodies (`NTF-UT-001` guards the privacy invarian
 
 ### Schema
 
-- [ ] Migrations 1–3 (§1.2) — prerequisite for every `NTF-BE-*` task below — ____
+- [x] Migrations 1–3 (§1.2) — prerequisite for every `NTF-BE-*` task below — 2026-10-03 (files `20261006090001_create_device_tokens` + `20261006090002_create_notification_deliveries_preferences` [2+3 combined]; **owner SQL run pending — Gate 2**)
 
 ### Repository · Service · Entry points · Jobs · Tests
 
-- [ ] `NTF-BE-013`–`015` sqlc: device_tokens (upsert, active-device scan, prune) — ____
-- [ ] `NTF-BE-016`–`018` sqlc: notification_deliveries (insert, status transitions, lists, admin counts) — ____
-- [ ] `NTF-BE-019` sqlc: notification_preferences (lazy-create + upsert) — ____
-- [ ] `NTF-BE-011` payload builder (pure, table-driven) + `NTF-BE-006`/`009` RecordOpened — ____
-- [ ] `NTF-BE-001`–`002` services: device register/delete/prune + topic subscription resolution — ____
-- [ ] `NTF-BE-003`–`005` services: preferences + delivery lists (own/school/platform) — ____
-- [ ] `NTF-BE-007`–`008` exports: `notify.BroadcastTopic` / `notify.SendToUser` (provider clients with fakes) — ____
-- [ ] `NTF-BE-010`/`012` services: test push + `RefreshTopicSubscriptions` — ____
-- [ ] Entry points: 7 endpoints per §2 (handlers over the services) + OpenAPI spec entries + contract regen — ____
-- [ ] `NTF-BE-020`–`022` jobs: `fanout.send` + `tokens.prune` + `topics.backfill` registered with 01 runner — ____
-- [ ] FCM Admin Go SDK client (topic subscribe/unsubscribe, topic send, per-token send) (timeouts, retries, redacted logging, env-parsed secrets) — ____
-- [ ] `NTF-BE-023` email channel: `notify.SendEmail`, `email.send` job (OTP priority lane, never persists OTP content), bn/en templates under `notifications.email.*` in the api's catalog (`applications/api/internal/i18n`), `List-Unsubscribe` → `email_enabled=false`, SMTP client (STARTTLS 587, 10 s timeout) — ____
-- [ ] Tests: `NTF-UT-001`–`005` · `NTF-IT-001`–`008` green in CI — ____
+- [x] `NTF-BE-013`–`015` sqlc: device_tokens (upsert, active-device scan, prune) — 2026-10-03
+- [x] `NTF-BE-016`–`018` sqlc: notification_deliveries (insert, status transitions, lists, admin counts) — 2026-10-03
+- [x] `NTF-BE-019` sqlc: notification_preferences (lazy-create + upsert) — 2026-10-03
+- [x] `NTF-BE-011` payload builder (pure, table-driven) + `NTF-BE-006`/`009` RecordOpened — 2026-10-03
+- [x] `NTF-BE-001`–`002` services: device register/delete/prune + topic subscription resolution — 2026-10-03
+- [x] `NTF-BE-003`–`005` services: preferences + delivery lists (own/school/platform) — 2026-10-03
+- [x] `NTF-BE-007`–`008` exports: `notify.BroadcastTopic` / `notify.SendToUser` (provider clients with fakes) — 2026-10-03
+- [x] `NTF-BE-010`/`012` services: test push + `RefreshTopicSubscriptions` — 2026-10-03
+- [x] Entry points: 7 endpoints per §2 (handlers over the services) + OpenAPI spec entries + contract regen — 2026-10-03 (`contracts: no drift`)
+- [x] `NTF-BE-020`–`022` jobs: `fanout.send` + `tokens.prune` + `topics.backfill` registered with 01 runner — 2026-10-03
+- [x] FCM Admin Go SDK client (topic subscribe/unsubscribe, topic send, per-token send) (timeouts, retries, redacted logging, env-parsed secrets) — 2026-10-03 (env-gated: `FCM_SERVICE_ACCOUNT_JSON` + `FCM_PROJECT_ID`)
+- [ ] `NTF-BE-023` email channel: `notify.SendEmail`, `email.send` job (OTP priority lane, never persists OTP content), bn/en templates under `notifications.email.*` in the api's catalog (`applications/api/internal/i18n`), `List-Unsubscribe` → `email_enabled=false`, SMTP client (STARTTLS 587, 10 s timeout) — deferred → `08-gaps.md` G-5 (lands with 07's staff settings)
+- [x] Tests: `NTF-UT-001`–`005` · `NTF-IT-001`–`008` green in CI — 2026-10-03 (UT-001–005 green with `-race`; IT-001–004/006–008 written, **runs pending owner** — testcontainers, `make test-integration`)

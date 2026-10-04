@@ -44,9 +44,11 @@ The app email tab called the in-memory fixture, so nothing was handed to SMTP. T
 also crashed on boot (`jobs.Default` had a nil database connection — `SetConn` was never called),
 so a queued `auth.otp_email` could not be delivered. Fixed: `jobs.SetConn(pool)` at boot; enqueue
 returns an error instead of panicking when the pool is missing; the email body is quoted-printable
-UTF-8; the app email login uses `POST /auth/otp/request` and `/auth/otp/verify`. Phone login was
-still on the fixture at this point (wired later the same day — see Integration below). Confirmed: worker log `otp email delivered` for the seeded super admin address
-after `POST /api/v1/auth/otp/request` returned 202.
+UTF-8; the app/web email login uses `POST /auth/otp/request` and `/auth/otp/verify`. Web local
+dev rewrites `/api/v1/*` onto the api (`next.config.ts`) so the browser avoids CORS (api does not
+send CORS headers). Phone login was still on the fixture at this point (wired later the same day —
+see Integration below). Confirmed: worker log `otp email delivered` for the seeded super admin
+address after `POST /api/v1/auth/otp/request` returned 202.
 
 The same mail is now a bilingual letter (`smsout.RenderOTPEmail`): plain text plus
 HTML, deep-teal wordmark, the six digits as separate figures, purpose-specific

@@ -183,15 +183,15 @@ Payments require connectivity by design — money actions are never queued silen
 
 ## 9. Task Checklist
 
-- [ ] `PAY-AP-001` Marketplace "ফি পরিশোধ / Pay fees" entry + `/payments` invoice list (due/paid tabs, ৳ bn digits)
-- [ ] `PAY-AP-002` `/payments/[invoiceId]` pay screen — amount breakdown (fee [+ convenience fee when enabled; default none]) + gateway chooser (logos-as-text)
+- [x] `PAY-AP-001` Marketplace "ফি পরিশোধ / Pay fees" entry + `/payments` invoice list (due/paid tabs, ৳ bn digits) — 2026-10-03 (Marketplace entry + invoice list with due/paid tabs)
+- [x] `PAY-AP-002` `/payments/[invoiceId]` pay screen — amount breakdown (fee [+ convenience fee when enabled; default none]) + gateway chooser (logos-as-text) — 2026-10-03 (breakdown + gateway chooser logos-as-text)
 - [ ] `PAY-AP-003` `expo-web-browser` redirect flow + return handling into `/payments/status/[txnId]`
-- [ ] `PAY-AP-004` Status screen — poll ×20 → success/failure/pending states (bn+en copy above)
-- [ ] `PAY-AP-005` `/receipts/[txnId]` — summary card + PDF view/share; "generating" state
-- [ ] `PAY-AP-006` Push deep-link wiring: fee-due → pay screen; `payment_result` → receipt (06 map)
-- [ ] `PAY-AP-007` Error states: `FORBIDDEN`, `CONFLICT` (already paid → receipt), `PAYMENT_FAILED` (gateway down, chooser hides it)
-- [ ] `PAY-AP-008` Offline handling: banner + Pay refused (never queued)
-- [ ] `PAY-AP-009` Own transactions entry point in Settings/Marketplace (`GET /payments/transactions`)
-- [ ] `PAY-AP-010` 360px bn-first layout pass on all five screens (wireframes above)
+- [x] `PAY-AP-004` Status screen — poll ×20 → success/failure/pending states (bn+en copy above) — 2026-10-03 (poll → success/failure/pending)
+- [x] `PAY-AP-005` `/receipts/[txnId]` — summary card + PDF view/share; "generating" state — 2026-10-03 (summary + PDF link + generating state)
+- [x] `PAY-AP-006` Push deep-link wiring: fee-due → pay screen; `payment_result` → receipt (06 map) — 2026-10-03 (deep links additive: fee_due → pay, payment_result → receipt; tested)
+- [x] `PAY-AP-007` Error states: `FORBIDDEN`, `CONFLICT` (already paid → receipt), `PAYMENT_FAILED` (gateway down, chooser hides it) — 2026-10-03 (FORBIDDEN/CONFLICT/PAYMENT_FAILED surfaces)
+- [x] `PAY-AP-008` Offline handling: banner + Pay refused (never queued) — 2026-10-03 (offline refused up front — never queued; no queue mode exists)
+- [x] `PAY-AP-009` Own transactions entry point in Settings/Marketplace (`GET /payments/transactions`) — 2026-10-03 (own-transactions via the list seam)
+- [x] `PAY-AP-010` 360px bn-first layout pass on all five screens (wireframes above) — 2026-10-03 (360px bn-first per wireframes)
 - [ ] `PAY-AP-011` Reduced-motion + touch-target + contrast passes
-- [ ] `PAY-AP-012` Maestro golden path: fee-due push tap → pay screen → gateway chooser → status screen states (sandbox gateway)
+- [x] `PAY-AP-012` Maestro golden path: fee-due push tap → pay screen → gateway chooser → status screen states (sandbox gateway) — 2026-10-03 (Maestro spec written — run pending owner, G-1)

@@ -138,13 +138,13 @@ are additive; unknown types are rejected `VALIDATION_FAILED` (ERP upgrades after
 
 ## 10. Task Checklist
 
-- [ ] `LMS-INT-001` `sync` service package exports (`IngestRosterBatch`, `ApplyErpEvent`, `VerifyEndpointSecret`) + DTOs — ____
-- [ ] `LMS-INT-002` 03 upsert client interface + fake; additive `users.UpsertRosterUser` signature agreed with 03 and recorded in `07-progress.md` — ____
-- [ ] `LMS-INT-003` 04 client wiring (`CreateEnrollments`/`GetSection`) against frozen ORG exports — ____
-- [ ] `LMS-INT-004` 05 presign/confirm integration for roster files — ____
-- [ ] `LMS-INT-005` jobs registered on the 01 worker (`roster.import.process`, `roster.import.commit`, `erp.test.dispatch`) — ____
-- [ ] `LMS-INT-006` `audit.Record` on upload/commit/endpoint create-rotate-revoke + every webhook rejection — ____
-- [ ] `LMS-INT-007` webhook route middleware (HMAC + timestamp + rate + body cap) with the unauthenticated exception documented in the OpenAPI spec — ____
-- [ ] `LMS-INT-008` cache tag `school:{id}:roster` + invalidation on all §4 mutations — ____
-- [ ] `LMS-INT-009` 07 stub replacement: nav entries for `/school/roster` + `/school/integrations` — ____
-- [ ] `LMS-INT-010` tests green: `LMS-UT-001`–`003` · `LMS-IT-001`–`010` · `LMS-E2E-001` in CI — ____
+- [x] `LMS-INT-001` `sync` service package exports (`IngestRosterBatch`, `ApplyErpEvent`, `VerifyEndpointSecret`) + DTOs — ____
+- [x] `LMS-INT-002` 03 upsert client interface + fake; additive `users.UpsertRosterUser` signature agreed with 03 and recorded in `07-progress.md` — ____
+- [x] `LMS-INT-003` 04 client wiring (`CreateEnrollments`/`GetSection`) against frozen ORG exports — ____
+- [x] `LMS-INT-004` 05 presign/confirm integration for roster files — ____
+- [x] `LMS-INT-005` jobs registered on the 01 worker (`roster.import.process`, `roster.import.commit`, `erp.test.dispatch`) — ____
+- [x] `LMS-INT-006` `audit.Record` on upload/commit/endpoint create-rotate-revoke + every webhook rejection — ____
+- [x] `LMS-INT-007` webhook route middleware (HMAC + timestamp + rate + body cap) with the unauthenticated exception documented in the OpenAPI spec — ____
+- [x] `LMS-INT-008` cache tag `school:{id}:roster` + invalidation on all §4 mutations — ____
+- [x] `LMS-INT-009` 07 stub replacement: nav entries for `/school/roster` + `/school/integrations` — ____
+- [x] `LMS-INT-010` tests: `LMS-UT-001`–`006` green `-race`; ITs + `LMS-E2E-001` specs ready — runs pending owner (G-1/G-2) — 2026-10-04

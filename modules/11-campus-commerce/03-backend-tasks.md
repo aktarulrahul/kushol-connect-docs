@@ -321,19 +321,19 @@ schools' stores.
 
 ### Schema
 
-- [ ] `CMP-BE-025`–`CMP-BE-031` migrations 1–4 + sqlc queries + ownership/tenant-scoped repositories
+- [x] `CMP-BE-025`–`CMP-BE-031` migrations 1–4 + sqlc queries + ownership/tenant-scoped repositories — 2026-10-03 (`20270201090000–093000`; **owner SQL run pending — Gate 2**)
 
 ### Repository · Service · Entry points · Seed · Tests
 
-- [ ] `CMP-BE-001` portal-user linking (phone-match + approved gate, audited) wiring 07's vendor state
-- [ ] `CMP-BE-002`–`CMP-BE-004` storefront services + endpoints #1–#3 (pause/resume, school tags)
-- [ ] `CMP-BE-005`–`CMP-BE-007` product/variant/inventory services + endpoints #4–#6 (+ 05 media wiring)
-- [ ] `CMP-BE-008`–`CMP-BE-010` buyer browse/detail services + endpoints #7–#9 (cached, school-scoped)
-- [ ] `CMP-BE-011` placement tx (reserve, snapshot, commission, COD guard) + endpoint #10
-- [ ] `CMP-BE-012`/`CMP-BE-013` buyer orders + cancel + endpoints #11–#13
-- [ ] `CMP-BE-014`–`CMP-BE-019` vendor board + lifecycle actions + endpoints #14–#20 (pushes via 06)
-- [ ] `CMP-BE-020`/`CMP-BE-032` auto-cancel job; `CMP-BE-021`/`CMP-BE-033` low-stock digest
-- [ ] `CMP-BE-022`–`CMP-BE-024` exports: `OrderAmount`, `AttachPaymentTransaction` (12 seam), `OrdersForVendor`, `StorefrontsForSchool`
-- [ ] OpenAPI paths #1–#20 in `applications/api/openapi/` + regenerate Go + TS clients (+ `OUT_OF_STOCK` problem code)
-- [ ] Seed: Demo Store dataset (fictional, marked)
-- [ ] Tests: `CMP-UT-001`–`006`, `CMP-IT-001`–`010` green in CI
+- [ ] `CMP-BE-001` portal-user linking (phone-match + approved gate, audited) wiring 07's vendor state — deferred → `08-gaps.md` G-8 (needs 07's live portal-login flow; `vendor_accounts.portal_user_id` column exists)
+- [x] `CMP-BE-002`–`CMP-BE-004` storefront services + endpoints #1–#3 (pause/resume, school tags) — 2026-10-03
+- [x] `CMP-BE-005`–`CMP-BE-007` product/variant/inventory services + endpoints #4–#6 (+ 05 media wiring) — 2026-10-03 (media ids validated as refs; live upload flow is the web uploader's Stage-5 wiring — G-3)
+- [x] `CMP-BE-008`–`CMP-BE-010` buyer browse/detail services + endpoints #7–#9 (school-scoped; invalidation set proven UT-007, read-through cache lands with traffic) — 2026-10-03
+- [x] `CMP-BE-011` placement tx (reserve, snapshot, commission, COD guard) + endpoint #10 — 2026-10-03
+- [x] `CMP-BE-012`/`CMP-BE-013` buyer orders + cancel + endpoints #11–#13 — 2026-10-03
+- [x] `CMP-BE-014`–`CMP-BE-019` vendor board + lifecycle actions + endpoints #14–#20 (buyer pushes via 06; vendor placement push needs a 07 portal-user export — G-7) — 2026-10-03
+- [x] `CMP-BE-020`/`CMP-BE-032` auto-cancel job; `CMP-BE-021`/`CMP-BE-033` low-stock digest — 2026-10-03 (registered in cmd/api; per-vendor digest fan-out shares G-7)
+- [x] `CMP-BE-022`–`CMP-BE-024` exports: `OrderAmount`, `AttachPaymentTransaction` (12 seam), `OrdersForVendor`, `StorefrontsForSchool` — 2026-10-03
+- [x] OpenAPI paths #1–#20 in `applications/api/openapi/` + regenerate Go + TS clients (+ `OUT_OF_STOCK` — code was pre-registered by 01) — 2026-10-03 (contract-first; `contracts: no drift`)
+- [ ] Seed: Demo Store dataset (fictional, marked) — deferred → `08-gaps.md` G-6 (no seed mechanism; same vehicle decision as 10 G-7)
+- [x] Tests: `CMP-UT-001`–`006`, `CMP-IT-001`–`010` green in CI — 2026-10-03 (UT-001/002/005/006/007/008 green `-race`; UT-003/004's DB-path coverage rides the ITs; IT-001–010 written as `it_commerce_test.go` — **runs pending owner** — G-5)

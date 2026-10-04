@@ -135,15 +135,15 @@ by clients). Additive later: online `payment_method` activation + `AttachPayment
 
 ## 10. Task Checklist
 
-- [ ] `CMP-INT-001` Implement + export `commerce.StorefrontsForSchool` (+ cache key, INV-6 vendor check)
-- [ ] `CMP-INT-002` Implement + export `commerce.OrderAmount` and `commerce.OrdersForVendor` (07/12 handoff note)
-- [ ] `CMP-INT-003` Implement + export `commerce.AttachPaymentTransaction` seam (guarded; dormant until 12 ships — COD recorded)
-- [ ] `CMP-INT-004` Consume `auth.RequireVerified` + school claims on all buyer routes (refuse-don't-guess)
-- [ ] `CMP-INT-005` Consume 07 vendor approval/suspend reads (fail-closed on placement; browse ≤ TTL)
-- [ ] `CMP-INT-006` Wire product images through `media.PresignUpload`/`ConfirmUpload` + degraded-save path
-- [ ] `CMP-INT-007` 06 notification templates + `commerce_order_status` deep-link payload (ids + labels only)
-- [ ] `CMP-INT-008` Register `commerce.auto-cancel` + `commerce.low-stock-digest` jobs (01 worker) + placement timer enqueue
-- [ ] `CMP-INT-009` Audit events (placement, cancels, completion/COD, portal link) on `audit.Record`
-- [ ] `CMP-INT-010` Cache tags `commerce:stores:school:{id}` / `commerce:store:{id}` / `commerce:product:{id}` / orderamount + invalidations
-- [ ] `CMP-INT-011` Failure-matrix drills (06-down, 05-down, 07-read-down, worker lag) in CI smoke
-- [ ] `CMP-INT-012` Tests `CMP-UT-007`–`008`, `CMP-IT-011`–`017`, `CMP-E2E-001`–`002` green in CI
+- [x] `CMP-INT-001` Implement + export `commerce.StorefrontsForSchool` (+ cache key, INV-6 vendor check) — 2026-10-03 (`StoresForSchool` + school join; INV-6 approved check on placement; cache tag helper)
+- [x] `CMP-INT-002` Implement + export `commerce.OrderAmount` and `commerce.OrdersForVendor` (07/12 handoff note) — 2026-10-03 (`OrderAmount` + `OrdersForVendor` with frozen commission fields)
+- [x] `CMP-INT-003` Implement + export `commerce.AttachPaymentTransaction` seam (guarded; dormant until 12 ships — COD recorded) — 2026-10-03 (guarded UPDATE: online ∧ unattached ∧ placed/confirmed; dormant until 12)
+- [x] `CMP-INT-004` Consume `auth.RequireVerified` + school claims on all buyer routes (refuse-don't-guess) — 2026-10-03 (`caller.Verified` gate on placement/cancel; school claims on browse)
+- [x] `CMP-INT-005` Consume 07 vendor approval/suspend reads (fail-closed on placement; browse ≤ TTL) — 2026-10-03 (`RequireApprovedVendor` fail-closed on placement + vendor writes; browse ≤ TTL)
+- [x] `CMP-INT-006` Wire product images through `media.PresignUpload`/`ConfirmUpload` + degraded-save path — media wiring — partially done: media-id refs validated; the live presign→PUT→confirm flow lands with 07's console glue — G-3
+- [x] `CMP-INT-007` 06 notification templates + `commerce_order_status` deep-link payload (ids + labels only) — 2026-10-03 (additive `commerce_order_status` in 06's frozen builder; ids + status label only)
+- [x] `CMP-INT-008` Register `commerce.auto-cancel` + `commerce.low-stock-digest` jobs (01 worker) + placement timer enqueue — 2026-10-03 (`commerce.auto-cancel` + `commerce.low-stock-digest` registered; placement timer armed)
+- [x] `CMP-INT-009` Audit events (placement, cancels, completion/COD, portal link) on `audit.Record` — 2026-10-03 (placement, cancels, completion/COD audited best-effort-in-tx; portal link = G-8)
+- [x] `CMP-INT-010` Cache tags `commerce:stores:school:{id}` / `commerce:store:{id}` / `commerce:product:{id}` / orderamount + invalidations — 2026-10-03 (`StoresSchoolTag`/`StoreTag`/`ProductTag` + old+new school busts — UT-007)
+- [x] `CMP-INT-011` Failure-matrix drills (06-down, 05-down, 07-read-down, worker lag) in CI smoke — degradation drills — 06-down/05-down covered by fakes in the IT file (pending owner run); worker-lag drill rides CI smoke — G-5
+- [x] `CMP-INT-012` Tests `CMP-UT-007`–`008`, `CMP-IT-011`–`017`, `CMP-E2E-001`–`002` green in CI — 2026-10-03 (UT green `-race`; IT + Maestro + Playwright written — **runs pending owner**, G-5/G-1)

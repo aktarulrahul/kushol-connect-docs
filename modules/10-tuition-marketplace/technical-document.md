@@ -316,5 +316,6 @@ Consolidated from `01` §9 and `02` §11 — the table to review in module readi
 
 | Date | Change | Author |
 | --- | --- | --- |
+| 2026-10-03 | Build executed contract-first: 15 REST paths (14 routed + tracker GET) + 26 `Tuition*` schemas landed in the api spec before any UI; INV-4 contact/chat nullability encoded in the contract; additive push types `tuition_match`/`tuition_interest`/`tuition_verification` in 06's frozen builder (bn/en copy api-side); matching = bbox+haversine ranker (subject coverage ↓, distance ↑, stable ties) with idempotent `ON CONFLICT DO NOTHING` inserts; accept tx emits the fee-DUE audit fact (INV-7/8) and opens 05's DM/Message-Request seam with a degraded `{pending}` handle; cache invalidation via the shared tag cache (`tuition:tutors:{area}` / `tuition:tutor:{id}` / `tuition:tutorcount:{schoolId}`); migrations `20261120090000–093000`. App: live client behind the session-token selector; web: fixture seam until 07's console session glue (G-8). Seed deferred (G-7). | Kilo |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
 | 2026-09-30 | Consistency pass: migrations re-versioned `20261120…` (were colliding with 08's `20261101…`) | Claude |

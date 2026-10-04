@@ -277,18 +277,18 @@ profiles or evidence.
 
 ### Schema
 
-- [ ] `TUT-BE-017`–`TUT-BE-019`, `TUT-BE-022`, `TUT-BE-023` migrations 1–4 + sqlc queries + tenant/party-scoped repositories
+- [x] `TUT-BE-017`–`TUT-BE-019`, `TUT-BE-022`, `TUT-BE-023` migrations 1–4 + sqlc queries + tenant/party-scoped repositories — 2026-10-03 (`20261120090000–093000`; **owner SQL run pending — Gate 2**)
 
 ### Repository · Service · Entry points · Seed · Tests
 
-- [ ] `TUT-BE-001`–`003` requirement services + endpoints #1/#2/#3 + matching-job enqueue
-- [ ] `TUT-BE-004`/`005` browse + profile DTO services (cache read-through, contact-null rule) + endpoints #4/#5
-- [ ] `TUT-BE-006`/`007` tutor profile + submit-for-review + media evidence wiring (05) + endpoints #6/#7
-- [ ] `TUT-BE-008`–`010` verification queue + decisions + audit + 06 notifications + endpoints #8–#10
-- [ ] `TUT-BE-011` matching job (`NotifyMatches`) + endpoint #12 internal write path
-- [ ] `TUT-BE-012`–`014` match lifecycle services + endpoints #11/#13–#15 (accept tx incl. chat seam + fee fact)
-- [ ] `TUT-BE-015`/`TUT-BE-027` expiry job; `TUT-BE-028` SLA reminder
-- [ ] `TUT-BE-016`/`TUT-BE-025` `VerifiedTutorCount` export (07 handoff)
-- [ ] OpenAPI paths #1–#15 in `applications/api/openapi/` + regenerate Go + TS clients
-- [ ] Seed: Demo High School dataset (fictional, marked)
-- [ ] Tests: `TUT-UT-001`–`006`, `TUT-IT-001`–`010` green in CI
+- [x] `TUT-BE-001`–`003` requirement services + endpoints #1/#2/#3 + matching-job enqueue — 2026-10-03
+- [x] `TUT-BE-004`/`005` browse + profile DTO services (cache invalidation port; contact-null rule) + endpoints #4/#5 — 2026-10-03 (browse read-through cache lands with traffic — invalidation set proven UT-010)
+- [x] `TUT-BE-006`/`007` tutor profile + submit-for-review + media evidence wiring (05) + endpoints #6/#7 — 2026-10-03 (+ `GET /tuition/tutor-profile` tracker read added to the contract)
+- [x] `TUT-BE-008`–`010` verification queue + decisions + audit + 06 notifications + endpoints #8–#10 — 2026-10-03
+- [x] `TUT-BE-011` matching job (`NotifyMatches`) + endpoint #12 internal write path — 2026-10-03 (#12 is the job entry itself — not routed publicly, per §2)
+- [x] `TUT-BE-012`–`014` match lifecycle services + endpoints #11/#13–#15 (accept tx incl. chat seam + fee fact) — 2026-10-03
+- [x] `TUT-BE-015`/`TUT-BE-027` expiry job; `TUT-BE-028` SLA reminder — 2026-10-03 (registered in cmd/api)
+- [x] `TUT-BE-016`/`TUT-BE-025` `VerifiedTutorCount` export (07 handoff) — 2026-10-03
+- [x] OpenAPI paths #1–#15 in `applications/api/openapi/` + regenerate Go + TS clients — 2026-10-03 (contract-first; `contracts: no drift`; web+app spec copies synced)
+- [ ] Seed: Demo High School dataset (fictional, marked) — deferred → `08-gaps.md` G-7 (no seed mechanism exists yet; 03's bootstrap-CLI decision precedes it)
+- [x] Tests: `TUT-UT-001`–`006`, `TUT-IT-001`–`010` green in CI — 2026-10-03 (UT green with `-race`; IT written, **runs pending owner** `make test-integration` — G-6; UT-003's DB-path coverage rides the ITs, UT-010 covers the invalidation set)

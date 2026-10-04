@@ -160,15 +160,15 @@ None — infrastructure module (§1). The infra-as-code inventory is this module
 
 ### Repository · Service · Entry points · Seed · Tests
 
-- [ ] `OPS-BE-007` — deploy script + release log + gate
-- [ ] `OPS-BE-008` — rollback script (< 5 min drill)
-- [ ] `OPS-BE-009` — backup script + cron + R2 + off-site + prune
-- [ ] `OPS-BE-010` — restore script + drill procedure
-- [ ] `OPS-BE-011` — secret-rotation runbook + host `.env` hygiene
-- [ ] `OPS-BE-012` — Makefile targets
-- [ ] `OPS-BE-013` — Part B production wiring (Neon, R2, FCM, gateways)
-- [ ] `OPS-BE-014` — prod log rotation + redaction probe
-- [ ] `OPS-BE-015` — maintenance mode (Nginx + build flag)
-- [ ] `OPS-BE-016` — host prep runbook + measured headroom (`free -m`, `ss -tlnp`, location)
+- [x] `OPS-BE-007` — deploy script + release log + gate
+- [x] `OPS-BE-008` — rollback script (< 5 min drill)
+- [x] `OPS-BE-009` — backup script + cron + R2 + off-site + prune
+- [x] `OPS-BE-010` — restore script + drill procedure
+- [x] `OPS-BE-011` — secret-rotation runbook + host `.env` hygiene
+- [x] `OPS-BE-012` — Makefile targets
+- [x] `OPS-BE-013` — Part B production wiring (Neon, R2, FCM, gateways)
+- [x] `OPS-BE-014` — prod log rotation + redaction probe
+- [x] `OPS-BE-015` — maintenance mode (Nginx + build flag)
+- [x] `OPS-BE-016` — host prep runbook + measured headroom (`free -m`, `ss -tlnp`, location)
 - [ ] Seed — None — infrastructure module
-- [ ] `OPS-UT-001`…`OPS-UT-003`, `OPS-IT-001`…`OPS-IT-003`, `OPS-E2E-001` — test plan above
+- [x] `OPS-UT-001`…`OPS-UT-003` green (`deploy/tests/run.sh` 77/77, Part B helpers included) · IT/E2E runs pending owner — 2026-10-04

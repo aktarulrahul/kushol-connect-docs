@@ -320,33 +320,33 @@ added to module 02's whitelist — additive, parity-gated).
 
 ## 9. Task Checklist
 
-- [ ] `WEB-FE-001` Route groups + middleware (session presence → `/login?next=`), role layouts for `/admin`, `/school`, `/vendor`
-- [ ] `WEB-FE-002` Locale cookie + `LocaleProvider` wiring; `<html lang>` bn default; toggle preserves form state
-- [ ] `WEB-FE-003` Landing: header/footer/hero/trust/vendors sections (static, bn/en)
-- [ ] `WEB-FE-004` `RoiCalculator` + `ROI_ASSUMPTIONS` constant + formula/disclaimer display
-- [ ] `WEB-FE-005` `PilotForm` (Route Handler → `POST /leads`, retry-safe)
-- [ ] `WEB-FE-006` `VendorInquiryForm` (→ `POST /vendor/register`)
-- [ ] `WEB-FE-007` `/download` + flag-gated `DownloadButtons` + `QrPlaceholder` + click lead
+- [x] `WEB-FE-001` — 2026-10-03 Route groups + middleware (session presence → `/login?next=`), role layouts for `/admin`, `/school`, `/vendor`
+- [x] `WEB-FE-002` — 2026-10-03 Locale cookie + `LocaleProvider` wiring; `<html lang>` bn default; toggle preserves form state
+- [x] `WEB-FE-003` — 2026-10-03 Landing: header/footer/hero/trust/vendors sections (static, bn/en)
+- [x] `WEB-FE-004` — 2026-10-03 `RoiCalculator` + `ROI_ASSUMPTIONS` constant + formula/disclaimer display
+- [x] `WEB-FE-005` — 2026-10-03 `PilotForm` (Route Handler → `POST /leads`, retry-safe)
+- [x] `WEB-FE-006` — 2026-10-03 `VendorInquiryForm` (→ `POST /vendor/register`)
+- [x] `WEB-FE-007` — 2026-10-03 `/download` + flag-gated `DownloadButtons` + `QrPlaceholder` + click lead
 - [ ] `WEB-FE-008` SEO suite: per-locale Metadata, OG image, JSON-LD Organization, `sitemap.ts`, `robots.ts`
-- [ ] `WEB-FE-009` Admin dashboard (`GET /admin/stats`) + placeholder cards (`WEB-BR-009`)
-- [ ] `WEB-FE-010` Tenants list (TanStack Table)
-- [ ] `WEB-FE-011` Create-school wizard (04 endpoints, review step, CONFLICT mapping)
-- [ ] `WEB-FE-012` Cities management (`POST /admin/cities`)
-- [ ] `WEB-FE-013` Vendor queue + drawer + `ReasonDialog` (approve/reject/suspend)
-- [ ] `WEB-FE-014` Leads pipeline (filters, transition dropdown, optimistic update)
-- [ ] `WEB-FE-015` Audit viewer (`GET /admin/audit-log`, filters + pager)
-- [ ] `WEB-FE-016` Campaigns stub route
-- [ ] `WEB-FE-017` School dashboard (`GET /school/stats`, partial-flags)
-- [ ] `WEB-FE-018` Verification queue (03 endpoints, SLA badge, reject reason, poll)
-- [ ] `WEB-FE-019` Notice board (pin/delete controls)
-- [ ] `WEB-FE-020` Notice composer (bn/en tabs, scope picker, pin, preview, one-way banner)
+- [x] `WEB-FE-009` — 2026-10-03 Admin dashboard (`GET /admin/stats`) + placeholder cards (`WEB-BR-009`)
+- [x] `WEB-FE-010` — 2026-10-03 Tenants list (TanStack Table)
+- [x] `WEB-FE-011` — 2026-10-03 Create-school wizard (04 endpoints, review step, CONFLICT mapping)
+- [x] `WEB-FE-012` — 2026-10-03 Cities management (`POST /admin/cities`)
+- [x] `WEB-FE-013` — 2026-10-03 Vendor queue + drawer + `ReasonDialog` (approve/reject/suspend)
+- [x] `WEB-FE-014` — 2026-10-03 Leads pipeline (filters, transition dropdown, optimistic update)
+- [x] `WEB-FE-015` — 2026-10-03 Audit viewer (`GET /admin/audit-log`, filters + pager)
+- [x] `WEB-FE-016` — 2026-10-03 Campaigns stub route
+- [x] `WEB-FE-017` — 2026-10-03 School dashboard (`GET /school/stats`, partial-flags)
+- [x] `WEB-FE-018` — 2026-10-03 Verification queue (03 endpoints, SLA badge, reject reason, poll)
+- [x] `WEB-FE-019` — 2026-10-03 Notice board (pin/delete controls)
+- [x] `WEB-FE-020` — 2026-10-03 Notice composer (bn/en tabs, scope picker, pin, preview, one-way banner)
 - [ ] `WEB-FE-021` `AttachmentUploader` (05 presign → PUT → confirm, retry)
-- [ ] `WEB-FE-022` Clubs approval queue (05 endpoints)
-- [ ] `WEB-FE-023` Sections manager (create/archive + CONFLICT copy)
-- [ ] `WEB-FE-024` Migration wizard (dry-run → results → PREVIEWED → commit) + runs list + status page poll
-- [ ] `WEB-FE-025` Stub routes (roster/ledger/matrix/tutors/webhooks) + vendor shell states
-- [ ] `WEB-FE-026` Branded 404 + role-aware FORBIDDEN pages
+- [x] `WEB-FE-022` — 2026-10-03 Clubs approval queue (05 endpoints)
+- [x] `WEB-FE-023` — 2026-10-03 Sections manager (create/archive + CONFLICT copy)
+- [x] `WEB-FE-024` — 2026-10-03 Migration wizard (dry-run → results → PREVIEWED → commit) + runs list + status page poll
+- [x] `WEB-FE-025` — 2026-10-03 Stub routes (roster/ledger/matrix/tutors/webhooks) + vendor shell states
+- [x] `WEB-FE-026` — 2026-10-03 Branded 404 + role-aware FORBIDDEN pages
 - [ ] `WEB-FE-027` `DataTable` keyboard/aria pass; focus management lib for wizards/dialogs
-- [ ] `WEB-FE-028` Motion per §5 with reduced-motion variants
-- [ ] `WEB-FE-029` bn/en catalog keys (`landing.*`, `admin.*`, `school.*`, `vendor.*`) + parity gate green
+- [x] `WEB-FE-028` — 2026-10-03 Motion per §5 with reduced-motion variants
+- [x] `WEB-FE-029` — 2026-10-03 bn/en catalog keys (`landing.*`, `admin.*`, `school.*`, `vendor.*`) + parity gate green
 - [ ] `WEB-FE-030` axe Playwright suite + CWV budget check (Lighthouse CI) on `/` and `/download`

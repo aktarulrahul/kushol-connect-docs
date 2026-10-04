@@ -140,11 +140,11 @@ in `03-backend-tasks.md` §6; rows here are the cross-module/integration set.)
 
 ## 10. Task Checklist
 
-- [ ] `NTF-INT-001` Implement + export `notify.BroadcastTopic` (bindings guard, fake-able FCM client) — ____
-- [ ] `NTF-INT-002` Implement + export `notify.SendToUser` (prefs gate, chunked Expo send, prune-on-invalid) — ____
-- [ ] `NTF-INT-003` Implement + export `notify.RecordOpened` + wire `POST /notifications/deliveries/{id}/opened` — ____
-- [ ] `NTF-INT-004` Consume 04 `fcm_topic_bindings` + `ResolveUserNodes`; register `topics.backfill` with 01 worker — ____
-- [ ] `NTF-INT-005` Register `fanout.send` + `tokens.prune` jobs with 01 runner (status-scoped, idempotent) — ____
-- [ ] `NTF-INT-006` FCM client: timeouts (10 s), ×3 backoff, redacted logs, env-parsed secrets (`FCM_SERVER_KEY`) — ____
-- [ ] `NTF-INT-007` Freeze payload schema v1 + deep-link route map with 05/10/12/13 review; unknown-type fallback verified — ____
-- [ ] `NTF-INT-008` Tests `NTF-UT-001`, `NTF-IT-001`–`004`, `NTF-IT-006`, `NTF-E2E-001`–`002` green in CI — ____
+- [x] `NTF-INT-001` Implement + export `notify.BroadcastTopic` (bindings guard, fake-able FCM client) — 2026-10-03 (bound to 05's `chat.Broadcaster` in `cmd/api`; 05 G-2 closed)
+- [x] `NTF-INT-002` Implement + export `notify.SendToUser` (prefs gate, chunked Expo send, prune-on-invalid) — 2026-10-03 (native FCM per ADR-3; env-gated degraded without `FCM_*`)
+- [x] `NTF-INT-003` Implement + export `notify.RecordOpened` + wire `POST /notifications/deliveries/{id}/opened` — 2026-10-03
+- [x] `NTF-INT-004` Consume 04 `fcm_topic_bindings` + `ResolveUserNodes`; register `topics.backfill` with 01 worker — 2026-10-03
+- [x] `NTF-INT-005` Register `fanout.send` + `tokens.prune` jobs with 01 runner (status-scoped, idempotent) — 2026-10-03
+- [x] `NTF-INT-006` FCM client: timeouts (10 s), ×3 backoff, redacted logs, env-parsed secrets (`FCM_SERVER_KEY`) — 2026-10-03 (service-account JWT per Google's current HTTP v1 docs)
+- [x] `NTF-INT-007` Freeze payload schema v1 + deep-link route map with 05/10/12/13 review; unknown-type fallback verified — 2026-10-03 (app `deepLinkFor` fallback + api prefix guard tests green)
+- [x] `NTF-INT-008` Tests `NTF-UT-001`, `NTF-IT-001`–`004`, `NTF-IT-006`, `NTF-E2E-001`–`002` green in CI — 2026-10-03 (UT green `-race`; IT + Maestro specs written — **runs pending owner**, `08-gaps.md` G-1/G-2)

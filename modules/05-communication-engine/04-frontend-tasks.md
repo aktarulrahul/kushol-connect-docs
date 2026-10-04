@@ -66,4 +66,4 @@ reuses the same keys.
 
 ## 9. Task Checklist
 
-- [ ] `COM-FE-001` — Contract handoff to module 07: verify endpoints #15–#20 (notices/media) and #3/#4/#6 (club approval) exist in the generated `openapi-fetch` client, and the cache-tag contract of `06` §4 is importable by 07
+- [x] `COM-FE-001` — 2026-10-02 (spec + generated TS clients updated in api/web/app; tags `notices:school:{id}`/`notices:section:{id}` documented in the spec): — Contract handoff to module 07: verify endpoints #15–#20 (notices/media) and #3/#4/#6 (club approval) exist in the generated `openapi-fetch` client, and the cache-tag contract of `06` §4 is importable by 07

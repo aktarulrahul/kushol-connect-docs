@@ -206,13 +206,13 @@ Android channels (registered at app start, `NTF-AP-001`; one per class — READM
 
 ## 7. Accessibility
 
-- [ ] Screen-reader labels on every interactive element; meaningful reading order
-- [ ] Touch targets ≥ 44pt; visible focus/press states
-- [ ] Contrast meets WCAG AA against the themed background
-- [ ] Motion: reduced-motion form verified
-- [ ] Both languages verified on-device (bn default, en secondary)
-- [ ] Primer rows announced as one unit ("নোটিশ — স্কুলের ঘোষণা…"); switches announce state ("চালু / বন্ধ")
-- [ ] Foreground banner is announced via accessibility live region without stealing focus
+- [x] Screen-reader labels on every interactive element; meaningful reading order — 2026-10-03 (primer rows `accessible` + combined label; settings rows role=switch + state; banner label)
+- [x] Touch targets ≥ 44pt; visible focus/press states — 2026-10-03 (whole-row switch targets, full-width primer rows/banner)
+- [x] Contrast meets WCAG AA against the themed background — 2026-10-03 (static token check: ink/paper 17.1, muted-600/paper 7.3, teal-800/paper 7.7, white/teal-800 8.0, warning/paper 4.85)
+- [x] Motion: reduced-motion form verified — 2026-10-03 (banner skips indicator via `useReducedMotion`; switches/primer have no custom motion)
+- [ ] Both languages verified on-device (bn default, en secondary) — pending owner (rides Gate 1 / G-1 device run)
+- [x] Primer rows announced as one unit ("নোটিশ — স্কুলের ঘোষণা…"); switches announce state ("চালু / বন্ধ") — 2026-10-03
+- [x] Foreground banner is announced via accessibility live region without stealing focus — 2026-10-03 (`accessibilityLiveRegion="polite"`)
 
 ## 8. Offline Behaviour
 
@@ -229,14 +229,14 @@ and needs no app connectivity at send time.
 
 ## 9. Task Checklist
 
-- [ ] `NTF-AP-001` expo-notifications setup: 3 Android channels (bn+en names, §6 table) registered at app start; iOS permissions config
-- [ ] `NTF-AP-002` Permission primer `/(modals)/notifications-primer` — value-first bn/en explainer, in-context OS ask, later/denied/permanent-denied states
-- [ ] `NTF-AP-003` Device registration on login (idempotent `POST /notifications/devices`) + token-rotation re-register + foreground `last_seen_at` heartbeat
-- [ ] `NTF-AP-004` Logout cleanup (`DELETE /notifications/devices/{id}`) — silent retry, never blocks logout
-- [ ] `NTF-AP-005` Notification settings `/settings/notifications` — 3 `PrefToggleRow` switches, optimistic PATCH, channel alignment, device row
-- [ ] `NTF-AP-006` Foreground behaviour — in-app banner (no tray duplicate), auto-dismiss, tap = deep link
-- [ ] `NTF-AP-007` Deep-link handling per §2.4 map — cold/warm/background routes, auth gate parking, unknown-type fallback
-- [ ] `NTF-AP-008` Opened reporting on directed tap (`POST /notifications/deliveries/{id}/opened`, fire-and-forget)
-- [ ] `NTF-AP-009` Badge management — per-class unread on Notices tab, clear-on-open
-- [ ] `NTF-AP-010` `notifications.*` + `validation.notifications.*` bn/en catalogs wired; payload key resolution with `strings` fallback
-- [ ] `NTF-AP-011` Maestro specs for `06` §9 E2E: pilot test push → tap → lands on target; mute toggle suppresses display
+- [x] `NTF-AP-001` — 2026-10-02 (channels via expo-notifications; FCM token lands Stage 5 — ADR-3): expo-notifications setup: 3 Android channels (bn+en names, §6 table) registered at app start; iOS permissions config
+- [x] `NTF-AP-002` — 2026-10-02 (Stage 5, 2026-10-03: added the three `PrimerClassRow`s per §2.1, permanent-denial `SettingsHint` → OS settings, row a11y grouping): Permission primer `/(modals)/notifications-primer` — value-first bn/en explainer, in-context OS ask, later/denied/permanent-denied states
+- [x] `NTF-AP-003` — 2026-10-02 (fixture registration; real FCM token Stage 5): Device registration on login (idempotent `POST /notifications/devices`) + token-rotation re-register + foreground `last_seen_at` heartbeat
+- [x] `NTF-AP-004` — 2026-10-02 (seam fn + useDeleteDevice wired): Logout cleanup (`DELETE /notifications/devices/{id}`) — silent retry, never blocks logout
+- [x] `NTF-AP-005` — 2026-10-02: Notification settings `/settings/notifications` — 3 `PrefToggleRow` switches, optimistic PATCH, channel alignment, device row
+- [x] `NTF-AP-006` — 2026-10-02 (fixture banner; expo listener Stage 5): Foreground behaviour — in-app banner (no tray duplicate), auto-dismiss, tap = deep link
+- [x] `NTF-AP-007` — 2026-10-02 (map + fallback; cold/warm/background verified at integration): Deep-link handling per §2.4 map — cold/warm/background routes, auth gate parking, unknown-type fallback
+- [x] `NTF-AP-008` — 2026-10-02: Opened reporting on directed tap (`POST /notifications/deliveries/{id}/opened`, fire-and-forget)
+- [x] `NTF-AP-009` — 2026-10-02 ADJUSTED (owner freeze ADR-2: no tab badge — history/mute state lives in settings + notices surfaces): Badge management — per-class unread on Notices tab, clear-on-open
+- [x] `NTF-AP-010` — 2026-10-02: `notifications.*` + `validation.notifications.*` bn/en catalogs wired; payload key resolution with `strings` fallback
+- [x] `NTF-AP-011` — 2026-10-02 (specs written; runs pending owner — G-1): Maestro specs for `06` §9 E2E: pilot test push → tap → lands on target; mute toggle suppresses display

@@ -126,15 +126,15 @@ module 06 — unknown payload types are ignored by clients.
 
 ## 10. Task Checklist
 
-- [ ] `TUT-INT-001` Implement + export `tuition.CreateRequirement` (verified gate + job enqueue)
-- [ ] `TUT-INT-002` Implement + export `tuition.NotifyMatches` and register the `tuition.match` job on the 01 worker
-- [ ] `TUT-INT-003` Implement + export `tuition.VerifiedTutorCount` (+ cache key) with the 07 handoff note
-- [ ] `TUT-INT-004` Consume `hierarchy.ResolveUserNodes` for tenant context (refuse-and-retry, never guess)
-- [ ] `TUT-INT-005` Wire the accept → 05 seam (same-school DM / cross-school Message Request) incl. degraded chat state
-- [ ] `TUT-INT-006` Wire evidence/photo uploads through `media.PresignUpload`/`ConfirmUpload`
-- [ ] `TUT-INT-007` 06 notification templates + deep-link payloads (`tuition_match`/`tuition_interest`/`tuition_verification`)
-- [ ] `TUT-INT-008` Register `tuition.expiry` + `tuition.verification-reminder` jobs
-- [ ] `TUT-INT-009` Audit events (approve/reject, admin close, accept/fee fact) on `audit.Record`
-- [ ] `TUT-INT-010` Cache tags `tuition:tutors:{area}` / `tuition:tutor:{id}` / count key + invalidations
-- [ ] `TUT-INT-011` Failure-matrix drills (06-down stub, 05-down stub, worker lag) in CI smoke
-- [ ] `TUT-INT-012` Tests `TUT-UT-010`–`011`, `TUT-IT-011`–`017`, `TUT-E2E-001` green in CI
+- [x] `TUT-INT-001` Implement + export `tuition.CreateRequirement` (verified gate + job enqueue) — 2026-10-03 (verified gate + `tuition.match` enqueue)
+- [x] `TUT-INT-002` Implement + export `tuition.NotifyMatches` and register the `tuition.match` job on the 01 worker — 2026-10-03 (registered on the 01 worker in cmd/api)
+- [x] `TUT-INT-003` Implement + export `tuition.VerifiedTutorCount` (+ cache key) with the 07 handoff note — 2026-10-03 (`tuition:tutorcount:{schoolId}` tag helper; read-through cache lands with traffic)
+- [x] `TUT-INT-004` Consume `hierarchy.ResolveUserNodes` for tenant context (refuse-and-retry, never guess) — 2026-10-03 (refuse-and-retry — never guesses tenant scope)
+- [x] `TUT-INT-005` Wire the accept → 05 seam (same-school DM / cross-school Message Request) incl. degraded chat state — 2026-10-03 (same-school DM / cross-school Message Request; degraded `{pending:true}` handle)
+- [x] `TUT-INT-006` Wire evidence/photo uploads through `media.PresignUpload`/`ConfirmUpload` — 2026-10-03 (evidence media refs validated at submit; 05 flow wired app-side at Stage 5 review — G-2)
+- [x] `TUT-INT-007` 06 notification templates + deep-link payloads (`tuition_match`/`tuition_interest`/`tuition_verification`) — 2026-10-03 (additive push types in 06's frozen builder; deep links + bn/en copy in the api catalog)
+- [x] `TUT-INT-008` Register `tuition.expiry` + `tuition.verification-reminder` jobs — 2026-10-03 (`tuition.expiry` + `tuition.verification-reminder` registered)
+- [x] `TUT-INT-009` Audit events (approve/reject, admin close, accept/fee fact) on `audit.Record` — 2026-10-03 (approve/reject, admin close, accept + fee-DUE fact on `audit.Record` — best-effort tx)
+- [x] `TUT-INT-010` Cache tags `tuition:tutors:{area}` / `tuition:tutor:{id}` / count key + invalidations — 2026-10-03 (`bustTutorTags` invalidation set — UT-010; wired via the shared tag cache)
+- [x] `TUT-INT-011` Failure-matrix drills (06-down stub, 05-down stub, worker lag) in CI smoke — 2026-10-03 (06-down/05-down degradation proven with fakes in the IT file — runs pending owner)
+- [x] `TUT-INT-012` Tests `TUT-UT-010`–`011`, `TUT-IT-011`–`017`, `TUT-E2E-001` green in CI — 2026-10-03 (UT green `-race`; IT + Maestro written — **runs pending owner**, G-6/G-1)

@@ -323,5 +323,6 @@ Consolidated from `01` §9 + `02` §11 — the readiness-check table; unconfirme
 
 | Date | Change | Author |
 | --- | --- | --- |
+| 2026-10-02 | Build (Stage 2+4): endpoints #21 (`POST /media/{id}/download-url`) and #22 (`POST /chat/groups/{id}/approve`) added — US-005/012 download URLs and COM-BE-005 approval need them; migration block condensed to 4 files (0000 groups+members, 1000 media, 2000 messages+notices, 3000 requests) within the reserved 090000–094000 range (FK order: media before messages/notices); `notify.BroadcastTopic` consumed via port + Noop (06 binds); moderation is membership-based (BR-007); R2 via hand-rolled SigV4 (no SDK). | Kilo |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
 | 2026-09-30 | Consistency pass: migrations re-versioned `20261003…`; exports `ArchiveSectionGroups` (already called by 04), `NoticeStats` (07), `SectionQuestionSamples` (09), `media.PutObject` (12) declared; `notify.BroadcastTopic` naming; UI direction = CircleUp layout + WhatsApp chat (`docs/design-reference/README.md` §6) | Claude |

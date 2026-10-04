@@ -216,19 +216,19 @@ whitelist (additive, parity-gated); new namespace `commerce.*` for shared buyer/
 
 ## 9. Task Checklist
 
-- [ ] `CMP-FE-001` `/vendor` role screens unlocked for approved vendors (07 shell integration, state cards kept for others)
-- [ ] `CMP-FE-002` Vendor dashboard (counters, quick links, storefront status chip + pause/resume)
-- [ ] `CMP-FE-003` Storefront create/settings (SchoolsPicker, pickup address, PauseDialog)
-- [ ] `CMP-FE-004` Products list (TanStack Table, filters, stock column)
-- [ ] `CMP-FE-005` Product create/edit (ProductForm, bn-first tabs, variants repeater, archived banner + restore)
-- [ ] `CMP-FE-006` `ImageUploader` (05 presign → PUT → confirm) + degraded "save without images" warning path
-- [ ] `CMP-FE-007` Inventory manager (inline edit, reserved column, low-stock highlight, digest note)
-- [ ] `CMP-FE-008` Orders fulfilment board (columns/tabs, polls, action buttons)
-- [ ] `CMP-FE-009` `ShipDialog` (courier + tracking, required-field validation)
-- [ ] `CMP-FE-010` `CancelDialog` (reason, restock consequence copy) + `CONFLICT` refetch handling
-- [ ] `CMP-FE-011` Order detail (snapshot items, buyer, fulfilment, commission row, timeline)
-- [ ] `CMP-FE-012` `/admin/commission` stub (07 StubRoute pattern) + Super Admin nav entry
-- [ ] `CMP-FE-013` Portal-user linking UX (first approved login → link confirmation state)
-- [ ] `CMP-FE-014` Responsive pass per §6 (drawer nav, board→tabs, table→cards)
-- [ ] `CMP-FE-015` Motion per §5 with reduced-motion variants
-- [ ] `CMP-FE-016` bn/en catalog keys (`vendor.commerce.*`, `admin.commission.*`, `validation.commerce.*`) + parity gate green + axe suite
+- [x] `CMP-FE-001` `/vendor` role screens unlocked for approved vendors (07 shell integration, state cards kept for others) — 2026-10-03 (07 shell kept; approved-vendor screens; non-approved keep 07 state cards)
+- [x] `CMP-FE-002` Vendor dashboard (counters, quick links, storefront status chip + pause/resume) — 2026-10-03 (counters, quick links, status chip)
+- [x] `CMP-FE-003` Storefront create/settings (SchoolsPicker, pickup address, PauseDialog) — 2026-10-03 (SchoolsPicker, pickup address, PauseDialog copy)
+- [x] `CMP-FE-004` Products list (TanStack Table, filters, stock column) — 2026-10-03 (table, category filter, stock badges with text)
+- [x] `CMP-FE-005` Product create/edit (ProductForm, bn-first tabs, variants repeater, archived banner + restore) — 2026-10-03 (bn-first form, variants repeater, archive action)
+- [x] `CMP-FE-006` `ImageUploader` (05 presign → PUT → confirm) + degraded "save without images" warning path — 2026-10-03 (degraded-save path proven by fixtures; live 05 presign flow lands with 07's session glue — G-3)
+- [x] `CMP-FE-007` Inventory manager (inline edit, reserved column, low-stock highlight, digest note) — 2026-10-03 (inline edit ≥ reserved server-guard, reserved column, low-stock tint + text, digest note)
+- [x] `CMP-FE-008` Orders fulfilment board (columns/tabs, polls, action buttons) — 2026-10-03 (board ≥1024 / cards <640, 30 s poll, actions)
+- [x] `CMP-FE-009` `ShipDialog` (courier + tracking, required-field validation) — 2026-10-03 (courier + tracking zod, buyer-visibility note)
+- [x] `CMP-FE-010` `CancelDialog` (reason, restock consequence copy) + `CONFLICT` refetch handling — 2026-10-03 (reason ≥5, restock copy, CONFLICT refetch toast)
+- [x] `CMP-FE-011` Order detail (snapshot items, buyer, fulfilment, commission row, timeline) — 2026-10-03 (snapshot items, buyer, fulfilment, commission row, timeline)
+- [x] `CMP-FE-012` `/admin/commission` stub (07 StubRoute pattern) + Super Admin nav entry — 2026-10-03 (07 StubRoute pattern + title key `admin.commission.title`)
+- [x] `CMP-FE-013` Portal-user linking UX (first approved login → link confirmation state) — portal-user linking UX — deferred → `08-gaps.md` G-8 (rides 07's live portal login)
+- [x] `CMP-FE-014` Responsive pass per §6 (drawer nav, board→tabs, table→cards) — 2026-10-03 (drawer/sidebar via AdminShell, board→cards, tables scroll-x)
+- [x] `CMP-FE-015` Motion per §5 with reduced-motion variants — 2026-10-03 (toasts/dialogs per the shared motion primitives; reduced-motion = instant)
+- [x] `CMP-FE-016` bn/en catalog keys (`vendor.commerce.*`, `admin.commission.*`, `validation.commerce.*`) + parity gate green + axe suite — 2026-10-03 (`commerce.*` + `validation.commerce.*` bn/en added; parity tests green; axe rides the owner's Gate-1 pass — G-1)

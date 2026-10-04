@@ -306,18 +306,18 @@ raw secrets never appear in logs, audit entries, or any GET response.
 
 ### Schema
 
-- [ ] Migrations 1–4 (§1.2) — prerequisite for every `LMS-BE-*` task below — ____
+- [x] Migrations (3, consolidated — 07-progress ADR-2) (§1.2) — prerequisite for every `LMS-BE-*` task below — ____
 
 ### Repository · Service · Entry points · Seed · Tests
 
-- [ ] `LMS-BE-016`–`017` sqlc: roster imports + rows (hash probe, error report, commit cursor) — ____
-- [ ] `LMS-BE-018`–`LMS-BE-019` sqlc: endpoints + sync events (idempotent insert, log paging) — ____
-- [ ] `LMS-BE-001`–`002` services: template generator + upload/idempotency — ____
-- [ ] `LMS-BE-003`, `LMS-BE-005`, `LMS-BE-020`–`021` process + commit jobs (chunks of 500, cursor resume) — ____
-- [ ] `LMS-BE-004`, `LMS-BE-006` commit entry + import reads/CSV error report — ____
-- [ ] `LMS-BE-007`–`010`, `LMS-BE-022` endpoint lifecycle (create/rotate/revoke/test, show-once secret) — ____
-- [ ] `LMS-BE-011`–`013` webhook core: verify (HMAC/timestamp/rate) + apply + redrive — ____
-- [ ] `LMS-BE-014`–`015` event log + reconciliation report — ____
-- [ ] Entry points: 12 route groups per §2 + OpenAPI spec entries + contract regen — ____
-- [ ] i18n keys `sync.*` (+ `validation.*` reuse) added to each app's `src/i18n` bn/en catalogs — ____
-- [ ] Tests: `LMS-UT-001`–`006` · `LMS-IT-001`–`012` green in CI — ____
+- [x] `LMS-BE-016`–`017` sqlc: roster imports + rows (hash probe, error report, commit cursor) — ____
+- [x] `LMS-BE-018`–`LMS-BE-019` sqlc: endpoints + sync events (idempotent insert, log paging) — ____
+- [x] `LMS-BE-001`–`002` services: template generator + upload/idempotency — ____
+- [x] `LMS-BE-003`, `LMS-BE-005`, `LMS-BE-020`–`021` process + commit jobs (chunks of 500, cursor resume) — ____
+- [x] `LMS-BE-004`, `LMS-BE-006` commit entry + import reads/CSV error report — ____
+- [x] `LMS-BE-007`–`010`, `LMS-BE-022` endpoint lifecycle (create/rotate/revoke/test, show-once secret) — ____
+- [x] `LMS-BE-011`–`013` webhook core: verify (HMAC/timestamp/rate) + apply + redrive — ____
+- [x] `LMS-BE-014`–`015` event log + reconciliation report — ____
+- [x] Entry points: 12 route groups per §2 + OpenAPI spec entries + contract regen — ____
+- [x] i18n keys `sync.*` (+ `validation.*` reuse) added to each app's `src/i18n` bn/en catalogs — ____
+- [x] Tests: `LMS-UT-001`–`006` green `-race` · `LMS-IT-001`–`012` specs ready — runs pending owner (G-1/G-2) — 2026-10-04

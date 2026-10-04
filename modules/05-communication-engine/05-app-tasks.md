@@ -277,23 +277,23 @@ payload + `client_msg_id`; replay order is per-group FIFO.
 
 ## 9. Task Checklist
 
-- [ ] `COM-AP-001` Chat home tab with Official/Custom/DMs segments + unread badges + request banner
-- [ ] `COM-AP-002` WS client: connect/JWT, room subscribe, heartbeat, exponential backoff reconnect + re-subscribe + catch-up
-- [ ] `COM-AP-003` Group chat screen: `MessageList`, date separators, Hind Siliguri, 360px layout
-- [ ] `COM-AP-004` Optimistic `MessageBubble` with SENDING→SENT→SEEN states + `client_msg_id` echo swap
-- [ ] `COM-AP-005` Composer + attach sheet (image/PDF/voice); keyboard-aware
-- [ ] `COM-AP-006` Image pipeline: compress to ~1 MB target → presign → PUT R2 → confirm → send message
-- [ ] `COM-AP-007` Voice recorder sheet (hold-to-record, ≤ 5 min, compress, background playback)
-- [ ] `COM-AP-008` PDF picker + viewer (system viewer, short-lived URL)
-- [ ] `COM-AP-009` Media viewer modal + "recovering attachment" archived state
-- [ ] `COM-AP-010` Read receipts UI (own ticks + per-message seen counts) via `message.read`
-- [ ] `COM-AP-011` Typing indicator (send throttle 1/3 s, 4 s expiry)
-- [ ] `COM-AP-012` DM flow: same-school instant open; out-of-network → request composer + pending state
-- [ ] `COM-AP-013` Message Request inbox screen (accept/decline/sent states)
-- [ ] `COM-AP-014` Notices tab (pinned first, scope badges, campaign section seam) + notice detail + push deep links
-- [ ] `COM-AP-015` Create-club modal with pending-approval success state
-- [ ] `COM-AP-016` Message delete (long-press; author ≤ 15 min rule surfaced; tombstone render)
-- [ ] `COM-AP-017` Offline queue (persisted) + offline banner + replay-on-reconnect
-- [ ] `COM-AP-018` `VerifiedGate` + all bn/en strings from `chat.*`/`notices.*` catalogs
-- [ ] `COM-AP-019` Reduced-motion variants for all §5 animations
-- [ ] `COM-AP-020` Maestro specs for §9 of `06` (E2E golden paths)
+- [x] `COM-AP-001` — — 2026-10-02: Chat home tab with Official/Custom/DMs segments + unread badges + request banner
+- [x] `COM-AP-002` — — 2026-10-02 (real client + tests; fixture bus feeds screens until Stage 5): WS client: connect/JWT, room subscribe, heartbeat, exponential backoff reconnect + re-subscribe + catch-up
+- [x] `COM-AP-003` — — 2026-10-02: Group chat screen: `MessageList`, date separators, Hind Siliguri, 360px layout
+- [x] `COM-AP-004` — — 2026-10-02: Optimistic `MessageBubble` with SENDING→SENT→SEEN states + `client_msg_id` echo swap
+- [x] `COM-AP-005` — — 2026-10-02: Composer + attach sheet (image/PDF/voice); keyboard-aware
+- [x] `COM-AP-006` — — 2026-10-02 (pipeline shape + caps + error paths; real expo-image-manipulator in Stage 5 — G-4): Image pipeline: compress to ~1 MB target → presign → PUT R2 → confirm → send message
+- [x] `COM-AP-007` — — 2026-10-02 (recorder sheet + 5-min cap; real expo-av in Stage 5 — G-4): Voice recorder sheet (hold-to-record, ≤ 5 min, compress, background playback)
+- [x] `COM-AP-008` — — 2026-10-02: PDF picker + viewer (system viewer, short-lived URL)
+- [x] `COM-AP-009` — — 2026-10-02: Media viewer modal + "recovering attachment" archived state
+- [x] `COM-AP-010` — — 2026-10-02 (own ticks + seen state; per-message counts arrive with `message.read` fan-out in Stage 5): Read receipts UI (own ticks + per-message seen counts) via `message.read`
+- [x] `COM-AP-011` — — 2026-10-02: Typing indicator (send throttle 1/3 s, 4 s expiry)
+- [x] `COM-AP-012` — — 2026-10-02: DM flow: same-school instant open; out-of-network → request composer + pending state
+- [x] `COM-AP-013` — — 2026-10-02: Message Request inbox screen (accept/decline/sent states)
+- [x] `COM-AP-014` — — 2026-10-02 (deep links land with 06's push binding): Notices tab (pinned first, scope badges, campaign section seam) + notice detail + push deep links
+- [x] `COM-AP-015` — — 2026-10-02: Create-club modal with pending-approval success state
+- [x] `COM-AP-016` — — 2026-10-02: Message delete (long-press; author ≤ 15 min rule surfaced; tombstone render)
+- [x] `COM-AP-017` — — 2026-10-02 (queue + banner + replay; MMKV persistence in Stage 5 — G-3): Offline queue (persisted) + offline banner + replay-on-reconnect
+- [x] `COM-AP-018` — — 2026-10-02: `VerifiedGate` + all bn/en strings from `chat.*`/`notices.*` catalogs
+- [x] `COM-AP-019` — — 2026-10-02: Reduced-motion variants for all §5 animations
+- [x] `COM-AP-020` — — 2026-10-02 (specs written; runs pending owner — G-1): Maestro specs for §9 of `06` (E2E golden paths)
