@@ -13,17 +13,17 @@
 
 | # | Route | Screen | Rendering | Access |
 | --- | --- | --- | --- | --- |
-| 1 | `/school/ledger` | Ledger dashboard — fills 07's stub (`WEB-FE-025`); tabs Invoices · Transactions · Reconciliation | Server shell + Client table | School Admin (own school) · Super Admin (read, all schools) |
-| 2 | `/school/invoices/new` | Issue single invoice | Client (RHF) | School Admin |
-| 3 | `/school/invoices/bulk` | Issue bulk invoices to a section (preview count) | Client (RHF) | School Admin |
-| 4 | `/school/ledger` (drawer) | Transaction detail drawer | Client overlay | School Admin · Super Admin |
-| 5 | `/school/ledger/reconciliation` | Reconciliation report (date picker + mismatch table) | Server data + Client filters | School Admin (own slice) · Super Admin |
+| 1 | `/institution/ledger` | Ledger dashboard — fills 07's stub (`WEB-FE-025`); tabs Invoices · Transactions · Reconciliation | Server shell + Client table | School Admin (own school) · Super Admin (read, all schools) |
+| 2 | `/institution/invoices/new` | Issue single invoice | Client (RHF) | School Admin |
+| 3 | `/institution/invoices/bulk` | Issue bulk invoices to a section (preview count) | Client (RHF) | School Admin |
+| 4 | `/institution/ledger` (drawer) | Transaction detail drawer | Client overlay | School Admin · Super Admin |
+| 5 | `/institution/ledger/reconciliation` | Reconciliation report (date picker + mismatch table) | Server data + Client filters | School Admin (own slice) · Super Admin |
 
 No public payment pages: payers pay in the app (module `05-app-tasks`); the web callback route only 302-redirects to the app deep link.
 
 ## 2. Screen Breakdown
 
-### 2.1 Ledger Dashboard — `/school/ledger`
+### 2.1 Ledger Dashboard — `/institution/ledger`
 
 **Layout**
 
@@ -44,7 +44,7 @@ desktop ≥1024                                tablet 640–1023
 
 | Component | Server/Client | Notes |
 | --- | --- | --- |
-| `LedgerSummaryCards` | Server | `GET /school/ledger/summary`; ৳ via `Intl` (bn digits when locale=bn) |
+| `LedgerSummaryCards` | Server | `GET /institution/ledger/summary`; ৳ via `Intl` (bn digits when locale=bn) |
 | `InvoiceTable` / `TransactionTable` | Client | TanStack Table + TanStack Query; server-side filter/sort/pagination — money totals never client-computed |
 | `ReconTable` | Client | date picker + gateway filter; mismatch rows flagged `🚩` |
 | `TransactionDrawer` | Client | focus-trapped overlay; shows ids, amounts, gateway status, receipt link — **no sensitive data** |
@@ -55,12 +55,12 @@ desktop ≥1024                                tablet 640–1023
 | State | Behaviour |
 | --- | --- |
 | Loading | Skeleton matching the final layout (cards + table rows) |
-| Empty | "এখনও কোনো ইনভয়েস নেই — প্রথম ফি নোটিশ ইস্যু করুন" / "No invoices yet — issue your first fee notice" + primary action → `/school/invoices/new` |
+| Empty | "এখনও কোনো ইনভয়েস নেই — প্রথম ফি নোটিশ ইস্যু করুন" / "No invoices yet — issue your first fee notice" + primary action → `/institution/invoices/new` |
 | Error | Boundary with retry + request id (`X-Request-Id` shown for support) |
 | Not found | Branded 404 |
 | Success | Totals row updates from the server response after each mutation |
 
-### 2.2 Issue Single Invoice — `/school/invoices/new`
+### 2.2 Issue Single Invoice — `/institution/invoices/new`
 
 **Layout**
 
@@ -85,7 +85,7 @@ desktop ≥1024                                tablet 640–1023
 
 **States** — Loading (picker skeleton) · Empty (no verified students → link to roster) · Error (field-mapped + request id) · Success (toast bn "ইনভয়েস ইস্যু হয়েছে" / en "Invoice issued" → navigates to ledger with the new row highlighted).
 
-### 2.3 Issue Bulk — `/school/invoices/bulk`
+### 2.3 Issue Bulk — `/institution/invoices/bulk`
 
 Same shape as 2.2 with `SectionPicker` instead of `StudentPicker` and a **preview step**: choosing a section fetches the resolved student count ("১২৪ জন শিক্ষার্থী / 124 students") before submit; > 200 shows `validation.payments.bulkLimit` and blocks submit. Success toast reports created/failed counts.
 
@@ -113,8 +113,8 @@ Submission: same Zod schema on the server · disable while pending · map `field
 | --- | --- |
 | Ledger reads (always fresh) | Server Component shell → generated OpenAPI client → api; `cache: no-store` — money screens are never cached |
 | Issue / void mutations | Server Action → generated client → api → toast + table refetch (revalidates `payments:invoices:{schoolId}` tags, `06` §4) |
-| Summary cards | Server fetch of `/school/ledger/summary` per navigation — no client cache |
-| Reconciliation | Client date filter → `/school/payments/reconciliation?date=` → mismatch table |
+| Summary cards | Server fetch of `/institution/ledger/summary` per navigation — no client cache |
+| Reconciliation | Client date filter → `/institution/payments/reconciliation?date=` → mismatch table |
 | CSV export | Client util over the current page's fetched dataset (server-supplied totals) |
 
 ## 5. Motion Spec
@@ -132,7 +132,7 @@ No decorative animation on money screens.
 
 | Surface | < 640 | 640–1023 | ≥ 1024 |
 | --- | --- | --- | --- |
-| `/school/ledger` | Not targeted (admin surface is ≥ tablet, but remains usable: priority columns + horizontal scroll) | Tabs scroll; filters collapse into a popover; cards stack | Full 3-pane: cards row + tabs + table with all columns |
+| `/institution/ledger` | Not targeted (admin surface is ≥ tablet, but remains usable: priority columns + horizontal scroll) | Tabs scroll; filters collapse into a popover; cards stack | Full 3-pane: cards row + tabs + table with all columns |
 | Invoice forms | Single column, stacked | Two-column (student/title / amount/date) | Two-column + live preview panel |
 | Drawer | Full-screen sheet | Bottom sheet | Right-side panel |
 
@@ -150,12 +150,12 @@ No decorative animation on money screens.
 
 ## 9. Task Checklist
 
-- [x] `PAY-FE-001` `/school/ledger` route replaces 07's stub; shell + summary cards (`GET /school/ledger/summary`) — 2026-10-03 (fills 07's stub; summary cards)
+- [x] `PAY-FE-001` `/institution/ledger` route replaces 07's stub; shell + summary cards (`GET /institution/ledger/summary`) — 2026-10-03 (fills 07's stub; summary cards)
 - [x] `PAY-FE-002` `InvoiceTable` — TanStack Table, server filters (status/class/month), pagination, totals row — 2026-10-03 (invoice table; status filters land with live filters)
 - [x] `PAY-FE-003` `TransactionTable` + `TransactionDrawer` (no sensitive data; receipt link) — 2026-10-03 (ledger entries table; drawer rides the reconciliation gap G-5)
 - [ ] `PAY-FE-004` CSV export of the filtered view (bn/en headers)
-- [x] `PAY-FE-005` `/school/invoices/new` form (RHF + zod mirror; student picker via 04) — 2026-10-03 (zod mirror, bn-first)
-- [ ] `PAY-FE-006` `/school/invoices/bulk` form + section preview count + 200-cap guard
+- [x] `PAY-FE-005` `/institution/invoices/new` form (RHF + zod mirror; student picker via 04) — 2026-10-03 (zod mirror, bn-first)
+- [ ] `PAY-FE-006` `/institution/invoices/bulk` form + section preview count + 200-cap guard
 - [ ] `PAY-FE-007` Reconciliation tab — date picker, gateway filter, mismatch table with 🚩 rows
 - [x] `PAY-FE-008` Void action (row menu + reason dialog + `CONFLICT` error state) — 2026-10-03 (row menu + confirm dialog + CONFLICT state)
 - [x] `PAY-FE-009` Empty/error/loading states for every surface (incl. bn empty copy above) — 2026-10-03 (loading/empty/error per surface)

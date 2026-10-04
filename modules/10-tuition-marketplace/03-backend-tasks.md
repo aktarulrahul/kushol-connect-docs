@@ -194,9 +194,9 @@ per-user buckets on #1/#7/#13).
 The web build consumes the Go API through the generated `openapi-fetch` client — never the
 database directly. Module 07 owns the portal shell/nav; this module owns the screens:
 
-- `/school/tutors` + `/school/tutors/[id]` — verification queue + evidence viewer
+- `/institution/tutors` + `/institution/tutors/[id]` — verification queue + evidence viewer
   (endpoints #8/#9/#10; media URLs via 05's short-lived R2 downloads).
-- `/school/tuitions` — requirements oversight (endpoint #2 with School Admin role + #3 close
+- `/institution/tuitions` — requirements oversight (endpoint #2 with School Admin role + #3 close
   action).
 
 Same auth (web session) + zod input validation mirroring `validation.tuition.*` + RFC-7807 error

@@ -16,7 +16,7 @@ Ships the web surface of Kushol Connect: the public B2B funnel — bilingual lan
 
 **In:** landing sections + ROI calculator + SEO suite (per-locale Metadata, OG, JSON-LD Organization, sitemap, robots) under CWV budgets; `/download` with flag-gated placeholders; `/admin` dashboard, tenants + create-school wizard, cities, vendor approvals, leads pipeline, campaigns stub, audit viewer; `/school` dashboard, verification queue, notice composer + board, clubs, sections, migration wizard; `/vendor` shell; api-side `landing_leads` + `vendor_accounts` tables, endpoints #1–#9 (`03` §2), route-guard middleware + per-role layouts, the `leads` rate-limit class.
 
-**Out:** `/login` screen (module 03 — 07 only gates shells behind it); roster CSV upload screen (module 14; `/school/roster` stub only); ledger / AI Matrix / tutor / webhook screens (modules 12/09/10/14 — stubs); vendor portal screens (11) and campaign moderation logic (13); revenue/fee data (11/12 — placeholder empty states); chat/notice fan-out (05/06).
+**Out:** `/login` screen (module 03 — 07 only gates shells behind it); roster CSV upload screen (module 14; `/institution/roster` stub only); ledger / AI Matrix / tutor / webhook screens (modules 12/09/10/14 — stubs); vendor portal screens (11) and campaign moderation logic (13); revenue/fee data (11/12 — placeholder empty states); chat/notice fan-out (05/06).
 
 ### 1.3 Dependencies
 
@@ -24,7 +24,7 @@ Ships the web surface of Kushol Connect: the public B2B funnel — bilingual lan
 | --- | --- | --- |
 | consumes | 01 foundations | generated client, `/healthz`, `audit.Record`, scoped `audit_log` reads, error envelope + `X-Request-Id`, limiter base for the `leads` class |
 | consumes | 02 design-system | tokens, web primitives, `LocaleProvider`/`t()`; namespace whitelist extended with `landing`/`school`/`vendor` (additive, parity-gated) |
-| consumes | 03 identity-access | session auth (cookie + CSRF), `/login`, verification queue + `GET /school/users`, additive `verification.PendingCount(schoolID)` |
+| consumes | 03 identity-access | session auth (cookie + CSRF), `/login`, verification queue + `GET /institution/users`, additive `verification.PendingCount(schoolID)` |
 | consumes | 04 organization-hierarchy | `POST/PATCH /admin/schools`, `POST /admin/cities`, picker reads, sections CRUD, migration create/get/commit, `hierarchy.PlatformCounts()/SchoolCounts()` |
 | consumes | 05 communication-engine | notices CRUD/pin, media presign/confirm, custom-group approval, additive `chat.NoticeStats(schoolID)` |
 | consumed by | 11 campus-commerce | `leads.Create`, `vendors.Approve` family, `/vendor` state lookup |
@@ -55,7 +55,7 @@ Ships the web surface of Kushol Connect: the public B2B funnel — bilingual lan
 ```text
 Visitor ──▶ / · /download (static + ISR, tag landing:content) · ROI calculator (client-side, ROI_ASSUMPTIONS)
 Principal ─▶ PilotForm · Vendor ─▶ VendorInquiryForm ─┐
-Super Admin ─▶ /admin/* · School Admin ─▶ /school/* ──┤ Route Handler / Server Action (zod re-validate, CSRF)
+Super Admin ─▶ /admin/* · School Admin ─▶ /institution/* ──┤ Route Handler / Server Action (zod re-validate, CSRF)
                                                       ▼ generated openapi-fetch client
                     applications/api (Go, chi): leads · vendors · stats · auditlog services
                     portal data via 03/04/05 exported services · audit.Record (01) when destructive
@@ -79,8 +79,8 @@ Super Admin ─▶ /admin/* · School Admin ─▶ /school/* ──┤ Route Han
    Component first paint → TanStack Query hydration → api (authenticate → claims → tenant-scope)
 3. Portal mutation:  Server Action / Route Handler → zod re-validate → api with X-CSRF-Token →
    audit-logged when destructive → revalidateTag per 06 §4 (admin:*, school:{id}:stats, notices:*)
-4. Migration wizard:  POST /school/migrations {dryRun:true} → DRAFT + per-item table →
-   dryRun:false → PREVIEWED → commit → poll GET /school/migrations/{id} every 3 s → COMMITTED
+4. Migration wizard:  POST /institution/migrations {dryRun:true} → DRAFT + per-item table →
+   dryRun:false → PREVIEWED → commit → poll GET /institution/migrations/{id} every 3 s → COMMITTED
 5. Degradation:  api down → landing/download still serve; portals error boundary + retry +
    X-Request-Id; lead submit retry-safe with input preserved
 ```
@@ -161,12 +161,12 @@ Exports return DTOs (never sqlc rows); admin-only exports require role claims; d
 | `/admin/campaigns` | Campaign moderation stub ("ships in module 13") | Dynamic | Super Admin |
 | `/admin/audit` | Audit log viewer — read-only, entity/action/school filters, pager | Dynamic | Super Admin |
 | `/school` | School Admin dashboard — four StatCards, partial-payload flags | Dynamic | School Admin |
-| `/school/users` | Verification queue — SLA badges (48 h amber / 72 h red), reject reason | Dynamic | School Admin |
-| `/school/notices` | Notice board — pinned-first, pin/delete controls | Dynamic | School Admin |
-| `/school/notices/new` | Notice composer — bn/en tabs, scope, pin, attachment (05 presign), preview, one-way banner | Dynamic | School Admin |
-| `/school/clubs` · `/school/sections` | Club (custom group) approval queue (05) · sections manager create/archive + `CONFLICT` copy | Dynamic | School Admin |
-| `/school/migrations` · `/new` · `/[id]` | Migration runs list · wizard (dry-run → review → commit) · status page (poll while COMMITTING) | Dynamic | School Admin |
-| `/school/roster` · `/ledger` · `/matrix` · `/tutors` · `/webhooks` | Stubs → modules 14/12/09/10/14 | Dynamic | School Admin |
+| `/institution/users` | Verification queue — SLA badges (48 h amber / 72 h red), reject reason | Dynamic | School Admin |
+| `/institution/notices` | Notice board — pinned-first, pin/delete controls | Dynamic | School Admin |
+| `/institution/notices/new` | Notice composer — bn/en tabs, scope, pin, attachment (05 presign), preview, one-way banner | Dynamic | School Admin |
+| `/institution/clubs` · `/institution/sections` | Club (custom group) approval queue (05) · sections manager create/archive + `CONFLICT` copy | Dynamic | School Admin |
+| `/institution/migrations` · `/new` · `/[id]` | Migration runs list · wizard (dry-run → review → commit) · status page (poll while COMMITTING) | Dynamic | School Admin |
+| `/institution/roster` · `/ledger` · `/matrix` · `/tutors` · `/webhooks` | Stubs → modules 14/12/09/10/14 | Dynamic | School Admin |
 | `/vendor` | Vendor shell — pending / approved / rejected states from api | Dynamic | Vendor |
 | `*` | Branded 404 + role-aware FORBIDDEN pages | Dynamic | All |
 
@@ -213,7 +213,7 @@ N/A — module 07 covers `web` + `api` only (README row). App surfaces that cons
 | Concern | Rule |
 | --- | --- |
 | Auth chain | Middleware checks session-cookie **presence only** for redirects (`WEB-BR-001`); every real decision runs api-side: authenticate → load role claims → tenant-scope (03 chain); mutations carry `X-CSRF-Token`; portal layouts re-check role claims per route group |
-| Role matrix | Public: `/`, `/download`, POST leads + vendor-register. Super Admin: `/admin/*` (endpoints #3–#7, #9). School Admin: `/school/*` (#8, claim-scoped). Teacher: `/school/ai-matrix` only (own sections, module 09) — every other `/school/*` route returns `FORBIDDEN`. Vendor: `/vendor` shell gated on server status. Teacher/Student/Guardian: no portal |
+| Role matrix | Public: `/`, `/download`, POST leads + vendor-register. Super Admin: `/admin/*` (endpoints #3–#7, #9). School Admin: `/institution/*` (#8, claim-scoped). Teacher: `/institution/ai-matrix` only (own sections, module 09) — every other `/institution/*` route returns `FORBIDDEN`. Vendor: `/vendor` shell gated on server status. Teacher/Student/Guardian: no portal |
 | Tenant scope | School Admin screens send no `schoolId` — scope is claim-derived (`WEB-BR-008`); `landing_leads`/`vendor_accounts` are platform-wide (Super Admin reads); cross-tenant attempts → `TENANT_MISMATCH`/404 with request id |
 | Rate limits | Class `leads` on `POST /leads` + `POST /vendor/register`: 10/h/IP, 3/min burst (Redis, DB fallback counters); default class on all other routes |
 | Audit events | `vendor.approved` / `vendor.rejected` / `vendor.suspended` (actor, target, reason); `lead.status_changed`; destructive UI actions (school/city create, vendor decision, lead status, migration preview/commit) confirmed in UI naming the object and audit-logged api-side; audit failure aborts the action (01 I-3) |
@@ -277,7 +277,7 @@ All errors surface as RFC-7807 `application/problem+json`; user-visible messages
 | # | Item | Impact | Owner | Status | Default if unanswered |
 | --- | --- | --- | --- | --- | --- |
 | 1 | ROI time-saved assumptions (OQ-1) | Trust damage with principals | Rahul | Open — `TODO: Confirm` pre-launch | `minutesPerNotice = 4`, `minutesPerFeeStudent = 0.5`; estimate label + formula shown |
-| 2 | Roster CSV format for the `/school/roster` stub tooltip (OQ-2) | Stub copy only | Rahul | Open | Portal-generated template (module 14); strict header validation, row-level error report |
+| 2 | Roster CSV format for the `/institution/roster` stub tooltip (OQ-2) | Stub copy only | Rahul | Open | Portal-generated template (module 14); strict header validation, row-level error report |
 | 3 | Final APK / TestFlight URLs (OQ-3) | Download funnel inert | Rahul | Open — `TODO: Confirm` at module 15 | Disabled placeholders; `NEXT_PUBLIC_DOWNLOAD_URLS_READY` false |
 | 4 | Assembled bn-first notice body acceptable to 05/app? (OQ-4) | App readability | Rahul + 05 owner | Open | Assembled `bn\n\n—\nen`, fixed separator, per-part caps |
 | 5 | Vendor reinstate path after suspension/rejection (OQ-5) | Lifecycle completeness | Rahul | Open | `PATCH …/approve` allowed again from `suspended`/`rejected`, audit-logged |
@@ -305,6 +305,8 @@ All errors surface as RFC-7807 `application/problem+json`; user-visible messages
 
 | Date | Change | Author |
 | --- | --- | --- |
+| 2026-10-04 | Institution portal route renamed `/school/*` → `/institution/*` (api contract paths unchanged); product terminology is "institution (প্রতিষ্ঠান)" throughout; panel serves three admin personas — Kushol admin, Institution admin, Vendor admin — with role-filtered nav + role-specific dashboards; admin chat restyled to WhatsApp fidelity with `wa-*` design tokens; stubs retired: `/admin/campaigns` (13), `/admin/commission` (12/13), `/institution/invoices` created (12), `/institution/webhooks` (14 delivery log). AI matrix stays a stub (09, phase 2) | Kilo |
+| 2026-10-04 | Console additions (fixture seams, contracts additive): two admin personas with role-aware `/admin`, admin chat, audit + access-log tabs on the DataTable, lead decisions (accept/reject-with-reason), vendor onboarding/store/item-approvals, school details + per-school LMS connector (kushol-admin-only), BD division→city onboarding, sidebar/user-popover/typography polish. Contracts + gaps G-13…G-16 in 07-progress/08-gaps | Kilo |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
-| 2026-09-30 | Consistency pass: vendor portal login = 03 `vendor` role created by `users.CreateVendorLogin` on approval; exports `vendors.AccountForUser` + `RequireApprovedVendor` for 11/13; stub routes renamed to owners' names (`/school/ai-matrix` — Teacher access to own sections, `/school/integrations`), `/school/sections/[sectionId]` added; UI direction = professional SaaS landing + admin console (`docs/design-reference/README.md` §7) | Claude |
-| 2026-10-03 | Build Stages 2–4: fixture UI for landing/admin/school/vendor; migrations `20261015090000–091000`; `leads`/`vendors`/`webconsole` services + console handlers; unit tests green; Gate 2 pending owner migrate | Cursor |
+| 2026-09-30 | Consistency pass: vendor portal login = 03 `vendor` role created by `users.CreateVendorLogin` on approval; exports `vendors.AccountForUser` + `RequireApprovedVendor` for 11/13; stub routes renamed to owners' names (`/institution/ai-matrix` — Teacher access to own sections, `/institution/integrations`), `/institution/sections/[sectionId]` added; UI direction = professional SaaS landing + admin console (`docs/design-reference/README.md` §7) | Claude |
+| 2026-10-03 | Build Stages 2–4: fixture UI for landing/admin/institution/vendor; migrations `20261015090000–091000`; `leads`/`vendors`/`webconsole` services + console handlers; unit tests green; Gate 2 pending owner migrate | Cursor |

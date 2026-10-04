@@ -121,7 +121,7 @@ by clients). Additive later: online `payment_method` activation + `AttachPayment
 
 | ID | Test | Layer | Proves |
 | --- | --- | --- | --- |
-| `CMP-UT-007` | Cache invalidation sets: storefront/school/product/inventory mutations bust exactly the §4 tag sets (incl. dropped schools) | Unit | §4 contract |
+| `CMP-UT-007` | Cache invalidation sets: storefront/institution/product/inventory mutations bust exactly the §4 tag sets (incl. dropped schools) | Unit | §4 contract |
 | `CMP-UT-008` | Push payload builder emits orderId + status label + deep link only (no addresses, no phone, no buyer PII) | Unit | I-9 privacy |
 | `CMP-IT-011` | **Oversell prevention, parallel orders** (seam-level): concurrent placements + live push/job stubs → one winner, losers `OUT_OF_STOCK`; reservation math exact | Integration | CMP-BR-004 / INV-2 |
 | `CMP-IT-012` | **Cross-school store visibility**: store serving {A} invisible to school B buyers (browse, detail, placement 404); school A sees it; pause hides both | Integration | CMP-BR-002 / INV-1 |

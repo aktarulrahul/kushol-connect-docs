@@ -1,6 +1,6 @@
 # 10-tuition-marketplace — Build Progress
 
-Module: tuition-marketplace · Surfaces: api + app + web (07's `/school/tutors` stub filled) ·
+Module: tuition-marketplace · Surfaces: api + app + web (07's `/institution/tutors` stub filled) ·
 Repos: `applications/api`, `applications/app`, `applications/web` · **Last updated:** 2026-10-03
 
 > Owner instruction (this session): "complete the 10-tuition-marketplace module" — building
@@ -98,7 +98,7 @@ the Stage 4/5 evidence above independently and landed the web half of the Stage-
 | web | `src/i18n/catalog.test.ts` allowlist | fixed: `landing.mkt.wordmark` ("kushol", brand Latin wordmark) added to the proper-name allowlist — unblocked the bn-catalog guard after the 07 stream added the key |
 
 The web screens stay on the fixture seam until module 07's session middleware (`WEB-INT-005`,
-cookie + CSRF transport) lands — flipping `/school/tutors*` + `/school/tuitions` to
+cookie + CSRF transport) lands — flipping `/institution/tutors*` + `/institution/tuitions` to
 `lib/tuition/api.ts` is then a one-import change (`08-gaps.md` G-7).
 
 ## Gate 2 SQL hand-off (owner)
@@ -114,10 +114,35 @@ the highest version — do not run lower-versioned files afterwards.
 
 ## UI review hand-off (Gate 1)
 
-- **Web** (`pnpm dev`, school-admin fixture login): `/school/tutors` (queue + SLA chips; platform
-  tab via `tuitionFixtureFlags.platformScope`), `/school/tutors/ver_demo_1` (evidence viewer,
-  approve/reject note rules), `/school/tuitions` (oversight + confirm-guarded close). Fixture
+- **Web** (`pnpm dev`, school-admin fixture login): `/institution/tutors` (queue + SLA chips; platform
+  tab via `tuitionFixtureFlags.platformScope`), `/institution/tutors/ver_demo_1` (evidence viewer,
+  approve/reject note rules), `/institution/tuitions` (oversight + confirm-guarded close). Fixture
   modes: `success/offline/forbidden/conflict` (`tuitionFixtureFlags`). Desktop 1280 + 768.
 - **App** (fixture session): home → wizard (4 steps, offline banner via
   `tuitionFixtureFlags.mode = "offline"`) → my requirements → detail accept; matches interest
   (optimistic); tutor setup + evidence tracker; premium upsell (disabled CTA). 360px bn + en.
+
+---
+
+## Scope correction + marketplace build (2026-10-04, owner instruction)
+
+**Tuitions are now independent of schools/colleges.** The P0 admin verification/oversight screens
+(`tuition.admin.*`, `/institution/tuitions` for the institution view) stay as built; the marketplace
+itself moved to standalone public routes with a new fixture seam (`fixtures/tuition-market.ts`):
+
+| Surface | What exists |
+| --- | --- |
+| `/tuition` | Browse open requirements (subject/class/area/sessions/budget) + interview-call log; Kushol ops **Arrange interview** per requirement |
+| `/tuition/post` | Guardian/student posts a requirement (no institution binding) |
+| `/tuition/register` | Any Kushol user registers as a tutor → **auto-match** (subject + class levels + area) → **matched tutors are notified** (count shown on success) |
+| Interviews | **Physical meet or online** — mode toggle; online takes a meeting link, in-person takes a venue; calls logged with mode badge |
+| Ratings | **Registered tutors are rated 1–5** (`rateTutor`): running average + count shown; unrated tutors render "unrated" explicitly |
+
+**Additive api contracts for the integration pass (10):** tuition requirements (no school FK —
+poster name/phone/subject/class/area/budget), tutor registrations (user-linked, subject/class/
+area), requirement–tutor matching + tutor notifications (06 push type `tuition.match` already
+exists), interview calls (mode in_person/online, slot, venue/meeting link), `tutor_ratings`
+(tutor, rater, stars 1–5, unique per rater per session).
+
+**Verified:** fixture tests for post → register → match/notify → arrange (both modes) and the
+rating bounds; web typecheck/lint green; 205/205 tests.

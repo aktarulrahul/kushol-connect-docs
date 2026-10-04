@@ -16,7 +16,7 @@ declared here (`docs/prompt/prompt-build.md` §6).
 | I-2 | `04 organization-hierarchy` | we call them | exported `hierarchy.CreateEnrollments(batch, source="ROSTER")` + `hierarchy.GetSection` | fatal per row (row-level error reported); never fatal to the import/job |
 | I-3 | `05 media` | we call them | presigned upload + confirm (`media_assets`) for roster files | import `failed` with reason; re-upload |
 | I-4 | `01 foundations` | we call them | `jobs.Enqueue`/`jobs.Register` (process/commit workers) · `audit.Record` · rate-limit middleware | jobs degraded (QUEUED + retry); audit failure aborts the wrapped destructive action |
-| I-5 | `07 command-center-web` | they host us | `/school/roster` + `/school/integrations` nav stubs — 14 fills them (wizard, history, `/school/integrations`) | portal shell down = screens unreachable; api unaffected |
+| I-5 | `07 command-center-web` | they host us | `/institution/roster` + `/institution/integrations` nav stubs — 14 fills them (wizard, history, `/institution/integrations`) | portal shell down = screens unreachable; api unaffected |
 | I-6 | Schools' LMS/ERP systems (external) | they call us | inbound HTTPS `POST /api/v1/webhooks/erp/{schoolId}` (HMAC-signed, unauthenticated-by-design exception) | rejected per event (`INVALID_SIGNATURE`/`STALE_TIMESTAMP`/`RATE_LIMITED`); ERP retries; never fatal to the platform |
 | I-7 | `04/05/06` verified-user chain (indirect) | we trigger | enrollment upserts for VERIFIED users propagate groups/topics via the existing chain | degraded — import completes, groups/topics converge via chain retries (06 §8) |
 
@@ -67,9 +67,9 @@ HTTP; signature changes are additive first.
 
 | Read | Tagged with |
 | --- | --- |
-| `GET /school/roster/imports*` | `school:{id}:roster` (admin reads fresh; no-store) |
-| `GET /school/erp/endpoints*` | `school:{id}:roster` (no-store) |
-| `GET /school/roster/reconciliation` | `school:{id}:roster` + 5-min Redis memo of computed counts (drift tolerance) |
+| `GET /institution/roster/imports*` | `school:{id}:roster` (admin reads fresh; no-store) |
+| `GET /institution/erp/endpoints*` | `school:{id}:roster` (no-store) |
+| `GET /institution/roster/reconciliation` | `school:{id}:roster` + 5-min Redis memo of computed counts (drift tolerance) |
 | template / error CSV streams | none (`no-store`) |
 
 ## 5. External Systems
@@ -134,7 +134,7 @@ are additive; unknown types are rejected `VALIDATION_FAILED` (ERP upgrades after
 | `LMS-UT-002` | Template headers fixed-set UT (exact columns/order, deterministic pre-fill) | Unit | `LMS-BR-008` |
 | `LMS-UT-003` | Secret verifier UT: constant-time compare, version selection, overlap window | Unit | `sync.VerifyEndpointSecret` |
 | `LMS-IT-010` | Rate-limit IT: 61st event/min → 429 + `Retry-After` | Integration | `LMS-BR-012` |
-| `LMS-E2E-001` | Playwright **WEB-LMS golden path**: login → `/school/roster/new` → download template → upload CSV → dry-run report → fix-free commit → summary counts → import visible in history; axe-clean | Playwright | end-to-end admin journey + bilingual UI |
+| `LMS-E2E-001` | Playwright **WEB-LMS golden path**: login → `/institution/roster/new` → download template → upload CSV → dry-run report → fix-free commit → summary counts → import visible in history; axe-clean | Playwright | end-to-end admin journey + bilingual UI |
 
 ## 10. Task Checklist
 
@@ -146,5 +146,5 @@ are additive; unknown types are rejected `VALIDATION_FAILED` (ERP upgrades after
 - [x] `LMS-INT-006` `audit.Record` on upload/commit/endpoint create-rotate-revoke + every webhook rejection — ____
 - [x] `LMS-INT-007` webhook route middleware (HMAC + timestamp + rate + body cap) with the unauthenticated exception documented in the OpenAPI spec — ____
 - [x] `LMS-INT-008` cache tag `school:{id}:roster` + invalidation on all §4 mutations — ____
-- [x] `LMS-INT-009` 07 stub replacement: nav entries for `/school/roster` + `/school/integrations` — ____
+- [x] `LMS-INT-009` 07 stub replacement: nav entries for `/institution/roster` + `/institution/integrations` — ____
 - [x] `LMS-INT-010` tests: `LMS-UT-001`–`006` green `-race`; ITs + `LMS-E2E-001` specs ready — runs pending owner (G-1/G-2) — 2026-10-04

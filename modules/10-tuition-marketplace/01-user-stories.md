@@ -109,7 +109,7 @@ Implements `brd.md` **BR-03** and `prd.md` **§5.3**: guardians/students post tu
 
 **Acceptance criteria**
 
-- **Given** pending verifications routed to my school, **when** I open `/school/tutors`, **then** each row shows tutor identity, university, subjects + an evidence viewer (05 media viewer, short-lived R2 URLs) — evidence visible to reviewers + owning tutor only.
+- **Given** pending verifications routed to my school, **when** I open `/institution/tutors`, **then** each row shows tutor identity, university, subjects + an evidence viewer (05 media viewer, short-lived R2 URLs) — evidence visible to reviewers + owning tutor only.
 - **Given** I approve (optional note), **when** the decision lands, **then** the profile becomes `verified` (`verified_at` set), the badge activates, the tutor is notified via 06, and `audit.Record` captures reviewer, decision and note.
 - **Given** I reject, **when** I submit a reason (required, ≥ 5 chars), **then** the profile becomes `rejected` and the tutor sees the reason in their tracker.
 - **Given** a queue item of another school, **when** I open it directly, **then** `TENANT_MISMATCH`/404 — no data leaks.

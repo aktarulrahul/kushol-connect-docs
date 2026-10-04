@@ -10,7 +10,7 @@ Module: lms-erp-sync · Surfaces: **api + web** (app = N/A by design, `05` empty
 
 | Stage | Status | Evidence |
 | --- | --- | --- |
-| 1 Plan | ✅ 2026-10-04 | OQ-1…10 defaults accepted (10k rows/20 MB · phone-only match · exact template · HMAC ±5 min + 24 h overlap · event-id duplicates 200 · 60/min + Retry-After · licence ON for pilots via 07 · pull default for partners · `/school/lms/connections*` routes · FCM rename deferred) |
+| 1 Plan | ✅ 2026-10-04 | OQ-1…10 defaults accepted (10k rows/20 MB · phone-only match · exact template · HMAC ±5 min + 24 h overlap · event-id duplicates 200 · 60/min + Retry-After · licence ON for pilots via 07 · pull default for partners · `/institution/lms/connections*` routes · FCM rename deferred) |
 | 2 UI (web, mock-driven) | ✅ 2026-10-04 | contract-first: 22 operations + 28 `Lms*` schemas landed FIRST; both clients generated (105 `Lms` refs in the web schema); web: roster home, upload wizard, import detail, integrations (endpoints + LMS pull panel), reconciliation — on `fixtures/lms.ts` |
 | Gate 1 | ⏳ pending owner | review hand-off below |
 | 3 Docs sync | ✅ 2026-10-04 | this file, 08-gaps, README → 🚧, registry row, checklist ticks, change log |
@@ -81,9 +81,9 @@ Run in order against Neon; each has a `.down` reverse. `ERP_SECRET_KEY` must be 
 
 ## Gate 1 review hand-off
 
-Web (`pnpm dev`, fixtures): `/school/roster` (cards + history) → `/school/roster/new`
+Web (`pnpm dev`, fixtures): `/institution/roster` (cards + history) → `/institution/roster/new`
 (template download → CSV upload → dry-run report → commit; errors block commit) →
-`/school/roster/imports/[id]` (totals + error rows) → `/school/integrations` (endpoint create
+`/institution/roster/imports/[id]` (totals + error rows) → `/institution/integrations` (endpoint create
 with show-once secret modal + ack, test/rotate/revoke, event log + redrive; LMS connection
-form + test + Sync now + run history) → `/school/roster/reconciliation` (baseline vs platform,
+form + test + Sync now + run history) → `/institution/roster/reconciliation` (baseline vs platform,
 drift flags). Desktop 1280 + 768; bn default, en toggle.

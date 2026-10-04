@@ -28,7 +28,7 @@ Implements `brd.md` **BR-03** and `prd.md` **§5.3**: guardians/students post tu
 | consumes | 04 organization-hierarchy | `hierarchy.ResolveUserNodes` (poster school context), section/class-level catalog |
 | consumes | 05 communication-engine | `chat` DM + `message_requests` (negotiation), `media.PresignUpload`/`ConfirmUpload` (evidence, photos) |
 | consumes | 06 notifications | `notify.SendToUser` / `BroadcastTopic` (match/decision/interest/expiry notices, deep links) |
-| consumed by | 07 command-center-web | hosts the `/school/tutors*` + `/school/tuitions` nav (module owns the screens); reads `tuition.VerifiedTutorCount` for landing/dashboard stats |
+| consumed by | 07 command-center-web | hosts the `/institution/tutors*` + `/institution/tuitions` nav (module owns the screens); reads `tuition.VerifiedTutorCount` for landing/dashboard stats |
 | consumed by | 12 payments (future) | consumes the accepted-match fee DUE fact (INV-8) — additive export when 12 lands (`TODO: Confirm` fee model first, `06` §1 I-7) |
 
 ---
@@ -169,9 +169,9 @@ Admin surface only; portal nav lives in module 07's shell.
 
 | Route | Screen | Rendering | Access |
 | --- | --- | --- | --- |
-| `/school/tutors` | Tutor-verification queue (tutor, university, subjects bn, SLA chip; Super Admin sees the প্ল্যাটফর্ম tab for NULL-school rows) | Server Component + Server Actions | School Admin / Super Admin |
-| `/school/tutors/[id]` | Verification detail + evidence viewer (05 media, short-lived R2 URLs; degraded placeholder) + approve/reject forms | Server Component + Client | School Admin (own school) / Super Admin (platform) |
-| `/school/tuitions` | Requirements oversight — read-only table; guarded close action with audit note | Server Component + Server Actions | School Admin |
+| `/institution/tutors` | Tutor-verification queue (tutor, university, subjects bn, SLA chip; Super Admin sees the প্ল্যাটফর্ম tab for NULL-school rows) | Server Component + Server Actions | School Admin / Super Admin |
+| `/institution/tutors/[id]` | Verification detail + evidence viewer (05 media, short-lived R2 URLs; degraded placeholder) + approve/reject forms | Server Component + Client | School Admin (own school) / Super Admin (platform) |
+| `/institution/tuitions` | Requirements oversight — read-only table; guarded close action with audit note | Server Component + Server Actions | School Admin |
 
 ### 6.2 Mobile (detail in `05-app-tasks.md`)
 
@@ -316,6 +316,7 @@ Consolidated from `01` §9 and `02` §11 — the table to review in module readi
 
 | Date | Change | Author |
 | --- | --- | --- |
+| 2026-10-04 | SCOPE: tuitions are independent of institutions (owner). Public marketplace `/tuition` (+post, +register): guardians/students post requirements; any Kushol user registers as a tutor, auto-match (subject+class+area) notifies them; Kushol arranges interviews — physical meet or online (venue/link); tutors rated 1–5 (running average). Institution-side verification/oversight unchanged (`/institution/tuitions`). Additive contracts listed in 07-progress | Kilo |
 | 2026-10-03 | Build executed contract-first: 15 REST paths (14 routed + tracker GET) + 26 `Tuition*` schemas landed in the api spec before any UI; INV-4 contact/chat nullability encoded in the contract; additive push types `tuition_match`/`tuition_interest`/`tuition_verification` in 06's frozen builder (bn/en copy api-side); matching = bbox+haversine ranker (subject coverage ↓, distance ↑, stable ties) with idempotent `ON CONFLICT DO NOTHING` inserts; accept tx emits the fee-DUE audit fact (INV-7/8) and opens 05's DM/Message-Request seam with a degraded `{pending}` handle; cache invalidation via the shared tag cache (`tuition:tutors:{area}` / `tuition:tutor:{id}` / `tuition:tutorcount:{schoolId}`); migrations `20261120090000–093000`. App: live client behind the session-token selector; web: fixture seam until 07's console session glue (G-8). Seed deferred (G-7). | Kilo |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
 | 2026-09-30 | Consistency pass: migrations re-versioned `20261120…` (were colliding with 08's `20261101…`) | Claude |

@@ -171,7 +171,7 @@ Refund/settlement admin actions (`adjustment` entries, settlement CSV import) ar
 
 ### Web Server Action / Route Handler (Next.js)
 
-`/school/ledger`, invoice forms, reconciliation screen call the Go API through the generated `openapi-fetch` client — never the database directly. Same auth (school-admin session, 03) + zod mirrors of the contract shapes; money totals always come from api responses (no client-side arithmetic).
+`/institution/ledger`, invoice forms, reconciliation screen call the Go API through the generated `openapi-fetch` client — never the database directly. Same auth (school-admin session, 03) + zod mirrors of the contract shapes; money totals always come from api responses (no client-side arithmetic).
 
 ---
 
@@ -195,8 +195,8 @@ Refund/settlement admin actions (`adjustment` entries, settlement CSV import) ar
 | `PAY-BE-014` | `payments.ListOwnTransactions(payer)` / `GetReceipt(actor, txnID)` | payer-scoped; receipt visible to payer + txn's school admin | — | no |
 | `PAY-BE-015` | `PaymentGateway` adapters (sslcommerz/bkash/nagad): `Initiate` / `VerifyWebhook` / `FetchStatus` | signature schemes + replay windows per gateway; timeouts 15 s; health flag feeds chooser hiding | — | no (adapter) |
 | `PAY-BE-016` | Webhook middleware (signature-first pipeline) | the documented auth-chain exception (`02` §6); 403 path writes flagged `gateway_events` + alert log (ids only) | — | yes (rejects) |
-| `PAY-BE-017` | `POST /school/refunds` endpoint wiring for `PAY-BE-012` | same chain; class `default` | summary tags | yes |
-| `PAY-BE-018` | `POST /school/settlements/import` endpoint wiring for `PAY-BE-011` | super_admin; multipart CSV | none | yes |
+| `PAY-BE-017` | `POST /institution/refunds` endpoint wiring for `PAY-BE-012` | same chain; class `default` | summary tags | yes |
+| `PAY-BE-018` | `POST /institution/settlements/import` endpoint wiring for `PAY-BE-011` | super_admin; multipart CSV | none | yes |
 
 ## 4. Repository Tasks
 

@@ -65,7 +65,7 @@ Run in order against Neon; each has a `.down` reverse. New env: `PAYMENTS_WEBHOO
 
 ## Gate 1 review hand-off
 
-Web (`pnpm dev`, school-admin fixture): `/school/ledger` (summary cards, invoices tab + void
-dialog, ledger tab) → `/school/invoices/new`. App (fixture): Marketplace → ফি পরিশোধ → invoice →
+Web (`pnpm dev`, school-admin fixture): `/institution/ledger` (summary cards, invoices tab + void
+dialog, ledger tab) → `/institution/invoices/new`. App (fixture): Marketplace → ফি পরিশোধ → invoice →
 pay (gateway chooser) → status (settles in sandbox) → receipt. Fixture modes:
 `success/offline/forbidden/conflict/gateway_down`. 360px bn+en.

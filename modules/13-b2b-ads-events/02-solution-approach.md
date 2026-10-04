@@ -56,7 +56,7 @@ schools/sections (04) ── referenced by targeting jsonb; dispatch expands tar
 | Module | What | Why not duplicated |
 | --- | --- | --- |
 | 07 | `vendors.Approve` status gate; moderation shell (`/admin/campaigns` stub); `leads.Create` funnel | Vendor lifecycle and B2B acquisition belong to 07; 13 only enforces the gate and fills the stub |
-| 04 | `hierarchy.ResolveUserNodes`, sections-by-city+grade+stream reads, aggregated `hierarchy.AudienceCount` (declared in 04 `06` §2) | Hierarchy is 04's data model; 13 never stores copies of city/school/section rows |
+| 04 | `hierarchy.ResolveUserNodes`, sections-by-city+grade+stream reads, aggregated `hierarchy.AudienceCount` (declared in 04 `06` §2) | Hierarchy is 04's data model; 13 never stores copies of city/institution/section rows |
 | 06 | `notify.BroadcastTopic` (sponsored push — same hierarchy topics), `notify.SendToUser` (event cancel notices) | All FCM/Expo machinery is 06's; 13 never touches push credentials |
 | 05 | `media_assets` presign/confirm for creative images | R2 uploads live in 05 |
 | 03 | Role claims + verification status of buyers | Auth chain is 03's |

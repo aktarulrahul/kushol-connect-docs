@@ -27,7 +27,7 @@ Turns fee collection from cash-in-an-envelope into a trust-first digital flow: S
 | consumes | 04 organization-hierarchy | `hierarchy.ResolveUserNodes` (school scoping; section→student resolution for bulk invoices) |
 | consumes | 05 communication-engine | `media.PutObject` (receipt PDFs → R2; declared in 05 `06` §2) |
 | consumes | 06 notifications | `notify.SendToUser` — fee-due push w/ deep link; payment-result push → receipt |
-| consumes | 07 command-center-web | The `/school/ledger` nav stub (`WEB-FE-025`) this module fills |
+| consumes | 07 command-center-web | The `/institution/ledger` nav stub (`WEB-FE-025`) this module fills |
 | consumes | 11 campus-commerce | `commerce.OrderAmount(orderId)` + the `payment_transaction_id` attach seam (defined in 11's spec) |
 | consumed by | 07 dashboards | `payments.InitiateInvoicePayment` / `InvoiceStatus` / `TransactionSummary` exports feed ledger cards, collect shortcuts and the transaction drawer — no new tables |
 | consumed by | 11 checkout | `POST /payments/initiate {orderId}` + `payments.TransactionSummary` for order→payment display; fallback to COD when 12 is down |
@@ -40,7 +40,7 @@ Turns fee collection from cash-in-an-envelope into a trust-first digital flow: S
 | --- | --- | --- | --- |
 | api | Go 1.24+ · chi · `PaymentGateway` interface + SSLCommerz/bKash/Nagad adapters · sqlc + pgx · PostgreSQL (Neon) · Redis (idempotency fast-path) · in-DB job table + 01 worker | Server-side HTTP to gateways — no SDKs in clients; webhook signature pipeline; append-only ledger | `tech-stack.md` Payments row: server-side HTTP integrations, webhook signature verification, idempotent ledger |
 | contracts | OpenAPI 3.1 (`applications/api/openapi/`) | single source for Go server types + TS clients; webhook route flagged `security: []` + webhook marker | gateway payload shapes versioned **internally** per adapter (stable event model v1) |
-| web | Next.js App Router · Server Components/Actions · TanStack Table + Query · RHF + zod | `/school/ledger` + invoice forms + reconciliation — all money reads `no-store` | fills 07's stub |
+| web | Next.js App Router · Server Components/Actions · TanStack Table + Query · RHF + zod | `/institution/ledger` + invoice forms + reconciliation — all money reads `no-store` | fills 07's stub |
 | app | Expo · expo-router · TanStack Query · `expo-web-browser` (in-app gateway view) | invoice list, pay screen, status poll, receipt view/share | `expo-web-browser` is the only new dep — small, EAS-compatible |
 | web + app (per app) | each app's `src/i18n` bn/en catalogs + zod schemas | `payments.*` / `validation.payments.*` keys ("বকেয়া ফি", "পেমেন্ট সফল", "ফি পরিশোধ রসিদ") | bn default |
 | security stance | Gateway-hosted checkout only | **No card/wallet data ever touches our servers** — no PAN/CVV/token storage anywhere; SAQ-A-level scope (`02` §6/§10) | gateways own fraud/liability |
@@ -144,7 +144,7 @@ Summary of `03-backend-tasks.md` §2 (auth chain authenticate → role claims �
 | 10 | GET `/api/v1/payments/transactions` | Payer (claims-scoped) | Own payment history, newest first | — | PAY-US-014 |
 | 11 | GET `/api/v1/payments/receipts/{txnId}` | Payer or txn's School Admin | `{receiptUrl, serialNo, issuedAt}` (immutable R2 URL) | `NOT_FOUND` (generating), `FORBIDDEN` | PAY-US-014 |
 
-Refund adjustment (`POST /school/refunds`) and settlement CSV import (`POST /school/settlements/import`) are Super/School-Admin endpoints defined at build (PAY-BE-017/018) — same chain, audited (PAY-BR-011, PAY-US-010).
+Refund adjustment (`POST /institution/refunds`) and settlement CSV import (`POST /institution/settlements/import`) are Super/School-Admin endpoints defined at build (PAY-BE-017/018) — same chain, audited (PAY-BR-011, PAY-US-010).
 
 ### 5.2 Realtime / jobs
 
@@ -178,9 +178,9 @@ No public payment pages — payers pay in the app; the web callback route only 3
 
 | Route | Screen | Rendering | Access |
 | --- | --- | --- | --- |
-| `/school/ledger` | Ledger dashboard — fills 07's stub (`WEB-FE-025`): summary cards (collected/outstanding ৳), Invoices · Transactions · Reconciliation tabs, server-side filters + totals row, CSV export, transaction detail drawer (ids/amounts/status only) | Server shell + Client tables (`no-store` — money screens never cached) | School Admin (own school) · Super Admin (read, all schools) |
-| `/school/invoices/new` | Issue single invoice — StudentPicker (04 roster), RHF + zod | Client (RHF) | School Admin |
-| `/school/invoices/bulk` | Issue bulk to a section — preview step with resolved student count ("১২৪ জন শিক্ষার্থী"); 200-cap guard | Client (RHF) | School Admin |
+| `/institution/ledger` | Ledger dashboard — fills 07's stub (`WEB-FE-025`): summary cards (collected/outstanding ৳), Invoices · Transactions · Reconciliation tabs, server-side filters + totals row, CSV export, transaction detail drawer (ids/amounts/status only) | Server shell + Client tables (`no-store` — money screens never cached) | School Admin (own school) · Super Admin (read, all schools) |
+| `/institution/invoices/new` | Issue single invoice — StudentPicker (04 roster), RHF + zod | Client (RHF) | School Admin |
+| `/institution/invoices/bulk` | Issue bulk to a section — preview step with resolved student count ("১২৪ জন শিক্ষার্থী"); 200-cap guard | Client (RHF) | School Admin |
 
 ### 6.2 Mobile (detail in `05-app-tasks.md`)
 
@@ -291,7 +291,7 @@ All errors surface as RFC-7807 `application/problem+json`. User-visible messages
 
 | Concern | Budget / detail |
 | --- | --- |
-| Expected volumes | Pilot ≈ hundreds of invoices/school/month; BRD-scale target ≈ 2.4 M transactions/year (`prd.md` §7); receipt generation is the only heavy work and is fully async |
+| Expected volumes | Pilot ≈ hundreds of invoices/institution/month; BRD-scale target ≈ 2.4 M transactions/year (`prd.md` §7); receipt generation is the only heavy work and is fully async |
 | Hot paths + indexes | Webhook lookup by `UNIQUE(gateway, gateway_txn_id)` (the idempotency hot path); invoice lists `(school_id,status,due_date)`; payer history `(payer_id,created_at DESC)`; ledger `(school_id,created_at DESC)` + `(school_id,type)` aggregates; expiry sweep partial `(status,updated_at) WHERE status IN ('initiated','redirected')` |
 | Latency targets | Initiate ≤ 800 ms p95 (excludes gateway page load); webhook processing ≤ 300 ms p95 (single tx + audit); ledger page ≤ 500 ms p95 with filters — always-fresh reads, so indexes do the work |
 | Bundle / payload impact | Web adds no deps beyond 07's TanStack stack (CSV export is a small util); app adds `expo-web-browser` only; no image assets on the pay path (logos-as-text) |
@@ -330,4 +330,4 @@ Consolidated from `01` §9 and `02` §11 — the table to review in module readi
 | --- | --- | --- |
 | 2026-10-03 | Build executed contract-first: 11 routes (incl. the `security: []` webhook exception with the verification order in-spec) + 24 schemas; webhook pipeline = signature+replay FIRST → envelope dedupe (UNIQUE gateway+event_id) → txn idempotency (UNIQUE gateway+gateway_txn_id) → server-to-server FetchStatus confirm → one tx (txn→success + balanced ledger + invoice→paid / 11-attach + receipt job); ledger append-only via trigger; convenience fee defaults 0/off (PAY-BR-008); `SandboxGateway` HMAC adapter exact + offline-testable, real adapters gated on merchant docs (ADR-1, G-2); receipts behind a `ReceiptRenderer` port (bn shaping spike = G-4); env `PAYMENTS_WEBHOOK_SECRET` added to config + tests; migrations `20270210090000–093000`. | Kilo |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
-| 2026-09-30 | Consistency pass: migrations re-versioned `20270210…` (after 11); convenience fee default BDT 0 per `brd.md` §7; success requires server-to-server `FetchStatus` confirmation (gateway webhook schemes `TODO: Confirm`); route `/school/payments/reconciliation` (was colliding with 14); guardian entitlement via 03 `guardians.IsGuardianOf`; `media.PutObject` now declared by 05 | Claude |
+| 2026-09-30 | Consistency pass: migrations re-versioned `20270210…` (after 11); convenience fee default BDT 0 per `brd.md` §7; success requires server-to-server `FetchStatus` confirmation (gateway webhook schemes `TODO: Confirm`); route `/institution/payments/reconciliation` (was colliding with 14); guardian entitlement via 03 `guardians.IsGuardianOf`; `media.PutObject` now declared by 05 | Claude |

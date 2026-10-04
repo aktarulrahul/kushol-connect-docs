@@ -31,17 +31,17 @@
 | 10 | `/admin/campaigns` | Campaign moderation stub ("ships in module 13") | Dynamic | Super Admin |
 | 11 | `/admin/audit` | Audit log viewer | Dynamic | Super Admin |
 | 12 | `/school` | School Admin dashboard | Dynamic | School Admin |
-| 13 | `/school/users` | Verification queue (SLA badges) | Dynamic | School Admin |
-| 14 | `/school/notices` | Notice board (pinned-first, pin/delete) | Dynamic | School Admin |
-| 15 | `/school/notices/new` | Notice composer (bn+en, scope, pin, attachment, preview) | Dynamic | School Admin |
-| 16 | `/school/clubs` | Club (custom group) approval queue | Dynamic | School Admin |
-| 17 | `/school/sections` | Sections manager (create/archive) | Dynamic | School Admin |
-| 17a | `/school/sections/[sectionId]` | Section detail + roster + class-teacher assignment (04 `04-frontend-tasks` screen 5) | Dynamic | School Admin |
-| 18 | `/school/migrations` | Migration runs list | Dynamic | School Admin |
-| 19 | `/school/migrations/new` | Migration wizard (select → dry-run → review → commit) | Dynamic | School Admin |
-| 20 | `/school/migrations/[id]` | Migration status page (poll while COMMITTING) | Dynamic | School Admin |
-| 21 | `/school/roster` | Stub → module 14 | Dynamic | School Admin |
-| 22 | `/school/ledger` · `/school/ai-matrix` · `/school/tutors` · `/school/integrations` | Stubs → modules 12/09/10/14 (route names owned by those modules) | Dynamic | School Admin (`/school/ai-matrix` also Teacher — own sections only, 09) |
+| 13 | `/institution/users` | Verification queue (SLA badges) | Dynamic | School Admin |
+| 14 | `/institution/notices` | Notice board (pinned-first, pin/delete) | Dynamic | School Admin |
+| 15 | `/institution/notices/new` | Notice composer (bn+en, scope, pin, attachment, preview) | Dynamic | School Admin |
+| 16 | `/institution/clubs` | Club (custom group) approval queue | Dynamic | School Admin |
+| 17 | `/institution/sections` | Sections manager (create/archive) | Dynamic | School Admin |
+| 17a | `/institution/sections/[sectionId]` | Section detail + roster + class-teacher assignment (04 `04-frontend-tasks` screen 5) | Dynamic | School Admin |
+| 18 | `/institution/migrations` | Migration runs list | Dynamic | School Admin |
+| 19 | `/institution/migrations/new` | Migration wizard (select → dry-run → review → commit) | Dynamic | School Admin |
+| 20 | `/institution/migrations/[id]` | Migration status page (poll while COMMITTING) | Dynamic | School Admin |
+| 21 | `/institution/roster` | Stub → module 14 | Dynamic | School Admin |
+| 22 | `/institution/ledger` · `/institution/ai-matrix` · `/institution/tutors` · `/institution/integrations` | Stubs → modules 12/09/10/14 (route names owned by those modules) | Dynamic | School Admin (`/institution/ai-matrix` also Teacher — own sections only, 09) |
 | 23 | `/vendor` | Vendor shell (pending/approved state) | Dynamic | Vendor |
 | 24 | `*` | Branded 404 + role-aware FORBIDDEN pages | Dynamic | All |
 
@@ -182,11 +182,11 @@ mutation affordance exists (append-only by 01).
 ### 2.8 School dashboard — `/school`
 
 Four `StatCard`s (students, active sections, pending verifications, notices last 30 d) from
-`GET /school/stats`; pending-verification card links to `/school/users`; revenue/ledger-style cards
+`GET /institution/stats`; pending-verification card links to `/institution/users`; revenue/ledger-style cards
 use placeholder variant. Partial stats render with per-source flags ("notices count temporarily
 unavailable").
 
-### 2.9 Verification queue — `/school/users`
+### 2.9 Verification queue — `/institution/users`
 
 **Layout** — filter tabs (pending/approved/rejected) + TanStack table: name, role badge, masked
 phone, evidence link (opens in new tab), submitted (relative), reminder count, SLA badge
@@ -201,7 +201,7 @@ row actions Approve / Reject.
 **States** — approve → confirm → row leaves queue (toast); `CONFLICT` → "already decided" +
 refetch; empty → "no pending requests" with dashboard link.
 
-### 2.10 Notice board + composer — `/school/notices`, `/school/notices/new`
+### 2.10 Notice board + composer — `/institution/notices`, `/institution/notices/new`
 
 **Board layout** — pinned-first list: pin icon, title, scope badge (school/section), date,
 attachment chip; row actions pin-toggle (`PATCH …/pin`) and delete (confirm). Composer layout:
@@ -216,13 +216,13 @@ pin switch; one-way explainer banner; Preview dialog; Publish.
 | `NoticeBoard` | Client (TanStack Query) | Reuses 05's `notices:*` revalidation |
 | `NoticePreview` | Client | Renders exactly the assembled body + attachment |
 
-### 2.11 Clubs + sections — `/school/clubs`, `/school/sections`
+### 2.11 Clubs + sections — `/institution/clubs`, `/institution/sections`
 
 Clubs: queue table (group name, creator, created) with Approve (creator becomes owner; 05 endpoints)
 / Decline. Sections: table grouped by session year + "new section" dialog (classLevel, name,
 sessionYear); archive with `CONFLICT` explanation when enrollments exist (`hierarchy.section.*` copy).
 
-### 2.12 Migration wizard + status — `/school/migrations/new`, `/school/migrations/[id]`
+### 2.12 Migration wizard + status — `/institution/migrations/new`, `/institution/migrations/[id]`
 
 **Layout**
 
@@ -239,9 +239,9 @@ Step 1            Step 2                  Step 3           Status page
 ```
 
 Errors in step 2 keep commit disabled with fix guidance (US-015); step 3 posts `dryRun:false`
-(PREVIEWED) then commit on confirm; runs list (`/school/migrations`) re-opens any run.
+(PREVIEWED) then commit on confirm; runs list (`/institution/migrations`) re-opens any run.
 
-### 2.13 Stubs — `/school/roster|ledger|matrix|tutors|webhooks`, `/vendor`
+### 2.13 Stubs — `/institution/roster|ledger|matrix|tutors|webhooks`, `/vendor`
 
 `StubRoute`: icon + "ships in module NN" (bn/en) + what will live there + back link. `/vendor`:
 shell + status card — pending → "your account is pending approval" (`vendor.state.pending`);
@@ -274,7 +274,7 @@ the composer.
 | Public write (leads) | Client form → Route Handler → generated `openapi-fetch` → api → success panel |
 | Portal reads | Server Component first paint → TanStack Query hydration for tables (queues, vendors, leads, sections) |
 | Mutation | Server Action / Route Handler → generated client → api → toast + `revalidateTag`/query invalidation |
-| Migration status | Poll `GET /school/migrations/{id}` every 3 s while COMMITTING → stop on terminal state |
+| Migration status | Poll `GET /institution/migrations/{id}` every 3 s while COMMITTING → stop on terminal state |
 | Attachment | Client → `POST /media/upload-url` → PUT R2 → `POST /media/{id}/confirm` → attach id to notice |
 
 ## 5. Motion Spec
@@ -307,7 +307,7 @@ the composer.
 - [ ] `<html lang>` flips bn/en; Bengali never rendered in Inter; `lang` attributes correct on mixed copy
 - [ ] Contrast WCAG 2.2 AA in light theme, both locales
 - [ ] Motion: reduced-motion variant verified per §5
-- [ ] axe (Playwright) clean on `/`, `/download`, `/admin/*`, `/school/*`, `/vendor`
+- [ ] axe (Playwright) clean on `/`, `/download`, `/admin/*`, `/institution/*`, `/vendor`
 
 ## 8. Design-System Compliance
 
@@ -336,7 +336,7 @@ added to module 02's whitelist — additive, parity-gated).
 - [x] `WEB-FE-014` — 2026-10-03 Leads pipeline (filters, transition dropdown, optimistic update)
 - [x] `WEB-FE-015` — 2026-10-03 Audit viewer (`GET /admin/audit-log`, filters + pager)
 - [x] `WEB-FE-016` — 2026-10-03 Campaigns stub route
-- [x] `WEB-FE-017` — 2026-10-03 School dashboard (`GET /school/stats`, partial-flags)
+- [x] `WEB-FE-017` — 2026-10-03 School dashboard (`GET /institution/stats`, partial-flags)
 - [x] `WEB-FE-018` — 2026-10-03 Verification queue (03 endpoints, SLA badge, reject reason, poll)
 - [x] `WEB-FE-019` — 2026-10-03 Notice board (pin/delete controls)
 - [x] `WEB-FE-020` — 2026-10-03 Notice composer (bn/en tabs, scope picker, pin, preview, one-way banner)
