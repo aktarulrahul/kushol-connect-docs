@@ -11,7 +11,9 @@ contain application code and their own CI gates only.
 | [`deploy/docs/`](deploy/docs/) | Reference: `images.md` (build + registry), `stack.md` (Compose, layout, config, security), `scripts.md`, `hestia.md` (Nginx, TLS, mail), `backups.md`, `prod-wiring.md`, `secret-rotation.md` |
 | [`docker/`](docker/) | `api.Dockerfile`, `web.Dockerfile` and their `*.dockerignore` — built with `-f` against the app repo as context (`deploy/docs/images.md` §2) |
 | [`deploy/`](deploy/) | The server bundle synced to `/opt/kushol` on the VPS: `compose.yaml`, `env/*.example`, `ops/`, `host/`, `hestia/` |
-| [`deploy/tests/`](deploy/tests/) | Bundle checks and deploy/rollback flow tests — `bash infra/deploy/tests/run.sh` / `flow.sh` from the docs repo |
+| [`deploy/build-push-images.sh`](deploy/build-push-images.sh) | **Mac:** build + push the api/web images from committed `main` (checks, gates, immutable tags) |
+| [`deploy/deploy-web-api-vps.sh`](deploy/deploy-web-api-vps.sh) | **Mac:** sync the bundle (`--sync`) and/or deploy the tags on the VPS over SSH |
+| [`deploy/tests/`](deploy/tests/) | Bundle checks, deploy/rollback flow tests, Mac-script tests — `bash infra/deploy/tests/run.sh` / `flow.sh` / `workstation.sh` from the docs repo |
 
 ## Things to know
 
@@ -22,5 +24,7 @@ contain application code and their own CI gates only.
   were removed with the move. Run the bundle tests before committing changes here.
 - **Images are built from the workspace** (`deploy/docs/images.md` §2) — never on the VPS — and
   pushed to the **private** Docker Hub repository `airahul/ai` as `api-main-<sha7>` / `web-main-<sha7>`.
+  Release = `bash docs/infra/deploy/build-push-images.sh` then `bash docs/infra/deploy/deploy-web-api-vps.sh`
+  from the workspace root.
 - The agent never runs the stack or the server steps (AGENTS.md rule 1); every server step is a
   script the owner runs.

@@ -110,3 +110,38 @@ with this module's console-glue pass):
 - Three admin personas now share the panel: **Kushol admin, Institution admin, Vendor admin** —
   each with their own nav (platform / manage-institution / manage-store) and dashboard; chat is
   reachable from all three. WhatsApp-style chat theme tokens (`wa-*`) registered in tokens.ts.
+
+---
+
+## Landing page redesign (2026-10-09, owner prompt)
+
+Redesigned `/` in `applications/web` as an interactive, illustrated, feature-focused promotional funnel for pilot schools (`#pilot`), vendors (`#vendors`), and app downloads (`#download`).
+
+- **Architecture:** Split into 16 modular components in `src/components/landing/`:
+  - `AnnouncementBar`: Thin deep-teal dismissible announcement banner with session storage memory.
+  - `LandingHeader`: Sticky header (64px → 56px on scroll), logo lockup, 4-item compact nav, switch-variant `LanguageToggle`, login, and `#pilot` CTA.
+  - `HeroSection`: LCP-optimized hero (instant H1 paint, 3 fact chips) with multi-tone atmospheric gradient background, architectural grid texture, ambient glowing spotlights, and `HeroDeviceShowcase` (iPhone 18 Pro + Google Pixel emulator mockups with real app screenshot).
+  - `HeroDeviceShowcase`: Dual emulator showcase featuring iPhone 18 Pro (titanium frame, Action Button, Camera Control, Dynamic Island) and Google Pixel (Pixel button layout, centered punch hole, Google G mark) with interactive platform switcher.
+  - `BeforeAfterSlider`: Draggable comparison slider (WhatsApp chaos vs Kushol order) with mouse, touch, and keyboard (ArrowLeft/Right) handles.
+  - `FeatureSlider`: 12-feature spotlight carousel (`framer-motion`) with 5 category filters, 6s autoplay progress bar, play/pause controls, and keyboard navigation.
+  - `HowItWorks`: 3-step structured verification & auto-grouping process.
+  - `RoleTabs`: 4 personas (Guardians, Teachers, Institutions, Vendors) with 3 verified benefits each and role CTAs.
+  - `DeskDemo`: Interactive school admin desk illustration with clickable feature hotspots (Roster, Notices, Sync).
+  - `RoiCalculator`: Range sliders + number inputs with 400ms count-up payoff and comparative SMS cost visualization.
+  - `TrustSafety`: Full-bleed deep-teal band with City → Institution → Section hierarchy diagram and 4 security pillars.
+  - `PilotSection`: Pilot school pitch with strictly real "২–৩টি প্রতিষ্ঠান" seat limit + `PilotForm`.
+  - `VendorSection`: Vendor reach pitch with I-10 audience targeting illustration + `VendorInquiryForm`.
+  - `AppDownloadSection`: Mobile app promo with QR code, disabled store badges, and pointer 3D tilt.
+  - `FaqAccordion`: 6 real objection-resolving questions in clean accordion.
+  - `FinalCtaBand`: Full-bleed deep-teal closing banner.
+  - `LandingFooter`: Brand lockup, compact nav links, legal, contact, and copyright.
+  - `MobileStickyCta`: Mobile-only bottom floating action bar that auto-hides when forms/footer are in viewport.
+  - `Illustrations`: 14 custom inline SVG vector scenes (I-1 to I-14) using exclusively token palette.
+- **Brand & Theme Compliance:**
+  - Registered promotional accent `marigold` (`#F2A93B`) in `tokens.ts` and generated into `theme.css`.
+  - Replaced all multi-hue Tailwind classes (`sky-`, `purple-`, `emerald-`, `amber-`) with token scales.
+  - Purged all fabricated metrics, fake testimonials, and unverified AI grouping claims; seat count strictly "২–৩টি প্রতিষ্ঠান".
+- **Verification:**
+  - Vitest suite: 28 test files, 220 tests passing (including `feature-slider.test.tsx`, `before-after-slider.test.tsx`, and `hero-device-showcase.test.tsx`).
+  - TypeScript: `pnpm typecheck` (`tsc --noEmit`) passes with 0 errors.
+  - ESLint & Prettier: clean with 0 warnings or errors.

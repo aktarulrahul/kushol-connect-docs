@@ -68,11 +68,16 @@ set_key() {
   rm -f "$tmp"
 }
 if needs_value DATABASE_URL; then
-  echo "Neon console → kushol-connect-db → branch production → Connect → turn connection pooling OFF → copy."
-  read -rsp "Neon DATABASE_URL (input hidden): " url
+  echo "Neon console → kushol-connect-db → branch production → Connect → copy the connection string."
+  read -rsp "Neon DATABASE_URL (input hidden; pooled or direct): " url
   echo
   [[ $url =~ ^postgres(ql)?:// ]] || die "that is not a postgres:// URL — rerun"
-  [[ $url != *-pooler.* ]] || die "that is the POOLED URL — migrations need the direct one (pooling off)"
+  # Migrations need the direct endpoint (golang-migrate's advisory lock fails through the pooler).
+  # Neon names the pooled host ep-<id>-pooler.<region>…; the direct host is the same without -pooler.
+  if [[ $url == *-pooler.* ]]; then
+    url=${url/-pooler./.}
+    echo "pooled URL given — using the direct endpoint (removed -pooler from the host)"
+  fi
   set_key DATABASE_URL "$url"
   echo "DATABASE_URL set"
 else

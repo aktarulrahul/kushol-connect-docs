@@ -1,6 +1,6 @@
 # Kushol Connect — Deployment runbook (Hostinger KVM 2)
 
-**Module:** `15-deployment-operations` Part A · **Last updated:** 2026-10-02 · **Audience:** operator
+**Module:** `15-deployment-operations` Part A · **Last updated:** 2026-10-09 · **Audience:** operator
 (English, OPS-BR-008). Architecture and the reasoning behind it: `docs/infra/architecture-and-deployment.md`.
 
 This file is the runbook — what to do, in order. The reference documents explain how each part
@@ -50,7 +50,9 @@ Bundle files (this folder, `docs/infra/deploy/` in the docs repo; the Dockerfile
 | `host/prepare-host.sh` | One-time host preparation (root) |
 | `hestia/setup-web.sh` · `hestia/templates/` | HestiaCP web domains + Kushol Nginx templates (root) |
 | `hestia/setup-mail.sh` | Mail domain, mailboxes, aliases, DNS values (root) |
-| `tests/run.sh` · `tests/flow.sh` | Bundle checks and deploy/rollback flow tests — run from the docs repo: `bash infra/deploy/tests/run.sh` / `flow.sh` (not synced to the server) |
+| `build-push-images.sh` | **On your Mac:** build the api/web image from committed `main` and push it (§6, [`docs/scripts.md`](docs/scripts.md)) — not synced to the server |
+| `deploy-web-api-vps.sh` | **On your Mac:** sync the bundle (`--sync`) and/or deploy on the VPS over SSH (§6) — not synced to the server |
+| `tests/run.sh` · `tests/flow.sh` · `tests/workstation.sh` | Bundle checks, deploy/rollback flow tests, tests of the two Mac scripts — run from the docs repo: `bash infra/deploy/tests/run.sh` / `flow.sh` / `workstation.sh` (not synced to the server) |
 | `docs/` | Reference documents (table above) |
 
 ## 2. First deployment — the plan
@@ -93,8 +95,9 @@ Full detail: [`docs/images.md`](docs/images.md).
 
 - The app repos' CI no longer builds images (everything deploy-related is in `docs/infra` since
   2026-10-08). Build from the workspace on your Mac — never on the VPS — from a clean, committed
-  `main` whose gate is green; the commands are in [`docs/images.md`](docs/images.md) §2. The tag to
-  deploy is `main-<sha7>` of each repo's commit.
+  `main` whose gate is green: `bash docs/infra/deploy/build-push-images.sh` (checks, gates, build,
+  push — [`docs/scripts.md`](docs/scripts.md)); the manual commands are in
+  [`docs/images.md`](docs/images.md) §2. The tag to deploy is `main-<sha7>` of each repo's commit.
 - The repository `airahul/ai` is **private** — keep it that way. For the server, create a Docker Hub
   **personal access token with Read-only scope** (Docker Hub → Account settings → Personal access
   tokens), never the account password. It is used in
@@ -105,10 +108,12 @@ Full detail: [`docs/images.md`](docs/images.md).
 From the workspace on your Mac (first time as `root`; later as `kushol`):
 
 ```bash
-rsync -av --delete --exclude 'env/*.env' --exclude 'state/' --exclude 'tests/' docs/infra/deploy/ root@72.61.114.20:/opt/kushol/
+rsync -av --delete --exclude 'env/*.env' --exclude 'state/' --exclude 'tests/' --exclude 'build-push-images.sh' --exclude 'deploy-web-api-vps.sh' docs/infra/deploy/ root@72.61.114.20:/opt/kushol/
 ```
 
-Real env files and server state are excluded, so a re-sync never overwrites them.
+Real env files and server state are excluded, so a re-sync never overwrites them. Later syncs:
+`bash docs/infra/deploy/deploy-web-api-vps.sh --sync-only` (same excludes, and it restores the
+ownership and modes `host/prepare-host.sh` sets — a root rsync copies the Mac's owner).
 
 ### 3.3 Prepare the host (root)
 
@@ -180,7 +185,10 @@ the worker shows no health state — 08-gaps G-2).
 
 DNS is Hostinger's (`*.dns-parking.com` are Hostinger's nameservers; the zone is edited in
 hPanel → Domains → kusholconnect.com → DNS, or by the agent through the Hostinger API **after your
-approval**). Today the zone is `@ A 2.57.91.91` (parking) and `www CNAME kusholconnect.com`.
+approval**). Since 2026-10-09 the zone has `@ A 72.61.114.20`, `api A 72.61.114.20` (TTL 300) and
+`www CNAME kusholconnect.com`; it was `@ A 2.57.91.91` (Hostinger parking) before. A name that was
+looked up before its record existed stays "not found" in resolver caches for up to 600 s (the SOA
+minimum), so a new record can lag that long.
 
 | Type | Name | Value | Note |
 | --- | --- | --- | --- |
@@ -245,8 +253,23 @@ Mailboxes live on the VPS disk — HestiaCP's user backups must be copied off-bo
 
 ## 6. Day-2 operations
 
+**Releasing from your Mac** (workspace root, Docker running, `docker login -u airahul` done):
+
+```bash
+bash docs/infra/deploy/build-push-images.sh
+```
+
+```bash
+bash docs/infra/deploy/deploy-web-api-vps.sh
+```
+
+The first builds and pushes `main-<sha7>` of both repos (only `api` or `web` if named; existing tags
+are skipped); the second deploys those tags over SSH (`--sync` first if the bundle changed; `web` /
+`api=main-<sha7>` to pick). Details: [`docs/scripts.md`](docs/scripts.md).
+
 | Task | Command (as `kushol` on the server unless noted) |
 | --- | --- |
+| Build + push, then deploy (Mac) | `bash docs/infra/deploy/build-push-images.sh [api] [web]` → `bash docs/infra/deploy/deploy-web-api-vps.sh [api] [web] [--sync]` |
 | Deploy api and/or web | `/opt/kushol/ops/deploy.sh pilot api=main-<sha7> web=main-<sha7>` (omit one to keep it) |
 | Roll back to the previous release | `/opt/kushol/ops/rollback.sh pilot` |
 | Status · logs · restart | `/opt/kushol/ops/compose.sh ps` · `… logs -f --tail 100 api` · `… restart web` |
@@ -255,7 +278,7 @@ Mailboxes live on the VPS disk — HestiaCP's user backups must be copied off-bo
 | Migrations (owner, Gate 2) | `/opt/kushol/ops/migrate.sh main-<sha7> status` / `up --confirm` |
 | Memory check (weekly) | `docker stats --no-stream` · `free -m` · `df -h /` |
 | Disk: old images | `docker image prune -f` (dangling only — keep recent tags so rollbacks stay fast) |
-| Update templates/scripts | edit in the repo, re-sync (§3.2), rerun `hestia/setup-web.sh` as root |
+| Update templates/scripts | edit in the repo, `deploy-web-api-vps.sh --sync-only` (Mac), rerun `hestia/setup-web.sh` as root |
 | After a HestiaCP upgrade | rerun `hestia/setup-web.sh` (custom templates survive, but re-applying is cheap) |
 | After changing HestiaCP firewall rules | if containers lose outbound access (`/readyz` red on Neon): `systemctl restart docker` (root) |
 

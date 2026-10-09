@@ -47,41 +47,39 @@
 
 ## 2. Screen Breakdown
 
-### 2.1 Landing — `/`
+### 2.1 Landing — `/` (Redesigned 2026-10-09 per Owner Direction)
 
-**Layout**
+**Layout & Funnel Rhythm**
 
-```text
-DESKTOP ≥1024                          TABLET 640–1023
-┌──────────────────────────────────┐   ┌──────────────────────────┐
-│ ◉ কুশল CONNECT      [বাং|EN] CTA │   │ logo    [বাং|EN]  ☰ CTA  │
-├──────────────────────────────────┤   ├──────────────────────────┤
-│ H1 hero (bn) · subhead           │   │ hero stacked             │
-│ [পাইলট শুরু করুন] [ডাউনলোড]      │   │ [CTA] [ডাউনলোড]          │
-├──────────────┬───────────────────┤   ├──────────────────────────┤
-│ FOR SCHOOLS  │ ROI calculator    │   │ value prop → calculator  │
-│ value prop   │ 3 inputs + result │   │ (full width, stacked)    │
-├──────────────┴───────────────────┤   ├──────────────────────────┤
-│ FOR VENDORS pitch [inquiry form] │   │ vendors → form           │
-├──────────────────────────────────┤   ├──────────────────────────┤
-│ DOWNLOADS (2 links + QR)         │   │ downloads                │
-├──────────────────────────────────┤   ├──────────────────────────┤
-│ TRUST: hierarchy·verification·   │   │ trust (accordion)        │
-│ tenant-isolation explainer       │   ├──────────────────────────┤
-├──────────────────────────────────┤   │ footer                   │
-│ footer: contact · bn/en · brand  │   └──────────────────────────┘
-└──────────────────────────────────┘
-```
+The landing page is an illustrated, high-density promotional funnel targeting 3 actions:
+1. **Schools/Colleges:** Join the pilot (`#pilot`)
+2. **Vendors & Education Brands:** Apply as a vendor (`#vendors`)
+3. **Guardians & Students:** Download the app (`/download` or `#download`)
 
-**Components**
+Section rhythm alternates surfaces (`Paper` `#FAFBFC` → `teal-50` `#EDF6F8` → `white` → full-bleed deep-teal `#095777` band) to eliminate dead white space.
 
-| Component | Server/Client | Notes |
+**Modular Landing Components (`src/components/landing/`)**
+
+| Component | Client/Server | Role & Interactions |
 | --- | --- | --- |
-| `SiteHeader` / `LocaleToggle` / `SiteFooter` | Server (toggle client) | Logo per module 02 rules (28–32 px lockup, accessible name) |
-| `HeroSection`, `TrustSection`, `VendorsPitch` | Server | Static copy from `landing.*` catalog |
-| `RoiCalculator` | Client | Deterministic formula, `ROI_ASSUMPTIONS` constant, formula + estimate disclaimer rendered |
-| `PilotForm` / `VendorInquiryForm` | Client (RHF) | POST via Route Handler → api |
-| `DownloadButtons` | Server | Flag-gated; disabled placeholders + `TODO: Confirm` |
+| `AnnouncementBar` | Client | Dismissible thin deep-teal top banner with session storage memory |
+| `LandingHeader` | Client | Sticky header (64px → 56px on scroll), logo lockup, compact 4-item nav, `LanguageToggle variant="switch"`, login link, `#pilot` CTA |
+| `HeroSection` | Client | LCP-optimized hero (H1 + 3 verified fact chips: 0 subscription fees during pilot, CSV/Excel instant upload, 100% institution control) + I-1 illustration |
+| `BeforeAfterSlider` | Client | Draggable comparison slider (WhatsApp chaos vs Kushol order) with mouse/touch/keyboard handles and 4 contrast rows |
+| `FeatureSlider` | Client | 12-feature spotlight carousel (`framer-motion`) with 5 category filters, 6s autoplay progress bar, play/pause controls, keyboard navigation (ArrowLeft/Right) |
+| `HowItWorks` | Client | 3-step structured process cards (Upload Roster → Auto-Group → Connect Safely) |
+| `RoleTabs` | Client | 4-tab role switch (Guardians, Teachers, Institutions, Vendors) with 3 verified benefits each and role-specific CTAs |
+| `DeskDemo` | Client | Interactive school admin desk illustration with clickable feature hotspots (Roster, Notices, Sync) |
+| `RoiCalculator` | Client | Dual range slider + number inputs, 400ms count-up payoff, instant comparison bar against traditional SMS costs |
+| `TrustSafety` | Server | Full-bleed deep-teal band with City → Institution → Section hierarchy diagram and 4 security pillars |
+| `PilotSection` | Client | Pilot school pitch with strictly real "২–৩টি প্রতিষ্ঠান" seat limit + `PilotForm` |
+| `VendorSection` | Client | Vendor pitch with I-10 audience targeting illustration + `VendorInquiryForm` |
+| `AppDownloadSection` | Client | Mobile app promo with QR code, disabled store badges, and pointer 3D tilt |
+| `FaqAccordion` | Client | 6 real objection-resolving questions in clean accordion |
+| `FinalCtaBand` | Server | Full-bleed deep-teal closing banner with dual CTAs |
+| `LandingFooter` | Client | Brand lockup, compact nav links, legal, contact, and copyright |
+| `MobileStickyCta` | Client | Floating mobile bottom action bar that auto-hides when forms/footer are in viewport |
+| `Illustrations` | Client/Server | 14 custom inline SVG vector scenes (I-1 to I-14) using exclusively token palette |
 
 **States**
 
@@ -281,7 +279,12 @@ the composer.
 
 | Element | Variant / technique | Trigger | Communicates | Reduced motion |
 | --- | --- | --- | --- | --- |
+| Hero illustration I-1 | 1.6 s SVG scene animation + ≤6px subtle idle float | page load | chaos → order transformation | static final frame |
+| Feature spotlight carousel | 6 s autoplay progress bar + slide crossfade via `framer-motion` | autoplay timer / user click / arrow key | feature discovery | pause autoplay; instant slide switch |
+| Draggable comparison slider | Smooth clip-path resize with mouse/touch/keyboard handles | drag / ArrowLeft / ArrowRight | contrast of WhatsApp vs Kushol | slider buttons still functional |
 | ROI result | 400 ms count-up (once per change, interruptible) | inputs change | payoff attention | instant value swap |
+| Admin desk demo hotspots | 250 ms fade + scale popover with highlight pulse | hotspot click | admin feature interaction | instant highlight without pulse |
+| Mobile sticky CTA bar | 200 ms translate-y slide in/out | scroll past hero / form entering viewport | persistence of primary action | instant show/hide without transition |
 | Wizard panel slide | 200 ms translate + fade | step change | progression | crossfade-instant |
 | Dialog/sheet | scale-fade 150 ms | open/close | context switch | instant |
 | Toast | slide-in 150 ms, auto-dismiss 4 s | mutation result | feedback | fade only |

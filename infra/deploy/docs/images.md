@@ -40,6 +40,12 @@ Tags are treated as immutable (OPS-BR-005): never re-point a `main-<sha7>` tag a
 
 ## 2. Building and pushing (owner)
 
+**The script does all of this:** from the workspace root, `bash docs/infra/deploy/build-push-images.sh`
+(both apps; name `api` or `web` for one). It refuses a repo that is not on `main`, has uncommitted
+changes or is not pushed; runs the gates (`--skip-gate` to skip); skips tags already in the
+registry; builds and pushes; and prints the `deploy-web-api-vps.sh` command
+([`scripts.md`](scripts.md)). The manual steps below are what it runs.
+
 The CI image jobs were removed with the move, so the checks they used to enforce are now the
 builder's job. For each app you build:
 
@@ -58,7 +64,8 @@ SHA=$(git -C applications/api rev-parse --short=7 HEAD) && docker buildx build -
 SHA=$(git -C applications/web rev-parse --short=7 HEAD) && docker buildx build --platform linux/amd64 -f docs/infra/docker/web.Dockerfile --build-arg NEXT_PUBLIC_API_URL=https://kusholconnect.com --build-arg NEXT_PUBLIC_SITE_URL=https://kusholconnect.com --label org.opencontainers.image.revision=$(git -C applications/web rev-parse HEAD) -t airahul/ai:web-main-$SHA --push applications/web
 ```
 
-5. **Deploy** the two tags: `ops/deploy.sh pilot api=main-<sha7> web=main-<sha7>` on the server.
+5. **Deploy** the two tags: `bash docs/infra/deploy/deploy-web-api-vps.sh api=main-<sha7> web=main-<sha7>`
+   from the Mac, or `ops/deploy.sh pilot api=main-<sha7> web=main-<sha7>` as `kushol` on the server.
 
 Notes:
 
@@ -143,6 +150,7 @@ them yet, so images always have both `false` (15 08-gaps G-13).
 | Tag | Commit | Pushed |
 | --- | --- | --- |
 | `airahul/ai:api-main-e71c776` | api `e71c776` (`linux/amd64`, index digest `sha256:782ea774…3617`) | 2026-10-09 |
+| `airahul/ai:web-main-bbf6b88` | web `bbf6b88` (`linux/amd64`, index digest `sha256:e66f1a3f…2f4f`; built for `https://kusholconnect.com`) | 2026-10-09 |
 
 ## 5. Updating base images
 

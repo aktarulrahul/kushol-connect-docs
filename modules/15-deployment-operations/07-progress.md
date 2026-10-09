@@ -1,9 +1,8 @@
 # Deployment & Operations — Build Progress
 
-**Module:** `15-deployment-operations` (Part A ✅ + Part B ✅ code-complete) · **Repos:** `applications/api`
-(`Dockerfile`, `deploy/`, CI image job), `applications/web` (`Dockerfile`, CI image job), both in the
-working tree of branch `module/03-identity-access`, nothing committed by the build ·
-**Last updated:** 2026-10-08
+**Module:** `15-deployment-operations` (Part A ✅ + Part B ✅ code-complete; first deploy serving on the
+VPS 2026-10-09, not public yet) · **Where:** everything in the docs repo under `docs/infra/` (ADR-14) ·
+**Last updated:** 2026-10-09
 
 Owner instruction (2026-10-02): "make deployment plan and script to deploy the web and api in
 hostinger in KVM 2 • srv1100749.hstgr.cloud within docker container for kusholconnect.com domain and
@@ -19,8 +18,8 @@ creates accounts or sets passwords — every server step is a script the owner r
 | 1 · Read & plan | ✅ | 2026-10-02 | Plan = `DEPLOYMENT.md` §2; facts re-verified (below) |
 | 2 · Build (infra-as-code) | ✅ agent side | 2026-10-02 | Images, Compose, ops scripts, HestiaCP web + mail scripts, CI jobs, runbook |
 | Gate 1 · UI | N/A | — | No screens (maintenance page deferred — G-6) |
-| Gate 2 · SQL | N/A for 15 | — | 15 owns no migrations; the first deploy needs **01's** migrations on Neon (owner, `DEPLOYMENT.md` §3.7) |
-| 5 · Integration | ⏳ **pending owner run** | — | Server steps §3–§5 of `DEPLOYMENT.md`; host report → this file |
+| Gate 2 · SQL | ✅ owner | 2026-10-09 | 15 owns no migrations; the owner applied every migration in `api-main-e71c776` to Neon production (`host/first-deploy.sh` step 5, typed `apply`): version 0 → `20270302090001`, not dirty |
+| 5 · Integration | 🟡 deployed, not public | 2026-10-09 | Stack serving on the VPS (below); waiting for the DNS change, then pass 2 + mail |
 | Gate 3 · integrated flows | ⏳ after the first deploy | — | `SMOKE_OK public` + mail headers `spf/dkim/dmarc=pass` |
 | 6 · Gaps & verification | ✅ `08-gaps.md` | 2026-10-02 | |
 
@@ -52,6 +51,7 @@ creates accounts or sets passwords — every server step is a script the owner r
 | ADR-12 | `ops/migrate.sh <api-tag> status \| up --confirm` | Owner-run Gate 2 helper using that image's own migrations; `deploy.sh` only checks `migrate-status` and stops (exit 3) |
 | ADR-13 | Worker healthcheck disabled | No HTTP and no shell in distroless — nothing to probe; restart policy covers crashes (G-2) |
 | ADR-14 | **All deploy files in the docs repo under `infra/`** (owner, 2026-10-08) — `infra/deploy/` (bundle, runbook, reference docs, tests) and `infra/docker/` (`api.Dockerfile`, `web.Dockerfile` + `<name>.dockerignore`); nothing deploy-related in the app repos | App CI keeps `gate` + gitleaks; the `image` and `deploy-bundle` jobs are gone because their files left the repos — images are built by the owner with `-f` against each app repo (`images.md` §2); the bundle tests run from the docs repo and skip env parity when the app repos are absent. The docs repo is public, so the bundle is public (templates only) |
+| ADR-15 | **Registry: one private Docker Hub repository `airahul/ai`** (owner, 2026-10-09) — tags `api-main-<sha7>` / `web-main-<sha7>` | `stack.env`: `API_IMAGE`/`WEB_IMAGE=docker.io/airahul/ai` + `API_TAG_PREFIX=api-` / `WEB_TAG_PREFIX=web-`; `compose.yaml` adds the prefix, so `deploy.sh`/`rollback.sh`/the release log keep plain `main-<sha7>`. Server pulls with a Docker Hub Read-only access token. Supersedes GHCR |
 
 ## Pinned versions (digests checked 2026-10-02)
 
@@ -93,11 +93,11 @@ creates accounts or sets passwords — every server step is a script the owner r
 
 ## Owner run — record results here
 
-1. Host report from `host/prepare-host.sh` (`/opt/kushol/state/host-check-*.txt`): ⏳
-2. `hestia/setup-web.sh` pass 1 output (Nginx mode detected, templates applied): ⏳
-3. 01 migrations on Neon via `ops/migrate.sh` (Gate 2 of 01): ⏳
-4. First deploy line (`SERVING pilot api=… web=…`) and `ops/compose.sh ps`: ⏳
-5. DNS change (agent can apply via the Hostinger API after explicit approval) → pass 2 → `SMOKE_OK public`: ⏳
+1. Host report from `host/prepare-host.sh` (`/opt/kushol/state/host-check-*.txt`): ✅ 2026-10-09 — Docker 29.9.0, 2 GB swap, `kushol` user, env files; outbound port 25 open
+2. `hestia/setup-web.sh` pass 1 output (Nginx mode detected, templates applied): ✅ 2026-10-09 02:29Z — nginx proxy in front of apache2; panel user `kusholconnect`, `kusholconnect.com` + `api.kusholconnect.com` with the `kushol-web`/`kushol-api` templates; no certificates yet (DNS); panel credentials file written to `/root/` for the owner to move and shred
+3. 01 migrations on Neon via `ops/migrate.sh` (Gate 2 of 01): ✅ 2026-10-09 02:29Z — `database_version=20270302090001 expected_version=20270302090001 dirty=false`
+4. First deploy line (`SERVING pilot api=… web=…`) and `ops/compose.sh ps`: ✅ 2026-10-09 02:30:13Z — `SMOKE_OK local`, `SERVING pilot api=main-e71c776 web=main-bbf6b88`; `docker ps`: api, web, redis healthy, worker up (no healthcheck). Agent check 02:35Z through the server's Nginx by host name: apex `/` 200 (Next.js), `www` 200, `api.` `/healthz` + `/readyz` 200, apex `/api/v1/` answered by the api (`X-Request-Id`)
+5. DNS change → pass 2 → `SMOKE_OK public`: 🟡 — 2026-10-09 ~02:41Z the agent set `@ A 72.61.114.20` and `api A 72.61.114.20` (TTL 300, `www` CNAME untouched) through the Hostinger API on the owner's explicit request ("make the necessary changes in hPanel"); before: `@ A 2.57.91.91` (parking). Verified: Google and Cloudflare resolve the apex to `72.61.114.20`, `http://kusholconnect.com/` and `www` → 200 by public name; `api.` waits out the 600 s negative cache. Pass 2 (certificates) + public smoke: ⏳ owner rerun of `host/first-deploy.sh`
 6. `hestia/setup-mail.sh` → DNS (incl. DKIM) → certificate → test-mail headers: ⏳
 7. Rollback drill timing (`ops/rollback.sh pilot`, target < 5 min): ⏳
 
@@ -120,3 +120,24 @@ creates accounts or sets passwords — every server step is a script the owner r
 
 **Owner runs still pending:** first backup execution + restore drill (BR-007), uptime monitor
 account, cutover checklist execution, EAS credentials + first queue, maintenance drill.
+
+## Release scripts (2026-10-09, owner request)
+
+Owner: "create one ./build-push-images.sh and ./deploy-web-api-vps.sh in docs/infra/deploy".
+
+| File | What |
+| --- | --- |
+| `docs/infra/deploy/build-push-images.sh` | Mac: repo checks (main, clean, pushed) → gates (`--skip-gate`) → skip existing tags → `buildx --platform linux/amd64 --push` → prints the deploy command |
+| `docs/infra/deploy/deploy-web-api-vps.sh` | Mac: registry check → optional `--sync`/`--sync-only` (rsync + layout fix) → `ops/deploy.sh` as `kushol` over one shared SSH connection → Gate 2 prompt on exit 3 → public HTTPS check |
+| `docs/infra/deploy/tests/workstation.sh` | 67 checks against throwaway git repos and fake docker/ssh/rsync/curl; mutation-checked (dropping `--platform`, the `state/` exclude or the `apply` guard each fails it) |
+
+Evidence (agent, no containers, no server): `workstation.sh` 67/67 on macOS bash 3.2, `run.sh` 91/91
+(adds `bash -n` on the new scripts), `flow.sh` 33/33. Docs: `DEPLOYMENT.md` (bundle table, §3.1, §3.2,
+§6), `docs/scripts.md`, `docs/images.md` §2, `infra/README.md`. Not run: the scripts for real (owner).
+
+## Images published
+
+| Image | Commit | Date | Notes |
+| --- | --- | --- | --- |
+| `airahul/ai:api-main-e71c776` | api `e71c776` | 2026-10-09 | `linux/amd64`; built from the workspace with `docs/infra/docker/api.Dockerfile` |
+| `airahul/ai:web-main-bbf6b88` | web `bbf6b88` | 2026-10-09 | `linux/amd64`; `NEXT_PUBLIC_*` = `https://kusholconnect.com` |

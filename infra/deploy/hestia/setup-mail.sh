@@ -7,6 +7,8 @@
 # Idempotent. Creates the mail domain (DKIM 2048, anti-spam, anti-virus when ClamAV is installed,
 # webmail), the four mailboxes and the aliases below, and prints the DNS records to add. Run it
 # again once those records resolve to issue the Let's Encrypt certificate for mail. and webmail.
+# It also drops Spamhaus from Exim's blocklists when Spamhaus refuses this server's resolver (that
+# rejected all inbound mail) and flags panel users whose notification address loops.
 # Passwords are generated here and written only to a root-only file under /root (hestia/lib.sh);
 # existing mailboxes are never touched, so rerunning never changes a password.
 set -euo pipefail
@@ -101,6 +103,37 @@ if timeout 8 bash -c 'exec 3<>/dev/tcp/gmail-smtp-in.l.google.com/25' 2>/dev/nul
 else
   warn "port 25 out looks BLOCKED — mail will not leave the server; ask Hostinger support to unblock SMTP"
 fi
+
+say "Inbound spam blocklists (Exim DNSBL — server-wide)"
+# Spamhaus refuses lookups that arrive through public resolvers (this VPS uses Hostinger's and
+# 1.1.1.1) and answers 127.255.255.x. Exim's `dnslists` check reads any answer as "listed", so every
+# inbound message — Gmail included — was rejected "in a black list at zen.spamhaus.org" (2026-10-09).
+# The test entry 127.0.0.2 shows what this server's resolver gets: 127.0.0.x means Spamhaus works.
+dnsbl=/etc/exim4/dnsbl.conf
+if [[ -f $dnsbl ]] && grep -q spamhaus "$dnsbl"; then
+  answer=$(getent ahostsv4 2.0.0.127.zen.spamhaus.org | awk 'NR == 1 { print $1 }')
+  if [[ $answer == 127.0.0.* ]]; then
+    ok "Spamhaus answers this server's resolver ($answer for the test entry) — kept"
+  else
+    [[ -e $dnsbl.orig ]] || cp "$dnsbl" "$dnsbl.orig"
+    sed -i '/spamhaus/d' "$dnsbl"
+    ok "removed Spamhaus from $dnsbl — it refuses this server's resolver (${answer:-no answer}); original kept as $dnsbl.orig"
+  fi
+else
+  ok "Spamhaus not in use"
+fi
+
+say "Panel notifications"
+# The VPS image ships an admin contact like noreply@ubuntu-hestia.localhost; that name points at this
+# server, so every panel notice loops until Exim freezes it ("Too many Received headers").
+for conf in "$HESTIA"/data/users/*/user.conf; do
+  user=$(basename "$(dirname "$conf")")
+  contact=$(sed -n "s/^CONTACT='\(.*\)'$/\1/p" "$conf")
+  case $contact in
+    "" | *.localhost | *.local) warn "HestiaCP user $user sends its notices to '${contact:-nobody}', which loops — set a real address: $VBIN/v-change-user-contact $user <address>" ;;
+    *) ok "$user → $contact" ;;
+  esac
+done
 
 say "DNS records to add (Hostinger DNS: hPanel → Domains → $domain → DNS)"
 spf="v=spf1 mx ip4:$PUBLIC_IP${PUBLIC_IP6:+ ip6:$PUBLIC_IP6} -all"

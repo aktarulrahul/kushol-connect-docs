@@ -163,7 +163,7 @@ for tpl in kushol-web.tpl kushol-web.stpl; do
 done
 
 # ── Bash syntax ─────────────────────────────────────────────────────────────────────────────────
-for script in "$DEPLOY"/ops/*.sh "$DEPLOY"/host/*.sh "$DEPLOY"/hestia/*.sh "$DEPLOY"/tests/*.sh; do
+for script in "$DEPLOY"/*.sh "$DEPLOY"/ops/*.sh "$DEPLOY"/host/*.sh "$DEPLOY"/hestia/*.sh "$DEPLOY"/tests/*.sh; do
   if bash -n "$script" 2>"$TMP/syntax"; then ok; else bad "syntax: $script: $(cat "$TMP/syntax")"; fi
 done
 

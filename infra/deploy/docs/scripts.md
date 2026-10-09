@@ -1,6 +1,6 @@
 # Scripts and tests — reference
 
-**Module:** `15-deployment-operations` (OPS-BE-006…008, -012, -016) · **Last updated:** 2026-10-02 ·
+**Module:** `15-deployment-operations` (OPS-BE-006…008, -012, -016) · **Last updated:** 2026-10-09 ·
 Runbook: [`../DEPLOYMENT.md`](../DEPLOYMENT.md)
 
 Conventions for every script: Bash with `set -euo pipefail`; non-interactive (cron-safe); progress
@@ -21,7 +21,59 @@ Script CLIs change additively only — new flags optional, existing behaviour an
 | [`hestia/setup-web.sh`](../hestia/setup-web.sh) | `root` | HestiaCP web domains, Nginx templates, TLS |
 | [`hestia/setup-mail.sh`](../hestia/setup-mail.sh) | `root` | HestiaCP mail domain, mailboxes, aliases, DNS values |
 | [`hestia/lib.sh`](../hestia/lib.sh) | (sourced) | shared HestiaCP helpers |
-| [`tests/run.sh`](../tests/run.sh), [`tests/flow.sh`](../tests/flow.sh) | anyone (CI, Mac) | bundle checks and deploy/rollback flow tests |
+| [`build-push-images.sh`](../build-push-images.sh) | owner, **on the Mac** | build the api/web image from committed `main` and push it to the registry |
+| [`deploy-web-api-vps.sh`](../deploy-web-api-vps.sh) | owner, **on the Mac** | (optionally sync the bundle, then) run `ops/deploy.sh` on the VPS over SSH; Gate 2 prompt; public check |
+| [`tests/run.sh`](../tests/run.sh), [`tests/flow.sh`](../tests/flow.sh), [`tests/workstation.sh`](../tests/workstation.sh) | anyone (CI, Mac) | bundle checks, deploy/rollback flow tests, tests of the two Mac scripts |
+
+The two Mac scripts sit at the top of the bundle but are never synced to the server (they need the
+app repos and Docker on the Mac). Run them from the workspace root (`kushol-connect/`).
+
+## `build-push-images.sh [api] [web] [--skip-gate] [--allow-unpushed] [--dry-run]` — Mac
+
+Builds and pushes the images ([`images.md`](images.md) §2 by hand). No app named = both.
+
+1. Preflight, for every selected app before anything long runs: Docker CLI + buildx present and Docker
+   running; the repo (`applications/<app>`, or `KC_APPS`) is on `main`, has **no uncommitted or
+   untracked changes** (the tag must name exactly the code in the image), and `HEAD` is on
+   `origin/main` after a fetch (`--allow-unpushed` relaxes only this one).
+2. Registry: if `<image>:<prefix>main-<sha7>` already exists it is **skipped** — tags are immutable
+   (OPS-BR-005). "not found" means build it; any other answer (not logged in, network) stops here
+   instead of after a long build.
+3. Gate (what CI's gate job runs): api `make gate` (includes the testcontainers suite — Docker), web
+   `pnpm gate`. `--skip-gate` skips it with a warning.
+4. `docker buildx build --platform linux/amd64 -f docs/infra/docker/<app>.Dockerfile --label
+   org.opencontainers.image.revision=<full sha> -t <ref> --push applications/<app>`; the web build gets
+   `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_SITE_URL` from `env/web.env(.example)`.
+5. Prints the matching `deploy-web-api-vps.sh api=… web=…` command.
+
+Image names and prefixes come from `env/stack.env`, else `env/stack.env.example`; `API_IMAGE`,
+`WEB_IMAGE`, `API_TAG_PREFIX`, `WEB_TAG_PREFIX` in the environment win. `--dry-run` does every check and
+prints the gate and build commands instead of running them. Exit 0 = everything selected is in the
+registry; 1 = a check failed (nothing pushed for that run) or a gate/build failed.
+
+## `deploy-web-api-vps.sh [api[=<tag>]] [web[=<tag>]] [--sync | --sync-only] [--dry-run]` — Mac
+
+Deploys over SSH to `KC_HOST` (default `root@<PUBLIC_IP>`). `api` / `web` alone mean `main-<sha7>` of
+that repo's `HEAD`; no app named = both at their `HEAD`s; an app left out keeps what is running.
+
+1. Tags must match `main|release-<hex 7–40>` (exit 2) and exist in the registry (exit 5, the server is
+   not touched). Without a Docker CLI the check is skipped and the server's pull decides.
+2. One SSH control connection (socket under `/tmp/kc-ssh.*`, closed on exit), so a root password is
+   asked once.
+3. `--sync` / `--sync-only`: `rsync -av --delete` of `docs/infra/deploy/` to `/opt/kushol/`, excluding
+   `env/*.env`, `state/`, `tests/` and the two Mac scripts, then restores the layout
+   `host/prepare-host.sh` sets (`chown -R kushol:kushol` when connected as root, `env/` 700, env files
+   600, scripts 755). `--sync-only` stops there.
+4. `ops/deploy.sh <KUSHOL_ENV> api=… web=…` as `kushol` (`sudo -iu kushol` when connected as root).
+5. Exit 3 (database behind the new api): shows `ops/migrate.sh <api-tag> status`; in a terminal it asks
+   for `apply` (Gate 2), runs `migrate.sh … up --confirm` and deploys again; otherwise it prints the
+   command and exits 3. Exits 1/4/5 are passed through with what they mean.
+6. Public check from the Mac: `https://<SITE_DOMAIN>/` and `https://<API_DOMAIN>/readyz`. Not 200 is a
+   warning only (the server's smoke already passed) — usually no certificate yet.
+
+`KC_HOST=kushol@72.61.114.20` once that user has your key (`host/prepare-host.sh --ssh-key-file`):
+then no `sudo` and no `chown`. `KC_ENV` overrides the env name. `--dry-run` prints the rsync/ssh
+commands instead of running them.
 
 ## `ops/deploy.sh <env> [api=<tag>] [web=<tag>] [--no-rollback]`
 
@@ -180,15 +232,16 @@ the environment; `tests/flow.sh` shortens them. Leave them unset on the server.
 
 ## Tests
 
-Run from the docs repo: `bash infra/deploy/tests/run.sh` and `bash infra/deploy/tests/flow.sh`
-(no containers). No CI runs them since the move to `docs/infra` (the docs repo has no workflow —
+Run from the docs repo: `bash infra/deploy/tests/run.sh`, `bash infra/deploy/tests/flow.sh` and
+`bash infra/deploy/tests/workstation.sh` (no containers, no registry, no server). No CI runs them since the move to `docs/infra` (the docs repo has no workflow —
 15 08-gaps G-14); before changing a script, also run `shellcheck -x infra/deploy/*/*.sh` if
 shellcheck is installed. The env-parity checks read the api and web sources from
 `../applications` (or `KC_APPS`) and print `SKIP` when those repos are not there.
 
 | Script | Checks |
 | --- | --- |
-| `tests/run.sh` (87 checks with the app repos present) | tag scheme accepts/refuses (OPS-UT-003) · env completeness detects empty, absent and `REPLACE` values · release-log rollback targets (skips `FAILED`, walks back after `ROLLED_BACK`) · **env parity**: every key in `internal/config` is in `api.env.example` or set by Compose, and nothing extra (OPS-UT-002); `web.env.example` matches the web repo's `src/env.ts` when it sits next to this repo · Compose rules: exactly api/redis/web/worker, each with `mem_limit`, `restart: unless-stopped`, `healthcheck`, `logging`; every port `127.0.0.1:`; no `build:`; no Postgres/MinIO; third-party images pinned by digest · no image builds in host scripts (OPS-BR-001) · templates use only known placeholders, balanced braces, never append `X-Forwarded-For` · `bash -n` on every script |
+| `tests/run.sh` (91 checks with the app repos present) | tag scheme accepts/refuses (OPS-UT-003) · env completeness detects empty, absent and `REPLACE` values · release-log rollback targets (skips `FAILED`, walks back after `ROLLED_BACK`) · **env parity**: every key in `internal/config` is in `api.env.example` or set by Compose, and nothing extra (OPS-UT-002); `web.env.example` matches the web repo's `src/env.ts` when it sits next to this repo · Compose rules: exactly api/redis/web/worker, each with `mem_limit`, `restart: unless-stopped`, `healthcheck`, `logging`; every port `127.0.0.1:`; no `build:`; no Postgres/MinIO; third-party images pinned by digest · no image builds in host scripts (OPS-BR-001) · templates use only known placeholders, balanced braces, never append `X-Forwarded-For` · `bash -n` on every script |
 | `tests/flow.sh` (33 checks; 34 where `flock` exists, e.g. Linux) | runs the real `deploy.sh`/`rollback.sh` against fake `docker` and `curl` (no containers, no network): first deploy · api-only deploy keeps web · red gate → automatic rollback (release, running tags, log lines, incidents) · database behind (exit 3, no `up`, owner command named) · dirty (4) · pull failure (5) · `latest` / env mismatch / unknown argument / placeholder secret / world-readable env refused (2) · operator rollback walks back, then has nothing left (2) · nothing to roll back before the first deploy · lock refusal (with a real `flock`, i.e. in CI) |
+| `tests/workstation.sh` (67 checks) | runs the real `build-push-images.sh` and `deploy-web-api-vps.sh` against throwaway git repos (with a bare `origin`) and fake `docker`, `make`, `pnpm`, `ssh`, `rsync`, `curl`: both images built for `linux/amd64` with the right tags, Dockerfiles, revision label and web-only build args · existing tags skipped · gate only for the selected app · dirty / unpushed / non-`main` / registry-auth failures stop before any build · `--allow-unpushed` · dry run builds nothing · deploy defaults to both `HEAD` tags as `kushol` · web-only · `latest` refused (2) · unpushed tag refused before SSH (5) · `--sync` excludes and layout fix before the deploy · `--sync-only` · database behind without a terminal stops at 3 and never migrates · failed release (1) · `kushol@` host uses no `sudo`/`chown` · no public HTTPS is only a warning · dry run touches nothing. Passes on macOS bash 3.2 |
 
 The container-backed dry-run (OPS-IT-001) is the owner's first deploy on the server.

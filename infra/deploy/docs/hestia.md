@@ -142,6 +142,16 @@ A new, shared IP has no sending reputation: early mail may land in spam until vo
 other two apps on this IP affect Kushol's reputation and vice versa. If OTP mail is delayed or
 filtered, the upgrade path is a transactional provider (architecture plan §7.3).
 
+**Pitfalls found on 2026-10-09** (read the reason in `/var/log/exim4/mainlog`; frozen messages with
+`exim -bp`, a failure notice's text with `exim -Mvb <id>`):
+
+| Symptom in the log | Cause | Fix |
+| --- | --- | --- |
+| `rejected RCPT … in a black list at zen.spamhaus.org` for Gmail and every other sender | Spamhaus refuses lookups from public resolvers (this VPS uses Hostinger's and 1.1.1.1) and answers `127.255.255.254`, which Exim reads as "listed" | `setup-mail.sh` removes Spamhaus from `/etc/exim4/dnsbl.conf` (server-wide; original in `dnsbl.conf.orig`). To use Spamhaus again: a Spamhaus DQS key or a local recursive resolver |
+| `550-5.7.26 … sender is unauthenticated … SPF [] … DKIM = did not pass` when a mailbox forwards to Gmail | forwarded failure notices have an empty sender, so Gmail checks the server name `srv1100749.hstgr.cloud`, which has no SPF of ours; with "do not store forwarded mail" the copy is lost | keep a local copy on forwarding mailboxes; publish the DKIM record |
+| `** noreply@ubuntu-hestia.localhost: Too many "Received" headers - suspected mail loop` | the VPS image's panel contact points back at this server | `v-change-user-contact <user> <real address>` (`setup-mail.sh` flags it) |
+| `550-5.1.1 The email account that you tried to reach does not exist` | a typo in the recipient | — |
+
 ### 2.6 Everyday mail administration
 
 | Task | How |
