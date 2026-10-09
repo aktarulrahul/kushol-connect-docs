@@ -51,7 +51,7 @@ Severity: **H** = would break or cause an outage/security issue · **M** = real 
 | F15 | L | `@react-native-firebase` means EAS development builds (no Expo Go) | State in tech-stack | Applied (§9) |
 | F16 | L | Consider River (Postgres job queue for Go) instead of hand-building 01's `jobs` | Evaluated in 01 Stage 1: keep the spec'd hand-built queue (River brings its own schema/migration tooling and maintenance loops that clash with owner-run migrations and Neon idle) | Decided (01, 2026-09-30) |
 | F17 | M | Self-hosted mail on a shared VPS: deliverability depends on reverse DNS, SPF/DKIM/DMARC and the IP's reputation; ClamAV/SpamAssassin use RAM on the same 8 GB box | §7.2 checklist (PTR = `mail.kusholconnect.com`, DKIM from HestiaCP, DMARC), include the mail stack in the memory budget, verify outbound port 25 is open on the VPS | Owner actions §8 |
-| F18 | M | With one repo per application there is no monorepo home for `docker-compose.yml`, `deploy/hestia/` templates, `ops/` scripts and the release log | Options: keep them in the api repo under `deploy/` (simplest), or a small separate `ops` repo; each app repo's CI builds and pushes only its own image | **Default taken 2026-10-02**: api repo `deploy/` (15 ADR-1); owner may still move it |
+| F18 | M | With one repo per application there is no monorepo home for `docker-compose.yml`, `deploy/hestia/` templates, `ops/` scripts and the release log | Options: keep them in the api repo under `deploy/` (simplest), or a small separate `ops` repo; each app repo's CI builds and pushes only its own image | **Decided 2026-10-08 (owner)**: everything in the docs repo under `infra/` — no deploy files in the app repos; images built by the owner (CI image jobs removed) |
 | F19 | M | Behind Docker port publishing the api sees the bridge gateway (not 127.0.0.1) as the TCP peer, so a loopback-only proxy trust list would ignore Nginx's `X-Forwarded-For` and rate-limit everyone as one IP | 01 adds `TRUSTED_PROXIES` (IPs/CIDRs, default loopback); 15's Compose sets it to the project network CIDR (fixed subnet in `docker-compose.yml`) | Applied in 01; 15 to set |
 
 ## 3. Target architecture
@@ -126,9 +126,10 @@ pre-release checks.
 
 ## 5. Deployment plan — Hostinger KVM 2 (Docker Engine + Compose, behind HestiaCP)
 
-> **Built 2026-10-02 (module 15 Part A).** The implementation and its documentation live in the api
-> repo: runbook `applications/api/deploy/DEPLOYMENT.md`; reference `deploy/docs/images.md` (build +
-> GHCR), `stack.md` (Compose, layout, config, security), `scripts.md`, `hestia.md` (Nginx, TLS, mail).
+> **Built 2026-10-02 (module 15 Part A); moved 2026-10-08 to this folder** (owner: all deploy files
+> in `docs/infra`, none in the app repos). Index: `infra/README.md`; runbook `infra/deploy/DEPLOYMENT.md`;
+> reference `infra/deploy/docs/images.md` (build + registry), `stack.md` (Compose, layout, config,
+> security), `scripts.md`, `hestia.md` (Nginx, TLS, mail); Dockerfiles in `infra/docker/`.
 > This section keeps the planning rationale; where they differ, the built files and those documents
 > win (decisions: `docs/modules/15-deployment-operations/07-progress.md` ADR-1…13).
 
@@ -157,10 +158,10 @@ Record results in `docs/modules/15-deployment-operations/07-progress.md` when mo
 4. **Directories:** `/opt/kushol/` → `compose.yaml`, `env/{stack,api,web}.env` (0600 in a 0700 dir,
    owned by the deploy user — 15 ADR-3), `ops/` scripts, `state/` (`release.env`, `releases.log`,
    `incidents.log`).
-5. **GHCR pull token** (classic PAT, `read:packages`): `docker login ghcr.io` as the deploy user —
+5. **Registry pull token** (since 2026-10-09: private Docker Hub repo `airahul/ai`, read-only access token): `docker login docker.io` as the deploy user —
    stored in its Docker config, not in an env file.
 
-### 5.3 Compose file (planning shape — final file: `applications/api/deploy/compose.yaml`)
+### 5.3 Compose file (planning shape — final file: `infra/deploy/compose.yaml`)
 
 ```yaml
 name: kushol
@@ -223,7 +224,7 @@ services:
 | Step | Where | Detail |
 | --- | --- | --- |
 | Quality gate | GitHub Actions | api: `gofmt`, `golangci-lint`, `go vet`, `go test`, testcontainers ITs · web/app: lint, typecheck, test, build · contract drift check · gitleaks |
-| Images | GitHub Actions → GHCR, one workflow per app repo | `kushol-api` (api repo), `kushol-web` (web repo); tag `main-<sha7>` (immutable) + `latest`; `linux/amd64`; base images pinned by digest. **Built 2026-10-02**: job `image` in each repo's `ci.yml`, after gate + gitleaks (+ deploy-bundle in api) — `deploy/docs/images.md` |
+| Images | ~~GitHub Actions → GHCR, one workflow per app repo~~ → since 2026-10-08 built by the owner from `infra/docker/` (`infra/deploy/docs/images.md`) | `kushol-api` (api repo), `kushol-web` (web repo); tag `main-<sha7>` (immutable) + `latest`; `linux/amd64`; base images pinned by digest. **Built 2026-10-02**: job `image` in each repo's `ci.yml`, after gate + gitleaks (+ deploy-bundle in api) — `deploy/docs/images.md` |
 | Deploy | Operator runs `ops/deploy.sh pilot api=<tag> web=<tag>` over SSH as `kushol` (manual, pilot) | Optional later: GitHub Actions job with an SSH key restricted to that script |
 | Mobile | EAS Build/Submit | profiles development/preview/production; `EXPO_PUBLIC_API_URL=https://api.kusholconnect.com` for preview/production |
 
@@ -329,7 +330,7 @@ webmail, optional SpamAssassin/ClamAV). It is independent of Docker: the Kushol 
 bind ports 25/465/587/993.
 
 **Setup checklist (owner — the agent does not create accounts or set passwords).** Steps 1–5, 7 and the
-DNS values are scripted in `applications/api/deploy/hestia/setup-mail.sh` (runbook `deploy/DEPLOYMENT.md` §5):
+DNS values are scripted in `infra/deploy/hestia/setup-mail.sh` (runbook `infra/deploy/DEPLOYMENT.md` §5):
 
 1. HestiaCP → **Mail** → *Add mail domain* `kusholconnect.com` — enable DKIM, anti-spam, and
    (if RAM allows) anti-virus; enable SSL (Let's Encrypt) for `mail.kusholconnect.com`.
@@ -412,3 +413,4 @@ for mail as well as the app.
 | 2026-09-30 | §8 item 1: Neon project created in Singapore (Postgres 18); Neon tooling (`neon.ts`, link context) lives in the api repo | Claude |
 | 2026-10-02 | Module 15 Part A built (`applications/api/deploy/`, runbook `DEPLOYMENT.md`): VPS location confirmed (F1 closed), F18 default, PTR left unchanged, SPF keeps `ip6`, no AAAA for web names, DNS stays at Hostinger | Claude |
 | 2026-10-02 | §5 points to the built implementation and its reference docs (`deploy/docs/`); §5.2 updated (per-service log rotation, env file ownership, GHCR login) | Claude |
+| 2026-10-08 | All deploy files moved from the api repo to `docs/infra` (owner); app repos' CI image and deploy-bundle jobs removed; F18 decided | Claude |

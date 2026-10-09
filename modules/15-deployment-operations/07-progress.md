@@ -3,14 +3,14 @@
 **Module:** `15-deployment-operations` (Part A ✅ + Part B ✅ code-complete) · **Repos:** `applications/api`
 (`Dockerfile`, `deploy/`, CI image job), `applications/web` (`Dockerfile`, CI image job), both in the
 working tree of branch `module/03-identity-access`, nothing committed by the build ·
-**Last updated:** 2026-10-02
+**Last updated:** 2026-10-08
 
 Owner instruction (2026-10-02): "make deployment plan and script to deploy the web and api in
 hostinger in KVM 2 • srv1100749.hstgr.cloud within docker container for kusholconnect.com domain and
 also created the 4 emails within the HestiaCP". Taken as the go-ahead for Part A ahead of 02's
 Gate 1. Standing rules apply: the agent has no SSH, never runs the stack or Docker, and never
 creates accounts or sets passwords — every server step is a script the owner runs
-(`applications/api/deploy/DEPLOYMENT.md` §2 is the ordered plan).
+(`docs/infra/deploy/DEPLOYMENT.md` §2 is the ordered plan — moved from the api repo on 2026-10-08, ADR-14).
 
 ## Stages & gates
 
@@ -38,7 +38,7 @@ creates accounts or sets passwords — every server step is a script the owner r
 
 | # | Decision | Why / effect |
 | --- | --- | --- |
-| ADR-1 | **Deploy files live in the api repo `deploy/`** (architecture F18, owner item #9 — default taken) | Simplest home with one repo per app. Each Dockerfile sits at its own repo root (build context) instead of the spec's `deploy/Dockerfile.api`/`.web`. Moving `deploy/` to an `ops` repo later is a copy |
+| ADR-1 | ~~Deploy files live in the api repo `deploy/`~~ — **superseded by ADR-14** | — |
 | ADR-2 | **A release = two tags** (`api=main-<sha7>`, `web=main-<sha7>`) | The repos build separately; `deploy.sh pilot api=… web=…` keeps the omitted one; `releases.log` records both. Spec's single `<tag>` arg is superseded |
 | ADR-3 | Env files `kushol:kushol 0600` in a `0700` dir (spec said root-owned) | The Compose CLI reads `env_file` as the invoking user; docker-group membership is root-equivalent anyway |
 | ADR-4 | Ports `127.0.0.1:8180` (api) / `:3100` (web); subnet `10.201.0.0/24`; `TRUSTED_PROXIES` = that subnet | Outside Docker's default pools so co-tenant networks cannot collide (prepare-host checks overlap and port use) |
@@ -51,6 +51,7 @@ creates accounts or sets passwords — every server step is a script the owner r
 | ADR-11 | Container hardening | api/worker/redis `read_only` + tmpfs, all `cap_drop: ALL` + `no-new-privileges`; web writable (Next writes `.next/cache`); redis runs as its image user so the entrypoint needs no capabilities |
 | ADR-12 | `ops/migrate.sh <api-tag> status \| up --confirm` | Owner-run Gate 2 helper using that image's own migrations; `deploy.sh` only checks `migrate-status` and stops (exit 3) |
 | ADR-13 | Worker healthcheck disabled | No HTTP and no shell in distroless — nothing to probe; restart policy covers crashes (G-2) |
+| ADR-14 | **All deploy files in the docs repo under `infra/`** (owner, 2026-10-08) — `infra/deploy/` (bundle, runbook, reference docs, tests) and `infra/docker/` (`api.Dockerfile`, `web.Dockerfile` + `<name>.dockerignore`); nothing deploy-related in the app repos | App CI keeps `gate` + gitleaks; the `image` and `deploy-bundle` jobs are gone because their files left the repos — images are built by the owner with `-f` against each app repo (`images.md` §2); the bundle tests run from the docs repo and skip env parity when the app repos are absent. The docs repo is public, so the bundle is public (templates only) |
 
 ## Pinned versions (digests checked 2026-10-02)
 
@@ -70,14 +71,14 @@ creates accounts or sets passwords — every server step is a script the owner r
 | OPS-BE-002 | web `Dockerfile` + `.dockerignore` (standalone, `node` user) + CI boot check | ✅ written · first build in CI |
 | OPS-BE-003 | `deploy/compose.yaml` (api/worker/web/redis, caps, healthchecks, loopback, fixed subnet) | ✅ |
 | OPS-BE-004 | `deploy/env/{stack,api,web}.env.example` (api keys = `internal/config` exactly, test-enforced) | ✅ |
-| OPS-BE-005 | CI `secrets` (gitleaks) + `image` jobs in both repos; api `deploy-bundle` job | ✅ written · first run on next push |
+| OPS-BE-005 | CI `secrets` (gitleaks) in both app repos · ~~`image` + `deploy-bundle` jobs~~ removed 2026-10-08 (ADR-14): images are built by the owner from `docs/infra/docker` | ◐ |
 | OPS-BE-006 | `deploy/hestia/templates/kushol-{web,api}.{tpl,stpl}` + `setup-web.sh` | ✅ · pending owner run |
 | OPS-BE-007 | `deploy/ops/deploy.sh` (+ `lib.sh`, `smoke.sh`, `compose.sh`) | ✅ |
 | OPS-BE-008 | `deploy/ops/rollback.sh` | ✅ · drill timing pending owner run |
-| OPS-BE-012 | `make deploy-check` (bundle tests) — server-side Make wrappers not needed: the bundle has no Makefile | ◐ |
+| OPS-BE-012 | Bundle tests `bash infra/deploy/tests/run.sh` / `flow.sh` from the docs repo (`make deploy-check` removed with the move) | ◐ |
 | OPS-BE-016 | `deploy/host/prepare-host.sh` | ✅ · host report pending owner run |
 | (owner request) | `deploy/hestia/setup-mail.sh` — mail domain, 4 mailboxes, aliases, DNS values | ✅ · pending owner run |
-| OPS-US-012 (Part A slice) | `applications/api/deploy/DEPLOYMENT.md` — plan, runbook, exit codes, DNS, mail, troubleshooting, incidents | ✅ |
+| OPS-US-012 (Part A slice) | `docs/infra/deploy/DEPLOYMENT.md` — plan, runbook, exit codes, DNS, mail, troubleshooting, incidents | ✅ |
 | Documentation (owner: "document everything") | `deploy/docs/images.md` (build + GHCR), `stack.md` (Compose, layout, config keys, security), `scripts.md` (script reference, exit codes, tests), `hestia.md` (routing, headers, TLS, templates, mail); pointers from both READMEs and the architecture plan §5 | ✅ 2026-10-02 |
 
 ## Evidence (agent side, 2026-10-02 — no containers, no server)

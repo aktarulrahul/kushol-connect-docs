@@ -1,14 +1,14 @@
 # Deployment & Operations — Gaps
 
-**Module:** `15-deployment-operations` (Part A) · **Last updated:** 2026-10-04
+**Module:** `15-deployment-operations` (Part A) · **Last updated:** 2026-10-08
 
 Genuine remaining gaps only (reason · impact · next action).
 
 | ID | Gap | Reason | Impact | Next action |
 | --- | --- | --- | --- | --- |
-| G-1 | Nothing has run on the server yet — host prep, HestiaCP web/mail, migrations, first deploy, DNS, TLS, rollback drill | Owner rule: the agent has no SSH and never runs the stack; server steps are owner-run | OPS-US-001/003/004 unproven end to end; pending owner run | Owner follows `applications/api/deploy/DEPLOYMENT.md` §2 and pastes each output into `07-progress.md` "Owner run" |
+| G-1 | Nothing has run on the server yet — host prep, HestiaCP web/mail, migrations, first deploy, DNS, TLS, rollback drill | Owner rule: the agent has no SSH and never runs the stack; server steps are owner-run | OPS-US-001/003/004 unproven end to end; pending owner run | Owner follows `docs/infra/deploy/DEPLOYMENT.md` §2 and pastes each output into `07-progress.md` "Owner run" |
 | G-2 | Worker container has no healthcheck (`disable: true`) | Worker serves no HTTP; distroless has no shell | A hung (not crashed) worker is not detected; crashes still restart (OPS-BR-006 partly met) | 01 adds a worker heartbeat (e.g. file in `/tmp` touched each loop + `api healthcheck --worker`); then enable it in `compose.yaml` |
-| G-3 | `shellcheck`, both image builds and `docker compose config` have not run yet | Not installed / Docker off on the dev Mac (owner rule) | Script lint or image build errors surface only on the first CI run | First push of these changes: CI jobs `deploy-bundle` and `image` (image only on `main`); fix anything red |
+| G-3 | `shellcheck`, both image builds and `docker compose config` have never run | No shellcheck on the dev Mac; image jobs and bundle CI removed with the move (ADR-14); agent never builds/pushes | Script or image errors surface only when the owner builds or deploys | Owner: first build per `infra/deploy/docs/images.md` §2; install shellcheck or add the docs-repo workflow (G-14) |
 | G-4 | Smoke has no login round-trip (OPS-E2E-001 asks for it, Playwright) | No login on `main` yet | Gate proves health, routing and TLS, not auth | When 03 is on `main`: Playwright smoke against `https://kusholconnect.com` in `ops/smoke.sh public` or CI |
 | G-5 | No Content-Security-Policy on the web | A wrong CSP breaks Next.js; 07 owns the pages | Weaker XSS defence-in-depth | 07 sets CSP (nonce-based) in Next or the template |
 | G-6 | ~~Maintenance mode~~ **built 2026-10-04** (Part B): `ops/maintenance.sh` + Nginx flag → 503 bn/en page + `/maintenance` page + `NEXT_PUBLIC_MAINTENANCE_MODE`; enable/disable drill pending owner | — | — | run drill once after first deploy |
@@ -17,4 +17,6 @@ Genuine remaining gaps only (reason · impact · next action).
 | G-9 | "The 4 emails" read as 4 mailboxes (3 people + `noreply`) with `hello@` as an alias | Request named no addresses; architecture §7.1 lists 5 | Different set needed? | `TODO: Confirm` with Rahul — change `MAILBOXES`/`MAIL_ALIASES` and rerun `setup-mail.sh` (existing mailboxes untouched) |
 | G-10 | `noreply@` send rate limit left at the HestiaCP default | OTP volume unknown before 03/06 go live | OTP email could be throttled under load | Measure after 03 email OTP ships; `v-change-mail-account-rate-limit` or move to a transactional provider (architecture §7.3) |
 | G-11 | The HestiaCP version and web stack on this VPS are unknown | No SSH for the agent | Scripts detect nginx proxy vs standalone and refuse unsupported setups or a HestiaCP without password-file support | Confirm from the host report (G-1 step 1) |
-| G-12 | ~~Boot check after push~~ **fixed 2026-10-04**: web `image` job now builds (load) → boot-checks → pushes | — | — | first CI run confirms |
+| G-12 | ~~Boot check after push~~ — moot since 2026-10-08: CI image jobs removed (ADR-14); `deploy.sh`'s gate rejects a web image that cannot start | — | — | — |
+| G-13 | `NEXT_PUBLIC_MAINTENANCE_MODE` and `NEXT_PUBLIC_DOWNLOAD_URLS_READY` are not build args of `web.Dockerfile` | Added to the web schema without a Dockerfile/CI change | Images always bake `false`; setting them in `web.env` does nothing | Add `ARG`/`ENV` for both to `infra/docker/web.Dockerfile` and pass them in the build command |
+| G-14 | No CI checks `docs/infra` | The docs repo has no workflow; the api repo's `deploy-bundle` job left with the files | Script regressions are caught only by running the tests by hand | Add `.github/workflows/infra.yml` to the docs repo: shellcheck + `run.sh` (env parity skipped, or check out the private api/web repos with a read token) + `flow.sh` |
