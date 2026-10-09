@@ -24,6 +24,7 @@ set -euo pipefail
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 APPS=${KC_APPS:-$HERE/../../../applications}
+[[ -d $APPS ]] && APPS=$(cd "$APPS" && pwd) # readable paths in messages
 REMOTE_ROOT=/opt/kushol
 # Exit codes of ops/deploy.sh (ops/lib.sh)
 EXIT_FAILED=1 EXIT_USAGE=2 EXIT_SCHEMA_BEHIND=3 EXIT_SCHEMA_DIRTY=4 EXIT_PULL=5

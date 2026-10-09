@@ -297,3 +297,4 @@ payload + `client_msg_id`; replay order is per-group FIFO.
 - [x] `COM-AP-018` — — 2026-10-02: `VerifiedGate` + all bn/en strings from `chat.*`/`notices.*` catalogs
 - [x] `COM-AP-019` — — 2026-10-02: Reduced-motion variants for all §5 animations
 - [x] `COM-AP-020` — — 2026-10-02 (specs written; runs pending owner — G-1): Maestro specs for §9 of `06` (E2E golden paths)
+- [x] `COM-AP-021` — — 2026-10-09 (owner ADR-9 in `07-progress.md`; fixture/client-state features — G-7; device review pending — G-9): Spartens chat/channel parity — list (search + bell header, filter chips incl. Unread, pinned chats, drafts, row menu, per-chat mute, pull-to-refresh, new-club FAB) and conversation (channel header + info sheet, pinned bar, unread pill, swipe-to-reply, long-press focus menu with reactions/reply/edit/pin/info/delete, reply/edit banners, jump-to-latest, large emoji)

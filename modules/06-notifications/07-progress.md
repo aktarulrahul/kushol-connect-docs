@@ -90,3 +90,16 @@ Fixtures: dev switcher (`ntfFixtureFlags`) still toggles success/offline/rate_li
 the screens; live paths need the owner's stack. Screens: `/(modals)/notifications-primer` (3 class
 rows, allow/denied/permanent-denied → OS settings), `/settings/notifications` (3 switches, device
 row, admin test push, history). Review at 360 px in bn + en.
+
+## Fix log — 2026-10-09 (owner `make test-integration` run 1 failure)
+
+**NTF-IT-002 (TestIT002MuteAndPrune)** panicked in `subscribeBoundTopics`: `s.hierarchy` is nil
+when the harness wires no 04 port, and the method called the nil interface. Fix: nil-guard returns
+an error so `RegisterDevice` takes its existing degraded path (warn + `topics.backfill` enqueue)
+instead of panicking. Agent-side checks green (build · vet · lint 0 · unit ok · `-tags=integration`
+compiles); suite re-run **pending owner**.
+
+**2026-10-09 (evening, owner-authorised run):** `make test-integration` fully green — 32 packages
+ok. IT002 passes with the nil-hierarchy degrade; IT006's fake hierarchy now keys nodes by the
+seeded caller id (it previously keyed a random uuid, so bound-topic resolution missed; the panic
+in IT002 had been aborting the package before IT006 could assert).

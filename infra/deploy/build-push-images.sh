@@ -23,6 +23,7 @@ set -euo pipefail
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 APPS=${KC_APPS:-$HERE/../../../applications}
+[[ -d $APPS ]] && APPS=$(cd "$APPS" && pwd) # readable paths in messages
 
 say() { printf '\n==== %s\n' "$*"; }
 warn() { printf 'WARNING: %s\n' "$*" >&2; }

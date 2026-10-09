@@ -118,3 +118,25 @@ Order within the day (append-only; does not invent Gate ✓):
 
 Related app chrome (WhatsApp-dense chat list, bottom tabs, reactions, etc.) is Stage-2 fixture
 UI under **05-communication-engine** `07-progress.md` — not an identity deliverable.
+
+## Fix log — 2026-10-09 (owner `make test-integration` run 1 failure)
+
+**IDT-IT-006 (TestIT006Register)** returned 500: register inserts the verification request with
+`requested_section_id`, and migration 04's FK (`verification_requests_requested_section_id_fkey`)
+needs the section row in the DB — but the IT world seeded only cities + schools, while placement
+re-validation runs against the in-memory demo. Fix: `newWorldWith` now also seeds the demo
+sections (both schools, levels 6–10, A/B, session 2026) so the deterministic demo ids exist as
+rows. The wrong-hierarchy CONFLICT case still fails first on placement (memory), before any FK.
+Agent-side checks green (build · vet · lint 0 · unit ok · `-tags=integration` compiles); suite
+re-run **pending owner**.
+
+## Fix log — 2026-10-09 (evening owner run: `migrate up` aborts everywhere)
+
+The new seed migration `20270303090000_seed_kushol_admins_and_chat` failed on every
+testcontainer suite (httpapi/jobs/notify/tuition/platform-db) with 42P10 — `ON CONFLICT (email)`
+cannot target `users_email_key` because that index is PARTIAL (`WHERE email IS NOT NULL`). Fix:
+the conflict target now repeats the index predicate (`ON CONFLICT (email) WHERE email IS NOT
+NULL DO UPDATE …`). Verified the other conflict targets are full-index/PK-backed
+(`auth_identities_provider_account_key`, `chat_group_members_unique_key`, `chat_groups` PK) and
+the seeded values pass the role/plan/locale CHECKs. `go build` · `go vet` (+`-tags=integration`)
+· golangci-lint 0 issues; suite re-run **pending owner**.

@@ -146,3 +146,20 @@ exists), interview calls (mode in_person/online, slot, venue/meeting link), `tut
 
 **Verified:** fixture tests for post → register → match/notify → arrange (both modes) and the
 rating bounds; web typecheck/lint green; 205/205 tests.
+
+## Fix log — 2026-10-09 (owner `make test-integration` run 1 failures)
+
+TUT-IT-001/002/009 failed at the harness seed: `seedVerifiedTutor` passed no bio, and the profile
+validation requires a bio in at least one language (`validation.tuition.bio_length`, BR-007).
+Fix: the seed now carries a bn bio. Code untouched — the validation is correct. Agent-side checks
+green (build · vet · lint 0 · unit ok · `-tags=integration` compiles); suite re-run **pending
+owner** (G-6).
+
+**2026-10-09 (evening, owner-authorised run):** `make test-integration` fully green — 32 packages
+ok. The harness seed now (a) inserts real confirmed `media_assets` rows for the national-ID +
+evidence FKs, (b) reaches the verification through the school queue (`SubmitForReview` returns
+the profile, not the verification row), (c) seeds the approving admin as a real `users` row
+(`reviewer_id` FK), (d) gives every seeded user a unique phone (contact reveal INV-4), and
+(e) expresses interest as the matched profile's owner (TUT-BE-012 ownership check). The matcher
+push counter now separates `tuition.match` sends from seed verification pushes. TUT-IT-001/002/
+005/009 — these were never runnable past the seed before; all green.
