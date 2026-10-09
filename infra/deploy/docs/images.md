@@ -135,7 +135,6 @@ them yet, so images always have both `false` (15 08-gaps G-13).
 | Who can push | The owner (`airahul`), from the workspace after `docker login` |
 | Who can pull | The server, as the `kushol` user, with a **Read-only personal access token** (Docker Hub → Account settings → Personal access tokens) — `sudo -iu kushol docker login docker.io -u airahul`, token pasted at the prompt (DEPLOYMENT.md §3.5; `host/first-deploy.sh` asks for it). Stored in `/home/kushol/.docker/config.json`, base64 and not encrypted, which is why it must be read-only — never the account password |
 | Token expiry | Deploys fail with exit **5** (pull failed) and the running stack is untouched. New token, `docker login` again |
-| Pull limits | Authenticated pulls of your own private repository count against the account's Docker Hub pull allowance; a deploy pulls 2 images (api, web) plus redis on first use |
 | Storage | Keep every tag still in `state/releases.log` (rollback targets); delete older tags in Docker Hub → `airahul/ai` → Tags when needed |
 | On the server | Pulled images stay on disk until pruned; keep recent ones so a rollback needs no download. `docker image prune -f` removes dangling layers only |
 

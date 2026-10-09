@@ -20,7 +20,7 @@ contain application code and their own CI gates only.
   committed. The server's IP, ports and layout are visible to anyone.
 - **No CI checks this folder yet.** The api repo's old `deploy-bundle` and both repos' `image` jobs
   were removed with the move. Run the bundle tests before committing changes here.
-- **Images are built by the owner** from the workspace (`deploy/docs/images.md` §2) — never on the
-  VPS. The registry is whatever `API_IMAGE`/`WEB_IMAGE` say in `deploy/env/stack.env`.
+- **Images are built from the workspace** (`deploy/docs/images.md` §2) — never on the VPS — and
+  pushed to the **private** Docker Hub repository `airahul/ai` as `api-main-<sha7>` / `web-main-<sha7>`.
 - The agent never runs the stack or the server steps (AGENTS.md rule 1); every server step is a
   script the owner runs.
