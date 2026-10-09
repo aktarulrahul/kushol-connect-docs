@@ -1,6 +1,6 @@
 # Images — how they are built and where they go
 
-**Module:** `15-deployment-operations` (OPS-BE-001, -002, -005) · **Last updated:** 2026-10-08 ·
+**Module:** `15-deployment-operations` (OPS-BE-001, -002, -005) · **Last updated:** 2026-10-09 ·
 Runbook: [`../DEPLOYMENT.md`](../DEPLOYMENT.md)
 
 Two images make up the platform. Since 2026-10-08 everything deploy-related lives in the docs repo
@@ -18,21 +18,23 @@ server: ops/deploy.sh pilot api=main-<sha7> web=main-<sha7> → docker compose p
 
 ## 1. What gets published
 
-| Image (`env/stack.env`) | Source | Dockerfile | Runs |
+| Image (private Docker Hub repo) | Source | Dockerfile | Runs |
 | --- | --- | --- | --- |
-| `API_IMAGE` (now `ghcr.io/aktarulrahul/kushol-api`) | `applications/api` | [`docker/api.Dockerfile`](../../docker/api.Dockerfile) | containers `api` (`serve`) and `worker` (`worker`); also `migrate-status` / `migrate` (one-off runs) |
-| `WEB_IMAGE` (now `ghcr.io/aktarulrahul/kushol-web`) | `applications/web` | [`docker/web.Dockerfile`](../../docker/web.Dockerfile) | container `web` (Next.js standalone server) |
+| `airahul/ai:api-main-<sha7>` | `applications/api` | [`docker/api.Dockerfile`](../../docker/api.Dockerfile) | containers `api` (`serve`) and `worker` (`worker`); also `migrate-status` / `migrate` (one-off runs) |
+| `airahul/ai:web-main-<sha7>` | `applications/web` | [`docker/web.Dockerfile`](../../docker/web.Dockerfile) | container `web` (Next.js standalone server) |
 | `redis:7.4.11-alpine3.21@sha256:858f…` | Docker Hub (not ours) | — | container `redis`, pulled by digest |
 
-The registry is whatever `API_IMAGE`/`WEB_IMAGE` name; changing registry means changing those two
-values and logging the server in to the new registry (§4). Nothing else depends on it.
+Both images live in **one private Docker Hub repository, `airahul/ai`** (owner, 2026-10-09), told
+apart by a tag prefix. `env/stack.env` holds `API_IMAGE`/`WEB_IMAGE=docker.io/airahul/ai` and
+`API_TAG_PREFIX=api-`/`WEB_TAG_PREFIX=web-`; `ops/deploy.sh` takes the plain tags
+(`api=main-<sha7> web=main-<sha7>`) and Compose adds the prefix.
 
 **Tags.**
 
 | Tag | Meaning | Deployable? |
 | --- | --- | --- |
-| `main-<sha7>` | the first 7 hex characters of the `main` commit that was built, e.g. `main-1a2b3c4` | **yes** — the unit of deployment; `ops/deploy.sh` accepts only `main-<hex 7–40>` or `release-<hex 7–40>` |
-| `latest` | optional convenience tag | **no** — `deploy.sh` refuses it so the release log always names an exact commit |
+| `api-main-<sha7>` / `web-main-<sha7>` | the first 7 hex characters of that repo's `main` commit, e.g. `api-main-e71c776` | **yes** — the unit of deployment; `ops/deploy.sh` accepts only `main-<hex 7–40>` or `release-<hex 7–40>` |
+| `api-latest` / `web-latest` | optional convenience tags (not pushed today) | **no** — `deploy.sh` refuses it so the release log always names an exact commit |
 
 Tags are treated as immutable (OPS-BR-005): never re-point a `main-<sha7>` tag at different code.
 
@@ -45,15 +47,15 @@ builder's job. For each app you build:
    pushed. The tag names that commit; uncommitted changes would make it lie.
 2. **Run the app's gate** (what CI's `gate` job runs): api `make gate` (integration tests need
    Docker), web `pnpm gate`. Don't publish a red build.
-3. **Log in** to the registry with a token that can push (GHCR: classic PAT with `write:packages`).
+3. **Log in** to Docker Hub as `airahul` (`docker login`) — the Mac's Docker Desktop login works.
 4. **Build and push** from the workspace root, `kushol-connect/`:
 
 ```bash
-SHA=$(git -C applications/api rev-parse --short=7 HEAD) && docker buildx build --platform linux/amd64 -f docs/infra/docker/api.Dockerfile --label org.opencontainers.image.revision=$(git -C applications/api rev-parse HEAD) -t ghcr.io/aktarulrahul/kushol-api:main-$SHA --push applications/api
+SHA=$(git -C applications/api rev-parse --short=7 HEAD) && docker buildx build --platform linux/amd64 -f docs/infra/docker/api.Dockerfile --label org.opencontainers.image.revision=$(git -C applications/api rev-parse HEAD) -t airahul/ai:api-main-$SHA --push applications/api
 ```
 
 ```bash
-SHA=$(git -C applications/web rev-parse --short=7 HEAD) && docker buildx build --platform linux/amd64 -f docs/infra/docker/web.Dockerfile --build-arg NEXT_PUBLIC_API_URL=https://kusholconnect.com --build-arg NEXT_PUBLIC_SITE_URL=https://kusholconnect.com --label org.opencontainers.image.revision=$(git -C applications/web rev-parse HEAD) -t ghcr.io/aktarulrahul/kushol-web:main-$SHA --push applications/web
+SHA=$(git -C applications/web rev-parse --short=7 HEAD) && docker buildx build --platform linux/amd64 -f docs/infra/docker/web.Dockerfile --build-arg NEXT_PUBLIC_API_URL=https://kusholconnect.com --build-arg NEXT_PUBLIC_SITE_URL=https://kusholconnect.com --label org.opencontainers.image.revision=$(git -C applications/web rev-parse HEAD) -t airahul/ai:web-main-$SHA --push applications/web
 ```
 
 5. **Deploy** the two tags: `ops/deploy.sh pilot api=main-<sha7> web=main-<sha7>` on the server.
@@ -125,18 +127,23 @@ them yet, so images always have both `false` (15 08-gaps G-13).
 | api | < 40 MB | `docker image ls <API_IMAGE>` after the build or a pull on the server |
 | web | < 250 MB | same for `<WEB_IMAGE>` |
 
-## 4. The registry
-
-Current configuration: GitHub Container Registry, `ghcr.io/aktarulrahul/kushol-{api,web}`.
+## 4. The registry — Docker Hub `airahul/ai` (private)
 
 | Topic | How it works here |
 | --- | --- |
-| Visibility | Keep the repositories **private**: the images are the product's compiled code. GHCR packages are private by default; registries that create repositories on first push (e.g. Docker Hub) may default to public — create the repository as private before the first push |
-| Who can push | The owner, with a push-scoped token (GHCR: `write:packages`) |
-| Who can pull | The server, as the `kushol` user, with a **read-only** token (GHCR: classic PAT with `read:packages`) — `sudo -iu kushol docker login <registry> -u <user>`, token pasted at the prompt (DEPLOYMENT.md §3.5). Stored in `/home/kushol/.docker/config.json`, base64 and not encrypted, which is why it must be read-only |
+| Visibility | **Private.** The images are the product's compiled code — never make the repository public. A Docker Hub free plan includes one private repository |
+| Who can push | The owner (`airahul`), from the workspace after `docker login` |
+| Who can pull | The server, as the `kushol` user, with a **Read-only personal access token** (Docker Hub → Account settings → Personal access tokens) — `sudo -iu kushol docker login docker.io -u airahul`, token pasted at the prompt (DEPLOYMENT.md §3.5; `host/first-deploy.sh` asks for it). Stored in `/home/kushol/.docker/config.json`, base64 and not encrypted, which is why it must be read-only — never the account password |
 | Token expiry | Deploys fail with exit **5** (pull failed) and the running stack is untouched. New token, `docker login` again |
-| Storage | Keep every tag still in `state/releases.log` (rollback targets); delete older versions in the registry's UI when storage matters |
+| Pull limits | Authenticated pulls of your own private repository count against the account's Docker Hub pull allowance; a deploy pulls 2 images (api, web) plus redis on first use |
+| Storage | Keep every tag still in `state/releases.log` (rollback targets); delete older tags in Docker Hub → `airahul/ai` → Tags when needed |
 | On the server | Pulled images stay on disk until pruned; keep recent ones so a rollback needs no download. `docker image prune -f` removes dangling layers only |
+
+### Published so far
+
+| Tag | Commit | Pushed |
+| --- | --- | --- |
+| `airahul/ai:api-main-e71c776` | api `e71c776` (`linux/amd64`, index digest `sha256:782ea774…3617`) | 2026-10-09 |
 
 ## 5. Updating base images
 
