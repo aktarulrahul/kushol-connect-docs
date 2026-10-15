@@ -134,9 +134,9 @@ Schema changes expand/contract; JSON shapes versioned; the OpenAPI spec is the s
 
 ## 10. Task Checklist
 
-- [ ] `PAY-INT-001` Publish exports `InitiateInvoicePayment` / `InvoiceStatus` / `TransactionSummary`; 07/11 consumer stubs compile
+- [x] `PAY-INT-001` Publish exports `InitiateInvoicePayment` / `InvoiceStatus` / `TransactionSummary`; 07/11 consumer stubs compile — 2026-10-15
 - [x] `PAY-INT-002` Confirm 11's seam signatures (`commerce.OrderAmount` + attach hook) against 11's spec; adapt names if 11 finalizes differently — flag any drift in `08-gaps.md` — 2026-10-03 (11's seam verified + consumed via adapter: OrderAmount + AttachPaymentTransaction)
-- [ ] `PAY-INT-003` Consume 05 `media.PutObject` (declared in 05 `06` §2, kind `receipt_pdf`); contract test against 05 fake
+- [x] `PAY-INT-003` Consume 05 `media.PutObject` (declared in 05 `06` §2, kind `receipt_pdf`); contract test against 05 fake — 2026-10-15
 - [x] `PAY-INT-004` Wire `notify.SendToUser` payloads: `fee_due` (`/payments/{invoiceId}`, bn "বকেয়া ফি" + amount) and `payment_result` (`/receipts/{txnId}`) — freeze with 06 (`NTF-INT-007`) — 2026-10-03 (fee_due + payment_result additive in 06's builder; ids+amounts only)
 - [x] `PAY-INT-005` Register jobs (`receipt.generate`, `invoice.notify`, `payments.reconcile`, `payments.overdue_sweep`, `payments.expire`) with the 01 worker + cron — 2026-10-03 (3 jobs registered; reconcile + notify fan-out land with G-5/G-7)
 - [x] `PAY-INT-006` Webhook routes outside the auth group with signature middleware; OpenAPI spec annotated as the signature-verified exception — 2026-10-03 (webhook route outside the auth group; spec annotated)

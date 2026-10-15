@@ -145,3 +145,17 @@ Redesigned `/` in `applications/web` as an interactive, illustrated, feature-foc
   - Vitest suite: 28 test files, 220 tests passing (including `feature-slider.test.tsx`, `before-after-slider.test.tsx`, and `hero-device-showcase.test.tsx`).
   - TypeScript: `pnpm typecheck` (`tsc --noEmit`) passes with 0 errors.
   - ESLint & Prettier: clean with 0 warnings or errors.
+
+## Admin LMS pages — 2026-10-09 (owner request)
+
+`/admin/lms` (Kushol admin only — SUPER_NAV "LMS", Blocks icon): all institutions' LMS pull
+connectors (list: institution, name, base URL, schedule, enabled, last run + status), **Configure
+new LMS** dialog (institution picker, name, HTTPS base URL, bearer/api-key auth + header,
+credential, schedule preset) enforcing one-connection-per-institution, and per-row + **Sync all**
+triggers. `/admin/lms/[id]` details page: config summary (credential masked), provisioning stats
+(sections · teachers+students · enrollments · **chat groups ensured** — the official section
+groups + the institution's teachers group), run history (status/trigger/counters/errors), enable/
+disable + sync-now. RBAC renders by session role (use-console-role); fixture seam
+(`fixtures/lms.ts` admin section) mirrors the api's `LmsConnection`/`LmsSyncRun` contract —
+swap point for 14's real endpoints, documented in-file. i18n `admin.lms.*` (en+bn, catalog
+parity kept); 3 new fixture tests (220/220 green).

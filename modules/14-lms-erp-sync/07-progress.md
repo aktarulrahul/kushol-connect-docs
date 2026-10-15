@@ -1,7 +1,7 @@
 # 14-lms-erp-sync — Build Progress
 
 Module: lms-erp-sync · Surfaces: **api + web** (app = N/A by design, `05` empty) ·
-**Last updated:** 2026-10-04
+**Last updated:** 2026-10-15
 
 > Owner instruction: "complete 14 lms-erp-sync" (08/09 deferred to phase 2). Same through-stages
 > precedent (06/10/11/12/13); gates 1–3 stay owner-manual.
@@ -12,10 +12,10 @@ Module: lms-erp-sync · Surfaces: **api + web** (app = N/A by design, `05` empty
 | --- | --- | --- |
 | 1 Plan | ✅ 2026-10-04 | OQ-1…10 defaults accepted (10k rows/20 MB · phone-only match · exact template · HMAC ±5 min + 24 h overlap · event-id duplicates 200 · 60/min + Retry-After · licence ON for pilots via 07 · pull default for partners · `/institution/lms/connections*` routes · FCM rename deferred) |
 | 2 UI (web, mock-driven) | ✅ 2026-10-04 | contract-first: 22 operations + 28 `Lms*` schemas landed FIRST; both clients generated (105 `Lms` refs in the web schema); web: roster home, upload wizard, import detail, integrations (endpoints + LMS pull panel), reconciliation — on `fixtures/lms.ts` |
-| Gate 1 | ⏳ pending owner | review hand-off below |
+| Gate 1 | ✅ owner 2026-10-15 | owner approved in session ("complete all from Gate 1"); review hand-off below |
 | 3 Docs sync | ✅ 2026-10-04 | this file, 08-gaps, README → 🚧, registry row, checklist ticks, change log |
 | 4 Backend | ✅ code-complete 2026-10-04 | 3 migrations, 3 sqlc files, `internal/sync` (roster pipeline, endpoint lifecycle, webhook core, pull connector, reconciliation) + cmd/httpapi wiring + `ERP_SECRET_KEY` config |
-| Gate 2 (SQL on Neon) | ⏳ pending owner | SQL hand-off below |
+| Gate 2 (SQL on Neon) | ✅ owner | 2026-10-09 — all migrations applied to Neon via 15 first deploy (`v0 → 20270302090001 dirty=false`), covers `20270301090001–090003` |
 | 5 Integration | ✅ code-complete 2026-10-04 | web fixture seam until 07's console glue (G-3, 10/11/12/13 precedent); ITs specified — runs pending owner (G-1/G-2) |
 | Gate 3 | ⏳ pending | — |
 
@@ -87,3 +87,31 @@ Web (`pnpm dev`, fixtures): `/institution/roster` (cards + history) → `/instit
 with show-once secret modal + ack, test/rotate/revoke, event log + redrive; LMS connection
 form + test + Sync now + run history) → `/institution/roster/reconciliation` (baseline vs platform,
 drift flags). Desktop 1280 + 768; bn default, en toggle.
+
+## Web admin LMS pages — 2026-10-09 (owner request; implements the vendor pull contract client-side)
+
+`/admin/lms` + `/admin/lms/[id]` now follow **vendor-lms-api-spec.md** / **vendor-lms-api-response-examples.md**
+exactly (fixture seam `fixtures/lms.ts` admin section; swap point = `internal/sync` endpoints):
+
+- **Vendor surface simulated per contract**: `GET /teachers` · `/students` · `/sections` (classes with
+  nested `sections[]`) · `/sections/{external_id}` (`teacher_ids`/`student_ids`/`class_teacher_id`) ·
+  `/notices` — cursor pagination (`next_cursor`, limit 1–200), 401 on disabled/revoked credentials
+  (the college demo connector is intentionally revoked to exercise the `sync.run.auth_failed` path),
+  soft-delete via `active:false` skipped rows. Sample payload = the doc's উদাহরণ উচ্চ বিদ্যালয় rows.
+- **Pull flow per lms-pull-integration-plan §3**: teachers → students → classes/sections →
+  per-section membership (unknown ids warn + skip, spec §5.4) → notices when `syncNotices` →
+  upsert counts → chat groups ensured (official section groups; **class_teacher = group admin**,
+  lex-smallest fallback + warning; plus the institution's teachers group). New people are created
+  **PENDING — never auto-verified** (spec §11); re-sync with the same `external_id`s updates in
+  place (idempotent, `lms_external_ids` semantics).
+- **UI**: per-row + details **Test connection** (probes `/teachers?limit=1` per plan §2.1, shows
+  latency or 401), **Sync now / Sync all**, and a per-connection pull **report** — classes,
+  sections, teachers/students created vs updated, enrollments changed, groups ensured, notices
+  upserted, and the warnings list (missing membership ids, class-teacher fallback, membership-doc
+  gaps). Configure dialog: institution, name, HTTPS base URL, bearer/api-key + header, credential
+  (write-only, masked), schedule preset, notice-sync flag; one connection per institution.
+- Gates: eslint · `tsc` · vitest 220/220 (admin connector tests incl. one-per-institution,
+  HTTPS-only, group-ensure, idempotent re-sync) · Next build — all green. API-side notes: the real
+  engine lives in `internal/sync` (pull.go); the admin platform-level endpoints (list ALL
+  connections + trigger across institutions) remain 14 backend work (§6 sketch) — the web seam is
+  the documented swap point.

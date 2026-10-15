@@ -1,7 +1,7 @@
 # 13-b2b-ads-events — Build Progress
 
 Module: b2b-ads-events · Surfaces: **api + web** (README scope; app = recorded gap OQ-3) ·
-**Last updated:** 2026-10-04
+**Last updated:** 2026-10-15
 
 > Owner instruction: "complete 13-b2b-ads-events" — same through-stages precedent (06/10/11/12);
 > gates 1–3 stay owner-manual.
@@ -12,10 +12,10 @@ Module: b2b-ads-events · Surfaces: **api + web** (README scope; app = recorded 
 | --- | --- | --- |
 | 1 Plan | ✅ 2026-10-03 | plan in-session; defaults OQ-1…7; deps 06/07 🚧 accepted per owner instruction |
 | 2 UI (web, mock-driven) | ✅ 2026-10-03 | contract-first: 17 REST paths + 24 `Ads*` schemas landed FIRST; both clients generated; web: moderation queue, campaign list, public events on `fixtures/ads.ts` |
-| Gate 1 | ⏳ pending owner | |
+| Gate 1 | ✅ owner 2026-10-15 | owner approved in session ("complete all from Gate 1") |
 | 3 Docs sync | ✅ 2026-10-04 | this file, 08-gaps, README → 🚧, checklist ticks, change log |
 | 4 Backend | ✅ code-complete 2026-10-04 | 2 migrations, 2 sqlc files, `internal/ads` (service, targeting/topics/cap/budget pure fns, dispatch job, events+tickets, handler) + cmd/httpapi wiring |
-| Gate 2 (SQL on Neon) | ⏳ pending owner | SQL hand-off below |
+| Gate 2 (SQL on Neon) | ✅ owner | 2026-10-09 — all migrations applied to Neon via 15 first deploy (`v0 → 20270302090001 dirty=false`), covers `20270220100000–101000` |
 | 5 Integration | ✅ code-complete 2026-10-04 | web fixture seam until 07's console glue (G-3, 10/11/12 precedent); IT-001–006 specs exist — runs pending owner |
 | Gate 3 | ⏳ pending | — |
 

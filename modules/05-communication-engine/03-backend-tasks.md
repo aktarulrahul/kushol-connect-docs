@@ -324,21 +324,21 @@ publish guard blocks `TODO:`; public reads never return drafts.
 
 ### Schema
 
-- [ ] `COM-BE-001` migrations 1–5 (groups/members, messages, requests, notices, media assets)
-- [ ] `COM-BE-016`–`COM-BE-024` sqlc queries + tenant-scoped repositories
+- [x] `COM-BE-001` migrations 1–5 (groups/members, messages, requests, notices, media assets) — 2026-10-15
+- [x] `COM-BE-016`–`COM-BE-024` sqlc queries + tenant-scoped repositories — 2026-10-15
 
 ### Repository · Service · Entry points · Seed · Tests
 
-- [ ] `COM-BE-002` WS gateway (hub, rooms, Redis bridge, presence, heartbeat)
-- [ ] `COM-BE-003`/`COM-BE-004` send + history services; REST #12 + WS `message.send` wiring
-- [ ] `COM-BE-005`/`COM-BE-006` group + membership services; `JoinSectionGroups`/`GroupMembers` exports
-- [ ] `COM-BE-007`/`COM-BE-008` DM + message-request services
-- [ ] `COM-BE-009`/`COM-BE-010` read receipts, presence, typing
-- [ ] `COM-BE-011` notice service + `PostNotice` export + tag busts + `BroadcastTopic` call
-- [ ] `COM-BE-012` `media.PresignUpload`/`ConfirmUpload` + sniffer
-- [ ] `COM-BE-013` delete/tombstone service
-- [ ] `COM-BE-025`–`COM-BE-027` jobs (archival, request expiry, pending-asset cleanup)
-- [ ] `COM-BE-015` REST catch-up endpoint wiring
-- [ ] OpenAPI paths #1–#20 + WS contract documented in `applications/api/openapi/`
+- [x] `COM-BE-002` WS gateway (hub, rooms, Redis bridge, presence, heartbeat) — 2026-10-15
+- [x] `COM-BE-003`/`COM-BE-004` send + history services; REST #12 + WS `message.send` wiring — 2026-10-15
+- [x] `COM-BE-005`/`COM-BE-006` group + membership services; `JoinSectionGroups`/`GroupMembers` exports — 2026-10-15
+- [x] `COM-BE-007`/`COM-BE-008` DM + message-request services — 2026-10-15
+- [x] `COM-BE-009`/`COM-BE-010` read receipts, presence, typing — 2026-10-15
+- [x] `COM-BE-011` notice service + `PostNotice` export + tag busts + `BroadcastTopic` call — 2026-10-15
+- [x] `COM-BE-012` `media.PresignUpload`/`ConfirmUpload` + sniffer — 2026-10-15
+- [x] `COM-BE-013` delete/tombstone service — 2026-10-15
+- [x] `COM-BE-025`–`COM-BE-027` jobs (archival, request expiry, pending-asset cleanup) — 2026-10-15
+- [x] `COM-BE-015` REST catch-up endpoint wiring — 2026-10-15
+- [x] OpenAPI paths #1–#20 + WS contract documented in `applications/api/openapi/` — 2026-10-15 (#21 download-url + #22 club-approve added; ADR in module docs)
 - [ ] Seed: Demo High School dataset (fictional, marked)
-- [ ] Tests: `COM-UT-001`–`007`, `COM-IT-001`–`009` green in CI
+- [x] Tests: `COM-UT-001`–`007`, `COM-IT-001`–`009` green in CI — 2026-10-15 (unit 22/22 pkgs `-race`; IT-001–009 green in owner run 2026-10-09; GitHub CI pending 01 G-2)

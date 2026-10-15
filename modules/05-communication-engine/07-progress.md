@@ -2,7 +2,7 @@
 
 Module: communication-engine · Surfaces: api + app (web N/A — 07 builds the composer on these
 endpoints) · Repos: `applications/api`, `applications/app` (branch `module/03-identity-access`
-working tree — ADR-4) · **Last updated:** 2026-10-09
+working tree — ADR-4) · **Last updated:** 2026-10-15
 
 > Note: the build prompt parameter `TODAY=2026-10-01` lags the actual build date; dates are
 > recorded truthfully as 2026-10-02 (same convention as module 04).
@@ -13,11 +13,11 @@ working tree — ADR-4) · **Last updated:** 2026-10-09
 | --- | --- | --- |
 | 1 Plan | ✅ approved 2026-10-02 | owner: "proceed" with recommended options |
 | 2 UI (app, mock-driven) | ✅ 2026-10-02 | COM-AP-001…019 on fixtures; app gate green (lint · typecheck · unit 176/176) |
-| Gate 1 (UI approval) | ⏳ pending owner — UI reviewable per the hand-off below (owner later instructed to continue building: "complete the pending tasks", 2026-10-02 — recorded, gate still owner-run) |
-| 3 Docs sync | ✅ 2026-10-02 | this file, `08-gaps.md`, README row → 🚧, checklist ticks, change log |
+| Gate 1 (UI approval) | ✅ owner 2026-10-15 | owner approved in session ("complete all from Gate 1") — covers the 2026-10-02 fixture hand-off **and** the 2026-10-09 Spartens restyle (ADR-9); device pass at 360px bn/en still recommended, recorded as gap G-9a |
+| 3 Docs sync | ✅ 2026-10-02 · checklist sync 2026-10-15 | this file, `08-gaps.md`, README row → 🚧; `03` backend + `06` integration checklists ticked 2026-10-15 (`COM-BE-001…027`, OpenAPI paths, tests; `COM-INT-001…011/013`). Open: seed item (no demo chat-group seed verified), `COM-INT-012` (E2E runs — G-1) |
 | 4 Backend | ✅ code-complete 2026-10-02 (migrations · services · gateway · exports · handlers · wiring · unit tests) — Gate 2 hand-off below | evidence table |
-| Gate 2 (SQL on Neon) | ⏳ pending owner — runs **01 → 03 → 04 → 05** blocks in order | — |
-| 5 Integration | ⏳ after Gate 2 | WS gateway live wiring, real R2, push binding with 06, fixture swap |
+| Gate 2 (SQL on Neon) | ✅ owner | 2026-10-09 — all migrations applied to Neon via 15's first deploy (`v0 → 20270302090001 dirty=false`), covers the 05 block `20261003090000–094000` |
+| 5 Integration | 🚧 resolved 2026-10-09 (owner `make test-integration` green, 32 pkgs — IT011/012/013 + `ListGroupsForUser` SQL fixed); remaining: app fixture swap, MMKV offline queue, real R2/device flows | G-3/G-4 |
 | Gate 3 (integrated flows) | ⏳ pending | — |
 | 6 Gaps & verification | 🚧 | `08-gaps.md` |
 

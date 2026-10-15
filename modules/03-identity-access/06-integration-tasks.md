@@ -135,15 +135,15 @@ endpoint) are additive; the `Principal` shape and middleware signatures are froz
 
 ## 10. Task Checklist
 
-- [ ] `IDT-INT-001` `auth` middleware package (`Authenticate`, `RequireRole`, `RequireVerified`, `CurrentUser`, `Principal`)
-- [ ] `IDT-INT-002` OpenAPI `securitySchemes` (bearerJWT mobile / sessionCookie web) + route wiring for all `03` §2 endpoints
-- [ ] `IDT-INT-003` hierarchy client interface + in-memory fake (pre-04 builds/tests)
-- [ ] `IDT-INT-004` `verification.EnqueueProvisioning` job → `hierarchy.OnUserVerified` adapter
-- [ ] `IDT-INT-005` audit events emitted for all BR-010 cases
-- [ ] `IDT-INT-006` jobs registered on the 01 worker (SLA reminder, OTP outbox, provisioning, cleanup)
-- [ ] `IDT-INT-007` SMS gateway client + outbox state machine (`SMS_GATEWAY_*`)
-- [ ] `IDT-INT-008` Google + GitHub OIDC clients (state, PKCE, link-on-verified-email)
-- [ ] `IDT-INT-009` rate-limit middleware, class `auth`, Redis + DB fallback
-- [ ] `IDT-INT-010` 06 notification hand-offs: approved / rejected / SLA-reminder templates requested
-- [ ] `IDT-INT-011` Redis cache keys (`session:{hash}`, `status:{userId}`) with explicit invalidation
+- [x] `IDT-INT-001` `auth` middleware package (`Authenticate`, `RequireRole`, `RequireVerified`, `CurrentUser`, `Principal`) — 2026-10-15
+- [x] `IDT-INT-002` OpenAPI `securitySchemes` (bearerJWT mobile / sessionCookie web) + route wiring for all `03` §2 endpoints — 2026-10-15
+- [x] `IDT-INT-003` hierarchy client interface + in-memory fake (pre-04 builds/tests) — 2026-10-15
+- [x] `IDT-INT-004` `verification.EnqueueProvisioning` job → `hierarchy.OnUserVerified` adapter — 2026-10-15
+- [x] `IDT-INT-005` audit events emitted for all BR-010 cases — 2026-10-15
+- [x] `IDT-INT-006` jobs registered on the 01 worker (SLA reminder, OTP outbox, provisioning, cleanup) — 2026-10-15
+- [x] `IDT-INT-007` SMS gateway client + outbox state machine (`SMS_GATEWAY_*`) — 2026-10-15
+- [x] `IDT-INT-008` Google + GitHub OIDC clients (state, PKCE, link-on-verified-email) — 2026-10-15
+- [x] `IDT-INT-009` rate-limit middleware, class `auth`, Redis + DB fallback — 2026-10-15
+- [x] `IDT-INT-010` 06 notification hand-offs: approved / rejected / SLA-reminder templates requested — 2026-10-15
+- [x] `IDT-INT-011` Redis cache keys (`session:{hash}`, `status:{userId}`) with explicit invalidation — 2026-10-15
 - [ ] `IDT-INT-012` E2E specs: `IDT-E2E-001` (Playwright) + `IDT-E2E-002` (Maestro) in CI

@@ -2,7 +2,7 @@
 
 Module: identity-access · Surfaces: api · web · app · integration ·
 Repos: `applications/api`, `applications/web`, `applications/app` (each its own git repo,
-branch `module/03-identity-access`, nothing committed yet) · **Last updated:** 2026-10-02
+branch `module/03-identity-access`, nothing committed yet) · **Last updated:** 2026-10-15
 
 ## Stage / gate status
 
@@ -10,10 +10,10 @@ branch `module/03-identity-access`, nothing committed yet) · **Last updated:** 
 | --- | --- | --- |
 | 1 Plan | ✅ approved (earlier session) | built per 01–06 spec set |
 | 2 UI (mock-driven) | ✅ built (earlier session) | web /login /register /verification-pending /auth/sso/return; app onboarding + login; fixtures seam |
-| Gate 1 (UI approval) | ⏳ pending owner — now includes the new Email OTP tab | — |
-| 3 Docs sync | 🚧 partial | this file + technical-document change log updated 2026-10-02; checklist ticks pending |
-| 4 Backend | ✅ (api) | full gate green 2026-10-02: fmt · contracts · vet · lint · `-race` unit (18 pkgs) · testcontainers integration incl. cross-tenant isolation |
-| Gate 2 (SQL on Neon) | ⏳ pending owner (01's G-1 covers both modules' blocks) | — |
+| Gate 1 (UI approval) | ✅ owner | 2026-10-15 — owner approved in session ("complete all from Gate 1"), including the Email OTP tab |
+| 3 Docs sync | ✅ | 2026-10-15 — checklists ticked: `IDT-FE-001…008` (FE-003 superseded by the passwordless pivot), `IDT-AP-001…011/013`, `IDT-INT-001…011`. Open: `IDT-FE-009/010`, `IDT-AP-012` (G-8), `IDT-AP-014` + `IDT-INT-012` (E2E runs — G-4) |
+| 4 Backend | ✅ (api) | full gate green 2026-10-02: fmt · contracts · vet · lint · `-race` unit (18 pkgs) · testcontainers integration incl. cross-tenant isolation; 2026-10-09 `make test-integration` fully green (32 pkgs) |
+| Gate 2 (SQL on Neon) | ◐ core done · 1 straggler | 2026-10-09 — owner applied all migrations to Neon via 15's first deploy (`v0 → 20270302090001 dirty=false`, covers the 01+03 blocks); still pending on Neon: `20270303090001_seed_demo_tenant_users` + `bootstrap-super-admin` (applied to the local `kc`/dev DB only) |
 | 5 Integration | 🚧 live for the auth calls the spec already has; some reads still fixtures | 2026-10-02: phone OTP, register, GET /me, logout (web + app), web SSO return → generated client. See the integration note below |
 | Gate 3 (integrated flows) | ⏳ pending owner | — |
 | 6 Gaps & verification | 🚧 | 08-gaps.md created 2026-10-02 |
@@ -140,3 +140,28 @@ NULL DO UPDATE …`). Verified the other conflict targets are full-index/PK-back
 (`auth_identities_provider_account_key`, `chat_group_members_unique_key`, `chat_groups` PK) and
 the seeded values pass the role/plan/locale CHECKs. `go build` · `go vet` (+`-tags=integration`)
 · golangci-lint 0 issues; suite re-run **pending owner**.
+
+## Demo tenant seed — 2026-10-09 (owner request: "seed the new users")
+
+New migration `20270303090001_seed_demo_tenant_users` (+down) seeds the shared demo tenant:
+
+- **Hierarchy**: launch cities (ঢাকা, চট্টগ্রাম) + the two demo schools + sections 6–10 A/B —
+  ids are the frozen `hierarchytest` constants / v5 `SectionID` grammar, so Gate 2's DB matches
+  every test world.
+- **Staff**: `rahul.aktarul@gmail.com` (school_admin, Demo HS), `aktarul.rahul@gmail.com`
+  (school_admin, Demo CTG).
+- **Vendor**: `aktarul.i1708@gmail.com` (`vendor`, platform-scoped) + an approved
+  `vendor_accounts` row portal-linked to it.
+- **Students + guardians**: 2 VERIFIED students (enrolled, HS 6A/6B) + 2 guardians
+  (`guardian_links` father/mother, ROSTER source).
+- **Auth (owner decision)**: passwordless — email OTP (web + app) via `users.email`, phone OTP
+  (app) via `users.phone_e164`; NO `auth_identities` rows, NO password hashes (OTP login resolves
+  the account straight off the users table, 03 §2).
+
+Fallout fixed in the IT worlds that previously seeded their own copies of the shared demo rows:
+httpapi world now relies on the migration for the demo hierarchy; hierarchy + notify worlds give
+their test cities distinct names (`cities_name_en_key` is unique). Exact-list assertions in
+hierarchy IT005/IT009 became presence-based (the shared tenant legitimately contributes rows).
+
+**Verified**: migration up/down/up green; `make test-integration` fully green — 32 packages ok;
+vet + golangci-lint 0 issues; unit `-race` 31 ok.

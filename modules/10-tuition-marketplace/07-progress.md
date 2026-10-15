@@ -1,7 +1,7 @@
 # 10-tuition-marketplace — Build Progress
 
 Module: tuition-marketplace · Surfaces: api + app + web (07's `/institution/tutors` stub filled) ·
-Repos: `applications/api`, `applications/app`, `applications/web` · **Last updated:** 2026-10-03
+Repos: `applications/api`, `applications/app`, `applications/web` · **Last updated:** 2026-10-15
 
 > Owner instruction (this session): "complete the 10-tuition-marketplace module" — building
 > continues through the stages on that instruction (precedent: the module-06 run); gates 1–3 stay
@@ -13,11 +13,11 @@ Repos: `applications/api`, `applications/app`, `applications/web` · **Last upda
 | --- | --- | --- |
 | 1 Plan | ✅ 2026-10-03 | plan delivered in-session (defaults OQ-1…7 + blocked-before-build verification standard; deps 05 🚧-code-complete accepted per owner instruction) |
 | 2 UI (web + app, mock-driven) | ✅ 2026-10-03 | web: queue/detail/oversight on `fixtures/tuition.ts`; app: 11 marketplace routes on `fixtures/tuition.ts`; OpenAPI paths #1–#15 landed FIRST and both clients generated from them (no hand-rolled DTO types) |
-| Gate 1 (UI approval) | ⏳ pending owner — build continued on the owner's "complete the pending tasks" instruction (2026-10-03) | |
-| 3 Docs sync | ✅ 2026-10-03, refreshed after Stage 4/5 | this file, `08-gaps.md`, README → 🚧, checklist ticks (`03` §7, `04` §9, `05` §9, `06` §10), change log |
+| Gate 1 (UI approval) | ✅ owner 2026-10-15 | owner approved in session ("complete all from Gate 1"); covers web queue/detail/oversight + the 11 app routes incl. the 2026-10-04 public-`/tuition` scope correction |
+| 3 Docs sync | ✅ 2026-10-03, refreshed after Stage 4/5 · checklist sync 2026-10-15 | this file, `08-gaps.md`, README → 🚧, checklist ticks (`03` §7, `04` §9, `05` §9, `06` §10), change log; seed item recorded deferred (G-7) |
 | 4 Backend | ✅ code-complete 2026-10-03 | 4 migrations + 4 sqlc query files + `internal/tuition` (service, matching, payload, jobs, handler, dto, cache) + cmd/api + httpapi wiring; `go build ./...` + `go vet ./...` clean repo-wide; golangci-lint 0 issues in `internal/tuition`; UT green `-race`; **SQL hand-off below — Gate 2 pending owner** |
-| Gate 2 (SQL on Neon) | ⏳ pending owner | run `db/migrations/2026112009000{0,1,2,3}_tut_*.up.sql` (with their `.down` reverses) in order |
-| 5 Integration | ✅ code-complete 2026-10-03 | app: live `openapi-fetch` client (`live.ts`) behind the session-token selector (`backend.ts`), hooks re-pointed; live-client tests 14/14; web: stays on the fixture seam until 07's console session glue (G-8) — contract + E2E specs ready; IT + Maestro written, runs pending owner |
+| Gate 2 (SQL on Neon) | ✅ owner | 2026-10-09 — all migrations applied to Neon via 15's first deploy (`v0 → 20270302090001 dirty=false`), covers `20261120090000–093000` |
+| 5 Integration | ✅ code-complete 2026-10-03 · **integration green 2026-10-09** (owner `make test-integration`, 32 pkgs) | app: live `openapi-fetch` client (`live.ts`) behind the session-token selector (`backend.ts`), hooks re-pointed; live-client tests 14/14; web: stays on the fixture seam until 07's console session glue (G-8) — contract + E2E specs ready; IT + Maestro written, runs pending owner |
 | Gate 3 | ⏳ pending | — |
 
 ## Decisions (ADR)

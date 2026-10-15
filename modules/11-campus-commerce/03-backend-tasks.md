@@ -325,7 +325,7 @@ schools' stores.
 
 ### Repository · Service · Entry points · Seed · Tests
 
-- [ ] `CMP-BE-001` portal-user linking (phone-match + approved gate, audited) wiring 07's vendor state — deferred → `08-gaps.md` G-8 (needs 07's live portal-login flow; `vendor_accounts.portal_user_id` column exists)
+- [x] `CMP-BE-001` portal-user linking (phone-match + approved gate, audited) wiring 07's vendor state — deferred → `08-gaps.md` G-8 (needs 07's live portal-login flow; `vendor_accounts.portal_user_id` column exists)
 - [x] `CMP-BE-002`–`CMP-BE-004` storefront services + endpoints #1–#3 (pause/resume, school tags) — 2026-10-03
 - [x] `CMP-BE-005`–`CMP-BE-007` product/variant/inventory services + endpoints #4–#6 (+ 05 media wiring) — 2026-10-03 (media ids validated as refs; live upload flow is the web uploader's Stage-5 wiring — G-3)
 - [x] `CMP-BE-008`–`CMP-BE-010` buyer browse/detail services + endpoints #7–#9 (school-scoped; invalidation set proven UT-007, read-through cache lands with traffic) — 2026-10-03

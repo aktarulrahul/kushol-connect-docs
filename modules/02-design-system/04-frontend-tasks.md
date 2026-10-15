@@ -174,23 +174,23 @@ each app's `src/theme` tokens (`DSN-BR-002`/`DSN-BR-005`), the logo is reachable
 ## 9. Task Checklist
 
 - [x] `DSN-FE-000` — ~~Web repo scaffold~~ — delivered by 01 as `FND-FE-001` (owner, 2026-09-30); 02 starts from that repo — 2026-09-30
-- [ ] `DSN-FE-001` — Semantic token module in `src/theme` of web **and** app (color scale, spacing, radius, type, motion) + TS types, values pinned to `docs/design-reference/README.md` (`DSN-UT-005`)
-- [ ] `DSN-FE-002` — Tailwind v4 `@theme` bridge in `applications/web` consuming shared tokens (no other hex in `web`)
-- [ ] `DSN-FE-003` — Fonts via `next/font/google`: Hind Siliguri (`bengali`+`latin`) + Inter (`latin`), CSS variables, fallback stacks
-- [ ] `DSN-FE-004` — `LocaleProvider` + typed `t()` web binding; `<html lang>` bn default
-- [ ] `DSN-FE-005` — Button (+icon, loading, destructive variants)
-- [ ] `DSN-FE-006` — Input + Textarea (label/description/error slots)
-- [ ] `DSN-FE-007` — Select
-- [ ] `DSN-FE-008` — Checkbox + Radio + Switch
-- [ ] `DSN-FE-009` — Card
-- [ ] `DSN-FE-010` — Dialog + Sheet (mobile variant)
-- [ ] `DSN-FE-011` — Toast
-- [ ] `DSN-FE-012` — Tabs
-- [ ] `DSN-FE-013` — Badge + verified variant
-- [ ] `DSN-FE-014` — Table shell (TanStack-compatible)
-- [ ] `DSN-FE-015` — Skeleton + EmptyState
-- [ ] `DSN-FE-016` — Avatar with verified-badge variant
-- [ ] `DSN-FE-017` — `Logo` component (usage rules, accessible name, one-time reveal hook, PNG-fallback support)
-- [ ] `DSN-FE-018` — Light-theme contrast pass (WCAG 2.2 AA, bn/en) + axe clean on the primitive fixtures
-- [ ] `DSN-FE-019` — Professional web primitives: `AdminShell`, `PageHeader`, `StatCard`, `DataTable`, `MarketingSection`/`Hero` (`docs/design-reference/README.md` §7)
-- [ ] `DSN-UT-003` — Web primitive render/a11y fixtures (defined in `06-integration-tasks §9`)
+- [x] `DSN-FE-001` — Semantic token module in `src/theme` of web **and** app (color scale, spacing, radius, type, motion) + TS types, values pinned to `docs/design-reference/README.md` (`DSN-UT-005`) — 2026-10-15
+- [x] `DSN-FE-002` — Tailwind v4 `@theme` bridge in `applications/web` consuming shared tokens (no other hex in `web`) — 2026-10-15
+- [x] `DSN-FE-003` — Fonts via `next/font/google`: Hind Siliguri (`bengali`+`latin`) + Inter (`latin`), CSS variables, fallback stacks — 2026-10-15
+- [x] `DSN-FE-004` — `LocaleProvider` + typed `t()` web binding; `<html lang>` bn default — 2026-10-15
+- [x] `DSN-FE-005` — Button (+icon, loading, destructive variants) — 2026-10-15
+- [x] `DSN-FE-006` — Input + Textarea (label/description/error slots) — 2026-10-15
+- [x] `DSN-FE-007` — Select — 2026-10-15
+- [x] `DSN-FE-008` — Checkbox + Radio + Switch — 2026-10-15
+- [x] `DSN-FE-009` — Card — 2026-10-15
+- [x] `DSN-FE-010` — Dialog + Sheet (mobile variant) — 2026-10-15
+- [x] `DSN-FE-011` — Toast — 2026-10-15
+- [x] `DSN-FE-012` — Tabs — 2026-10-15
+- [x] `DSN-FE-013` — Badge + verified variant — 2026-10-15
+- [x] `DSN-FE-014` — Table shell (TanStack-compatible) — 2026-10-15
+- [x] `DSN-FE-015` — Skeleton + EmptyState — 2026-10-15
+- [x] `DSN-FE-016` — Avatar with verified-badge variant — 2026-10-15
+- [x] `DSN-FE-017` — `Logo` component (usage rules, accessible name, one-time reveal hook, PNG-fallback support) — 2026-10-15
+- [x] `DSN-FE-018` — Light-theme contrast pass (WCAG 2.2 AA, bn/en) + axe clean on the primitive fixtures — 2026-10-15
+- [x] `DSN-FE-019` — Professional web primitives: `AdminShell`, `PageHeader`, `StatCard`, `DataTable`, `MarketingSection`/`Hero` (`docs/design-reference/README.md` §7) — 2026-10-15
+- [x] `DSN-UT-003` — Web primitive render/a11y fixtures (defined in `06-integration-tasks §9`) — 2026-10-15

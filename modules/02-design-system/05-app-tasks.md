@@ -189,22 +189,22 @@ Bangla. There is no offline queue surface in this module (queues belong to
 ## 9. Task Checklist
 
 - [x] `DSN-AP-000` — ~~App repo scaffold~~ — delivered by 01 as `FND-AP-001` (owner, 2026-09-30); 02 starts from that repo — 2026-09-30
-- [ ] `DSN-AP-001` — NativeWind configured from the app's `src/theme` tokens (pinned versions)
-- [ ] `DSN-AP-002` — @expo-google-fonts Hind Siliguri + Inter bundled; root font gate; splash held until loaded
-- [ ] `DSN-AP-003` — `LocaleProvider` + typed `t()` RN binding (bn default)
-- [ ] `DSN-AP-004` — Button (+icon/loading)
-- [ ] `DSN-AP-005` — Input + Textarea (keyboard-aware)
-- [ ] `DSN-AP-006` — Select (zeego/native)
-- [ ] `DSN-AP-007` — Checkbox + Radio + Switch
-- [ ] `DSN-AP-008` — Card
-- [ ] `DSN-AP-009` — Dialog + bottom Sheet
-- [ ] `DSN-AP-010` — Toast (safe-area, accessibility announcement)
-- [ ] `DSN-AP-011` — Tabs styling for the `/(tabs)` shell + in-screen tabs
-- [ ] `DSN-AP-012` — Badge + verified variant
-- [ ] `DSN-AP-013` — Skeleton + EmptyState
-- [ ] `DSN-AP-014` — Avatar with verified-badge variant
-- [ ] `DSN-AP-015` — Icon wrapper (lucide-react-native, token sizing)
-- [ ] `DSN-AP-018` — CircleUp-pattern primitives: `FloatingTabBar`+`Fab`, `ScreenHeader`, `SegmentedPill`, `ListRow`, `UnreadBadge`/`PresenceDot`/`AvatarStack`, `OtpInput`, `ConfirmModal` (`docs/design-reference/README.md` §6)
-- [ ] `DSN-AP-016` — App icon (adaptive) + splash + notification small icon from brand assets in `app.json`/EAS config; fallback per `01-user-stories §9` Q1
+- [x] `DSN-AP-001` — NativeWind configured from the app's `src/theme` tokens (pinned versions) — 2026-10-15
+- [x] `DSN-AP-002` — @expo-google-fonts Hind Siliguri + Inter bundled; root font gate; splash held until loaded — 2026-10-15
+- [x] `DSN-AP-003` — `LocaleProvider` + typed `t()` RN binding (bn default) — 2026-10-15
+- [x] `DSN-AP-004` — Button (+icon/loading) — 2026-10-15
+- [x] `DSN-AP-005` — Input + Textarea (keyboard-aware) — 2026-10-15
+- [x] `DSN-AP-006` — Select (zeego/native) — 2026-10-15
+- [x] `DSN-AP-007` — Checkbox + Radio + Switch — 2026-10-15
+- [x] `DSN-AP-008` — Card — 2026-10-15
+- [x] `DSN-AP-009` — Dialog + bottom Sheet — 2026-10-15
+- [x] `DSN-AP-010` — Toast (safe-area, accessibility announcement) — 2026-10-15
+- [x] `DSN-AP-011` — Tabs styling for the `/(tabs)` shell + in-screen tabs — 2026-10-15
+- [x] `DSN-AP-012` — Badge + verified variant — 2026-10-15
+- [x] `DSN-AP-013` — Skeleton + EmptyState — 2026-10-15
+- [x] `DSN-AP-014` — Avatar with verified-badge variant — 2026-10-15
+- [x] `DSN-AP-015` — Icon wrapper (lucide-react-native, token sizing) — 2026-10-15
+- [x] `DSN-AP-018` — CircleUp-pattern primitives: `FloatingTabBar`+`Fab`, `ScreenHeader`, `SegmentedPill`, `ListRow`, `UnreadBadge`/`PresenceDot`/`AvatarStack`, `OtpInput`, `ConfirmModal` (`docs/design-reference/README.md` §6) — 2026-10-15
+- [x] `DSN-AP-016` — App icon (adaptive) + splash + notification small icon from brand assets in `app.json`/EAS config; fallback per `01-user-stories §9` Q1 — 2026-10-15
 - [ ] `DSN-AP-017` — 360px bn-first verification pass (specimen + +30% strings) on a low-end Android profile
-- [ ] `DSN-UT-004` — RN primitive render fixtures (defined in `06-integration-tasks §9`)
+- [x] `DSN-UT-004` — RN primitive render fixtures (defined in `06-integration-tasks §9`) — 2026-10-15

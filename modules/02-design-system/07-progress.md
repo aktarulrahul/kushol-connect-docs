@@ -1,8 +1,7 @@
 # Design System — Build Progress
 
 **Module:** `02-design-system` · **Apps:** `web` · `app` (`api`: none — `03-backend-tasks.md` is all
-N/A by design) · **Repos:** `applications/web`, `applications/app`, each on branch
-`module/02-design-system`, nothing committed by the build · **Last updated:** 2026-10-01
+N/A by design) · **Repos:** `applications/web`, `applications/app`, nothing committed by the build · **Last updated:** 2026-10-15
 
 Owner instruction (2026-10-01): "complete the app, web, api till 02-design-system", then "use shadcn,
 react query, react table in admin table", "use tailwind and react query as well in mobile app" and
@@ -17,8 +16,8 @@ textfields, input, badge, all kind of popup, toast, card, etc". Built against 01
 | --- | --- | --- | --- |
 | 1 · Read & plan | ✅ (pre-approved by the instruction) | 2026-10-01 | Plan given in chat; owner then added shadcn, TanStack Query/Table and the full common-component set |
 | 2 · UI build | ✅ | 2026-10-01 | Tokens, fonts, catalogs, primitives web + app; dev-only UI kits for review |
-| Gate 1 · UI approval | ⏳ **waiting on owner** | — | Review steps below |
-| 3 · Docs sync | ◐ partial | 2026-10-01 | READMEs, this file, `08-gaps.md`; checklists are ticked after Gate 1 |
+| Gate 1 · UI approval | ✅ owner | 2026-10-15 | Owner approved in session ("complete all from Gate 1"); review steps below were the submission |
+| 3 · Docs sync | ✅ | 2026-10-15 | Checklists ticked (`DSN-FE-001…019`, `DSN-AP-001…016/018`, `DSN-UT/IT/INT` items); `DSN-AP-017` + app `DSN-E2E-001` stay open (device runs — G-4/G-5) |
 | 4 · Backend build | N/A | — | No `DSN-BE` items, no tables, no endpoints |
 | Gate 2 · SQL run | N/A | — | No migrations |
 | 5 · Integration | ✅ CI gates in both repos | 2026-10-01 | `DSN-INT-001/002` done; `DSN-INT-003` = 03 consuming first |
