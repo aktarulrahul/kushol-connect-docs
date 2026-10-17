@@ -213,7 +213,7 @@ Exports return DTOs; `Principal` and middleware signatures are frozen for 04–1
 
 | System | Purpose | Protocol | Secret | Timeout / retry | Degradation |
 | --- | --- | --- | --- | --- | --- |
-| SMS gateway (`TODO: Confirm` vendor — SSLWireless-class, `OQ-2`) | OTP delivery | HTTPS REST | `SMS_GATEWAY_URL` / `SMS_GATEWAY_API_KEY` / `SMS_GATEWAY_SENDER` | 5s; ×5 backoff via outbox job | OTP queued; `auth.smsDelayed` copy; alert at `failed`; password/SSO unaffected |
+| SMS gateway (SAS Bulk SMS, owner 2026-10-17; `OQ-2`) | OTP delivery — app phone OTP only | HTTP GET, credentials in the query string (cleartext — 08-gaps G-9) | `SMS_GATEWAY_URL` / `SMS_GATEWAY_API_KEY` / `SMS_GATEWAY_SECRET_KEY` / `SMS_GATEWAY_SENDER` (callerID) | 5s; ×5 backoff via outbox job; non-2xx or a reply error marker = failure | OTP queued; `auth.smsDelayed` copy; alert at `failed`; password/SSO unaffected |
 | Google OIDC | teacher/staff SSO | HTTPS (discovery + token + userinfo) | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | 5s; ×2 on 5xx | SSO button error → phone OTP alternative |
 | GitHub OIDC | SSO | HTTPS | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | 5s; ×2 on 5xx | same |
 | Redis | rate-limit counters + `session:{hash}` / `status:{userId}` caches | TCP (go-redis) | `REDIS_URL` | 100 ms; fail open to DB | DB fallback counters (stricter), direct lookups |
@@ -228,7 +228,7 @@ Exports return DTOs; `Principal` and middleware signatures are frozen for 04–1
 | --- | --- | --- | --- |
 | `DATABASE_URL` · `REDIS_URL` | yes | (from 01 config module) | pgx pool · Redis client |
 | `JWT_SECRET` · `OTP_PEPPER` | yes | ≥ 32 random bytes · random bytes | HS256 access JWT (`02-solution-approach.md` §6) · HMAC-SHA256 OTP storage |
-| `SMS_GATEWAY_URL` / `_API_KEY` / `_SENDER` | yes | SSLWireless-class endpoint (`TODO: Confirm` vendor) | SMS outbox worker (`IDT-INT-007`) |
+| `SMS_GATEWAY_URL` / `_API_KEY` / `_SECRET_KEY` / `_SENDER` | yes (all four or none — config refuses a partial set) | SAS Bulk SMS `sendtext` endpoint; `_SENDER` is the vendor's callerID; real values only in the gitignored `applications/api/.env` / server `env/api.env` | SMS outbox worker (`IDT-INT-007`, `smsout.HTTPGateway`) |
 | `GOOGLE_CLIENT_ID` / `_SECRET` · `GITHUB_CLIENT_ID` / `_SECRET` | yes | OIDC app credentials | `sso.Google` / `sso.GitHub` (`IDT-INT-008`) |
 | super-admin bootstrap phone/email/password | yes (one-off) | env-fed CLI, argon2id (`TODO: Confirm` contacts) | `bootstrap.CreateSuperAdmin` (`IDT-BE-032`) |
 

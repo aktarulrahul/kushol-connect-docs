@@ -2,7 +2,7 @@
 
 Module: communication-engine · Surfaces: api + app (web N/A — 07 builds the composer on these
 endpoints) · Repos: `applications/api`, `applications/app` (branch `module/03-identity-access`
-working tree — ADR-4) · **Last updated:** 2026-10-15
+working tree — ADR-4) · **Last updated:** 2026-10-17
 
 > Note: the build prompt parameter `TODAY=2026-10-01` lags the actual build date; dates are
 > recorded truthfully as 2026-10-02 (same convention as module 04).
@@ -429,3 +429,66 @@ mis-orders the api's variable-length fractional seconds (`isoAtOrBefore`).
 
 Owner steps: run the migration (Gate 2), `make test-integration`, and check the forward sheet,
 ticks and Message info on a device (Gate 1/3).
+
+## G-20 closed — receipts reach senders, not the whole room — 2026-10-17
+
+Every member's delivered/read ack used to publish `message.delivered` / `message.read` to the
+whole group room, so one message cost 2·(n−1)·n frames in an n-member group (n = 300 → about
+179,400), and every client refetched history on each burst.
+
+- **Decision (ADR-19).** Two options were evaluated:
+  - (a) Publish one room-wide `receipts.updated` only when the room's horizon moves, storing the
+    last published horizon on `chat_groups` (conditional `UPDATE … RETURNING`). **Rejected.** A
+    horizon is per viewer (the minimum over every OTHER member), so one room value cannot serve
+    everyone: the payload would need the floor plus the lone laggard's own value. It still costs
+    O(n) frames per change, needs a migration and a version guard against cross-node reordering,
+    and the stored value goes stale on membership changes (a join lowers the floor with no
+    pointer advance).
+  - (b) **Chosen.** Ticks only show on your own messages, so only the senders of messages that
+    an advance newly covered need an event. They get it in their own user room.
+- **How (api).**
+  - The advance queries now return where the actor's pointers stood before (`read_from`,
+    `delivered_from`).
+  - After the advance commits, `GroupReceiptLows` reads the room's two lowest pointers per kind.
+    That is enough for every viewer's horizon (`BuildHorizons`, `Horizon.For`: everyone sees the
+    floor, except a member holding it alone, who sees the second lowest).
+  - `ListReceiptSenders` returns each other sender's earliest message between the old and new
+    pointer. `ReceiptUpdates` keeps the senders whose message is now inside their horizon, and
+    each gets `receipts.updated {groupId, readUpTo?, deliveredUpTo?}` with their own horizons.
+  - Result: all members' acks for one message produce **one delivered and one read event, to its
+    sender only** (pinned by `TestReceiptFanOutPerMessage`, 40 members).
+  - History pages use the same rule, with one query in place of `GroupReadHorizon` +
+    `GroupDeliveredHorizon`, which are removed.
+  - No migration. The gateway hub is unchanged: `PublishUser` already routes to `user:{id}`.
+- **Across nodes.** Horizons are read after the advance commits, so of two concurrent "last" acks
+  at least one sees both. The worst case is a duplicate event, which is harmless.
+- **Clients.** Both clients drop the per-room 800 ms receipt refetch timers; a receipt event now
+  causes no refetch at all.
+  - web `/chat`: `receipts.updated` patches my ticks in place (`raiseTicks`).
+  - app: it raises the cached history page's `readUpTo` / `deliveredUpTo` (`raiseHorizons`,
+    `mapEvent`).
+  - Events only move ticks forward, and the next history fetch stays the truth.
+  - The client→server `message.read` / `message.delivered` frames are unchanged.
+- **Cost.** Each pointer advance adds one horizon query, plus a senders query only when the
+  advance can cover something (inbox listing: per group whose delivered pointer moved).
+- **Rollout note.** App builds older than this change ignore `receipts.updated` (unknown events
+  are dropped). Their ticks update on the next history load, not live.
+
+| Repo    | Check                                                                                       | Result                                                                                                                                                                                       |
+| ------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| api     | `go build ./...` · `go vet ./...` · `go vet -tags integration ./internal/chat/...`           | clean                                                                                                                                                                                        |
+| api     | `go test ./...`                                                                             | all packages ok. New `horizons_test.go`: `TestHorizonFor`, `TestHorizonMatchesBruteForce` (500 random rooms vs. min over others), `TestReceiptUpdates`, fan-out per message + catch-up |
+| api     | golangci-lint `./internal/chat/...` (also `--build-tags integration`)                       | only gofmt-on-CRLF in untouched `dm.go`, `exports.go`, `handler_helpers.go`; touched files have no CR and pass gofmt                                                                          |
+| api     | `make contracts` · `make contracts-check`                                                   | no drift (`api.gen.go`: embedded spec text only)                                                                                                                                             |
+| api     | `TestIT018ReceiptFanOutTargetsSenders` (new, beside `TestIT017`)                            | **pending owner run** (`make test-integration`)                                                                                                                                             |
+| api     | `go test -race`                                                                             | not run (no cgo on this host, G-19)                                                                                                                                                          |
+| web     | `tsc --noEmit` (src) · eslint · prettier (touched files)                                    | clean (tsc errors only in the dev server's `.next/dev/types` output)                                                                                                                         |
+| web     | vitest (full)                                                                               | 259/259 (33 files), with new `raiseTicks` cases                                                                                                                                              |
+| web/app | `pnpm sync:api-spec && pnpm generate:api`                                                   | `schema.gen.ts`: WS protocol doc comments only                                                                                                                                               |
+| app     | `tsc --noEmit` · eslint · prettier (touched files)                                          | clean                                                                                                                                                                                        |
+| app     | jest (full)                                                                                 | 354/355; the one failure is the pre-existing `src/__tests__/index.test.tsx` (G-8)                                                                                                            |
+
+Owner steps: `make test-integration` (new `TestIT018`, and `TestIT017` again). No migration, so
+Gate 2 does not apply. Gate 3: in a group of 3 or more, check that the sender's ✓✓ appear once
+everyone has received the message and turn blue once everyone has read it, without a reload, on
+web and app.

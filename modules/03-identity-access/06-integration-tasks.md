@@ -11,7 +11,7 @@
 | I-1 | `04-organization-hierarchy` | we call them | exported Go functions: hierarchy reads (placement validation, picker data) + `hierarchy.OnUserVerified(userID)` via the provisioning job | reads: degraded (cached hierarchy) · `OnUserVerified`: degraded (job retries, approval stays) |
 | I-2 | `07-command-center-web`, `05-communication-engine`, `08/10/11+` | they call us | 07: REST via generated client (queue, roster) · api modules: in-process `auth.Authenticate` / `auth.RequireRole` / `auth.RequireVerified` | fatal for them (no route runs unauthenticated); our outages surface as their 401/503 |
 | I-3 | api → app/web pushes | we notify | verification approved/rejected + SLA reminders delivered via 06; status changes force client re-auth/refresh | degraded, never fatal |
-| I-4 | SMS gateway (external) | outbound | HTTPS (`SMS_GATEWAY_*` env) | degraded — OTP queued with retry, `auth.smsDelayed` shown |
+| I-4 | SMS gateway (external — SAS Bulk SMS) | outbound | HTTP GET (`SMS_GATEWAY_*` env; plain HTTP, 08-gaps G-9) | degraded — OTP queued with retry, `auth.smsDelayed` shown |
 | I-5 | Google / GitHub OIDC (external) | outbound | HTTPS OIDC (`golang.org/x/oauth2` / `coreos/go-oidc`) | degraded — SSO button errors, phone OTP unaffected |
 
 ## 2. Exported Contract
@@ -88,7 +88,7 @@ here with an in-memory fake used by `IDT-IT-*` tests; the 04 spec binds the real
 
 | System | Protocol | Auth / secret | Timeout | Retry | Degradation |
 | --- | --- | --- | --- | --- | --- |
-| SMS gateway (`TODO: Confirm` vendor — SSLWireless-class) | HTTPS REST | `SMS_GATEWAY_URL/API_KEY/SENDER` env | 5 s | ×5 backoff via outbox job | queue + `auth.smsDelayed` copy; alert at `failed` |
+| SMS gateway (SAS Bulk SMS, owner 2026-10-17) | HTTP GET, credentials in the query (08-gaps G-9) | `SMS_GATEWAY_URL/API_KEY/SECRET_KEY/SENDER` env | 5 s | ×5 backoff via outbox job | queue + `auth.smsDelayed` copy; alert at `failed` |
 | Google OIDC | HTTPS (discovery + token + userinfo) | `GOOGLE_CLIENT_ID/SECRET` | 5 s | ×2 on 5xx | error state → phone OTP alternative |
 | GitHub OIDC | HTTPS | `GITHUB_CLIENT_ID/SECRET` | 5 s | ×2 on 5xx | same |
 | Redis (limits + caches) | TCP (go-redis) | `REDIS_URL` | 100 ms | none (fail open to DB) | DB fallback counters (stricter), direct DB lookups |

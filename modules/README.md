@@ -144,7 +144,7 @@ with the build date before the owner runs them (and note it in `07-progress.md`)
 | Build order | Module | Version block | Notes |
 | --- | --- | --- | --- |
 | 1 | 01 | `20260930000001–000003` | extensions, `audit_log`, `jobs` |
-| 2 | 03 | `20261001090000–090030` | no FKs to 04 tables (04 not built yet) |
+| 2 | 03 | `20261001090000–090030` | no FKs to 04 tables (04 not built yet). 2026-10-17: data migration `20270307090000_set_kushol_admin_phone` (Aktarul Islam's phone), stamped after the highest applied version |
 | 3 | 04 | `20261002090001–090007` | `…090007` adds FKs from 03 tables to `schools`/`sections` |
 | 4 | 05 | `20261003090000–094000` | 2026-10-17: later 05 changes are stamped after the highest applied version — `20270305090000` (re-stamp of the skipped `20261016090000` rich-messages file) `20270305091000` (system groups, Office/CSV media kinds, file names) and `20270306090000` (delivered/read receipts, one reaction per person, forward hops) |
 | 5 | 06 | `20261006090001–090002` | 2+3 combined: `…090002_create_notification_deliveries_preferences` |
