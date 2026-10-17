@@ -146,7 +146,7 @@ with the build date before the owner runs them (and note it in `07-progress.md`)
 | 1 | 01 | `20260930000001–000003` | extensions, `audit_log`, `jobs` |
 | 2 | 03 | `20261001090000–090030` | no FKs to 04 tables (04 not built yet) |
 | 3 | 04 | `20261002090001–090007` | `…090007` adds FKs from 03 tables to `schools`/`sections` |
-| 4 | 05 | `20261003090000–094000` | |
+| 4 | 05 | `20261003090000–094000` | 2026-10-17: later 05 changes are stamped after the highest applied version — `20270305090000` (re-stamp of the skipped `20261016090000` rich-messages file) `20270305091000` (system groups, Office/CSV media kinds, file names) and `20270306090000` (delivered/read receipts, one reaction per person, forward hops) |
 | 5 | 06 | `20261006090001–090002` | 2+3 combined: `…090002_create_notification_deliveries_preferences` |
 | 6 | 07 | `20261015090000–091000` | |
 | 7 | 08 | `20261101090000–093000` | |
@@ -166,7 +166,7 @@ with the build date before the owner runs them (and note it in `07-progress.md`)
 | Error codes (RFC-7807 `code`) | `01-foundations/technical-document.md` §10 (core + module-specific table) |
 | i18n catalog namespaces | `02-design-system/02-solution-approach.md` §1.1 |
 | Go export packages | `audit` `jobs` `principal` `i18n` (01; `i18n` = api-side bn/en copy for problem/push/email text) · `auth` `sessions` `verification` `users` `guardians` (03) · `hierarchy` (04) · `chat` `media` (05) · `notify` (06) · `vendors` (07) · `ai` `aiquota` (08; `ai.AttemptStats` lives in `ai` because `analytics` is 09's package) · `analytics` (09) · each module's `06` §2 is the signature source |
-| Web routes | 07 owns the `/admin`, `/school`, `/vendor` route tree and stub names; feature modules fill stubs under the same name (`/school/ai-matrix` 09 · `/school/tutors` 10 · `/school/ledger`, `/school/payments/*` 12 · `/school/roster/*`, `/school/integrations` 14) |
+| Web routes | 07 owns the `/admin`, `/school`, `/vendor` route tree and stub names; feature modules fill stubs under the same name (`/school/ai-matrix` 09 · `/school/tutors` 10 · `/school/ledger`, `/school/payments/*` 12 · `/school/roster/*`, `/school/integrations` 14). 05 owns **`/chat`** (console messenger, owner 2026-10-17; `/admin/chat` redirects) |
 | API paths | One owner per path; shared-sounding reports are namespaced by owner (`/school/payments/reconciliation` 12 vs `/school/roster/reconciliation` 14) |
 | Env variables | Each module's `technical-document.md` §8.1; full inventory in `prompt.txt` §11 and 15's `.env.example` |
 
