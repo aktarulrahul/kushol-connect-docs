@@ -1,0 +1,22 @@
+# Ignore rules for docs/infra/docker/web.Dockerfile (BuildKit reads <Dockerfile>.dockerignore next to
+# the Dockerfile). The context is the web repo. Local env files must never reach `next build` (it
+# would load .env.local), and build/test output is rebuilt inside the image.
+.git
+.github
+.env
+.env.*
+!.env.example
+node_modules
+.pnpm-store
+.next
+out
+build
+coverage
+test-results
+playwright-report
+blob-report
+playwright/.cache
+e2e
+*.tsbuildinfo
+*.log
+.DS_Store

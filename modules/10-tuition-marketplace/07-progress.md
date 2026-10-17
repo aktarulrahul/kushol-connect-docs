@@ -1,7 +1,7 @@
 # 10-tuition-marketplace — Build Progress
 
-Module: tuition-marketplace · Surfaces: api + app + web (07's `/school/tutors` stub filled) ·
-Repos: `applications/api`, `applications/app`, `applications/web` · **Last updated:** 2026-10-03
+Module: tuition-marketplace · Surfaces: api + app + web (07's `/institution/tutors` stub filled) ·
+Repos: `applications/api`, `applications/app`, `applications/web` · **Last updated:** 2026-10-15
 
 > Owner instruction (this session): "complete the 10-tuition-marketplace module" — building
 > continues through the stages on that instruction (precedent: the module-06 run); gates 1–3 stay
@@ -13,11 +13,11 @@ Repos: `applications/api`, `applications/app`, `applications/web` · **Last upda
 | --- | --- | --- |
 | 1 Plan | ✅ 2026-10-03 | plan delivered in-session (defaults OQ-1…7 + blocked-before-build verification standard; deps 05 🚧-code-complete accepted per owner instruction) |
 | 2 UI (web + app, mock-driven) | ✅ 2026-10-03 | web: queue/detail/oversight on `fixtures/tuition.ts`; app: 11 marketplace routes on `fixtures/tuition.ts`; OpenAPI paths #1–#15 landed FIRST and both clients generated from them (no hand-rolled DTO types) |
-| Gate 1 (UI approval) | ⏳ pending owner — build continued on the owner's "complete the pending tasks" instruction (2026-10-03) | |
-| 3 Docs sync | ✅ 2026-10-03, refreshed after Stage 4/5 | this file, `08-gaps.md`, README → 🚧, checklist ticks (`03` §7, `04` §9, `05` §9, `06` §10), change log |
+| Gate 1 (UI approval) | ✅ owner 2026-10-15 | owner approved in session ("complete all from Gate 1"); covers web queue/detail/oversight + the 11 app routes incl. the 2026-10-04 public-`/tuition` scope correction |
+| 3 Docs sync | ✅ 2026-10-03, refreshed after Stage 4/5 · checklist sync 2026-10-15 | this file, `08-gaps.md`, README → 🚧, checklist ticks (`03` §7, `04` §9, `05` §9, `06` §10), change log; seed item recorded deferred (G-7) |
 | 4 Backend | ✅ code-complete 2026-10-03 | 4 migrations + 4 sqlc query files + `internal/tuition` (service, matching, payload, jobs, handler, dto, cache) + cmd/api + httpapi wiring; `go build ./...` + `go vet ./...` clean repo-wide; golangci-lint 0 issues in `internal/tuition`; UT green `-race`; **SQL hand-off below — Gate 2 pending owner** |
-| Gate 2 (SQL on Neon) | ⏳ pending owner | run `db/migrations/2026112009000{0,1,2,3}_tut_*.up.sql` (with their `.down` reverses) in order |
-| 5 Integration | ✅ code-complete 2026-10-03 | app: live `openapi-fetch` client (`live.ts`) behind the session-token selector (`backend.ts`), hooks re-pointed; live-client tests 14/14; web: stays on the fixture seam until 07's console session glue (G-8) — contract + E2E specs ready; IT + Maestro written, runs pending owner |
+| Gate 2 (SQL on Neon) | ✅ owner | 2026-10-09 — all migrations applied to Neon via 15's first deploy (`v0 → 20270302090001 dirty=false`), covers `20261120090000–093000` |
+| 5 Integration | ✅ code-complete 2026-10-03 · **integration green 2026-10-09** (owner `make test-integration`, 32 pkgs) | app: live `openapi-fetch` client (`live.ts`) behind the session-token selector (`backend.ts`), hooks re-pointed; live-client tests 14/14; web: stays on the fixture seam until 07's console session glue (G-8) — contract + E2E specs ready; IT + Maestro written, runs pending owner |
 | Gate 3 | ⏳ pending | — |
 
 ## Decisions (ADR)
@@ -98,7 +98,7 @@ the Stage 4/5 evidence above independently and landed the web half of the Stage-
 | web | `src/i18n/catalog.test.ts` allowlist | fixed: `landing.mkt.wordmark` ("kushol", brand Latin wordmark) added to the proper-name allowlist — unblocked the bn-catalog guard after the 07 stream added the key |
 
 The web screens stay on the fixture seam until module 07's session middleware (`WEB-INT-005`,
-cookie + CSRF transport) lands — flipping `/school/tutors*` + `/school/tuitions` to
+cookie + CSRF transport) lands — flipping `/institution/tutors*` + `/institution/tuitions` to
 `lib/tuition/api.ts` is then a one-import change (`08-gaps.md` G-7).
 
 ## Gate 2 SQL hand-off (owner)
@@ -114,10 +114,52 @@ the highest version — do not run lower-versioned files afterwards.
 
 ## UI review hand-off (Gate 1)
 
-- **Web** (`pnpm dev`, school-admin fixture login): `/school/tutors` (queue + SLA chips; platform
-  tab via `tuitionFixtureFlags.platformScope`), `/school/tutors/ver_demo_1` (evidence viewer,
-  approve/reject note rules), `/school/tuitions` (oversight + confirm-guarded close). Fixture
+- **Web** (`pnpm dev`, school-admin fixture login): `/institution/tutors` (queue + SLA chips; platform
+  tab via `tuitionFixtureFlags.platformScope`), `/institution/tutors/ver_demo_1` (evidence viewer,
+  approve/reject note rules), `/institution/tuitions` (oversight + confirm-guarded close). Fixture
   modes: `success/offline/forbidden/conflict` (`tuitionFixtureFlags`). Desktop 1280 + 768.
 - **App** (fixture session): home → wizard (4 steps, offline banner via
   `tuitionFixtureFlags.mode = "offline"`) → my requirements → detail accept; matches interest
   (optimistic); tutor setup + evidence tracker; premium upsell (disabled CTA). 360px bn + en.
+
+---
+
+## Scope correction + marketplace build (2026-10-04, owner instruction)
+
+**Tuitions are now independent of schools/colleges.** The P0 admin verification/oversight screens
+(`tuition.admin.*`, `/institution/tuitions` for the institution view) stay as built; the marketplace
+itself moved to standalone public routes with a new fixture seam (`fixtures/tuition-market.ts`):
+
+| Surface | What exists |
+| --- | --- |
+| `/tuition` | Browse open requirements (subject/class/area/sessions/budget) + interview-call log; Kushol ops **Arrange interview** per requirement |
+| `/tuition/post` | Guardian/student posts a requirement (no institution binding) |
+| `/tuition/register` | Any Kushol user registers as a tutor → **auto-match** (subject + class levels + area) → **matched tutors are notified** (count shown on success) |
+| Interviews | **Physical meet or online** — mode toggle; online takes a meeting link, in-person takes a venue; calls logged with mode badge |
+| Ratings | **Registered tutors are rated 1–5** (`rateTutor`): running average + count shown; unrated tutors render "unrated" explicitly |
+
+**Additive api contracts for the integration pass (10):** tuition requirements (no school FK —
+poster name/phone/subject/class/area/budget), tutor registrations (user-linked, subject/class/
+area), requirement–tutor matching + tutor notifications (06 push type `tuition.match` already
+exists), interview calls (mode in_person/online, slot, venue/meeting link), `tutor_ratings`
+(tutor, rater, stars 1–5, unique per rater per session).
+
+**Verified:** fixture tests for post → register → match/notify → arrange (both modes) and the
+rating bounds; web typecheck/lint green; 205/205 tests.
+
+## Fix log — 2026-10-09 (owner `make test-integration` run 1 failures)
+
+TUT-IT-001/002/009 failed at the harness seed: `seedVerifiedTutor` passed no bio, and the profile
+validation requires a bio in at least one language (`validation.tuition.bio_length`, BR-007).
+Fix: the seed now carries a bn bio. Code untouched — the validation is correct. Agent-side checks
+green (build · vet · lint 0 · unit ok · `-tags=integration` compiles); suite re-run **pending
+owner** (G-6).
+
+**2026-10-09 (evening, owner-authorised run):** `make test-integration` fully green — 32 packages
+ok. The harness seed now (a) inserts real confirmed `media_assets` rows for the national-ID +
+evidence FKs, (b) reaches the verification through the school queue (`SubmitForReview` returns
+the profile, not the verification row), (c) seeds the approving admin as a real `users` row
+(`reviewer_id` FK), (d) gives every seeded user a unique phone (contact reveal INV-4), and
+(e) expresses interest as the matched profile's owner (TUT-BE-012 ownership check). The matcher
+push counter now separates `tuition.match` sends from seed verification pushes. TUT-IT-001/002/
+005/009 — these were never runnable past the seed before; all green.

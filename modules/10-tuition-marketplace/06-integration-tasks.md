@@ -17,7 +17,7 @@
 | I-3 | `04-organization-hierarchy` | we call them | `hierarchy.ResolveUserNodes(userId)` (poster school context) + section/class-level catalog | degraded — matching job retries; requirement stays `open`; never posts without tenant context (refuse + retry) |
 | I-4 | `05-communication-engine` | we call them | `chat` DM open (same-school) + `message_requests` (cross-school negotiation) · `media.PresignUpload`/`ConfirmUpload` (evidence, photos) | degraded — negotiation blocked with retry message; matches intact; evidence upload resumable |
 | I-5 | `06-notifications` | we call them | `notify.SendToUser` (match/interest/decision/expiry notices) / `BroadcastTopic` (future area digests) | degraded, never fatal — **matches are created regardless**; 06 owns its retry queue |
-| I-6 | `07-command-center-web` | they host nav, we own screens | `/school/tutors`, `/school/tutors/[id]`, `/school/tuitions` call REST #2/#3/#8–#10 via the generated client | degraded — queue shows API error; admin actions retried |
+| I-6 | `07-command-center-web` | they host nav, we own screens | `/institution/tutors`, `/institution/tutors/[id]`, `/institution/tuitions` call REST #2/#3/#8–#10 via the generated client | degraded — queue shows API error; admin actions retried |
 | I-7 | `12-payments` (future) | they will call us | consume the accepted-match DUE fact (INV-8) — additive export when 12 lands (`TODO: Confirm` fee model first) | n/a — out of scope until Phase 3 |
 | I-8 | app/web clients | they call us | REST `/api/v1/tuition|school/*` via generated `openapi-fetch`/oapi clients | fatal to the feature surface (standard API errors) |
 | I-9 | api → app pushes | we notify | via I-5; deep links `tuition_match` / `tuition_interest` / `tuition_verification` (ids + labels only) | degraded — in-app lists still authoritative |
@@ -85,7 +85,7 @@ HTTP; signature changes are additive first.
 | Interest CTA (tutor) | `POST /tuition/matches/{id}/interest` | `CONFLICT` on closed/expired/matched; optimistic chip rollback on failure |
 | Browse / profile | `GET /tuition/tutors` · `GET /tuition/tutors/{id}` | Public-safe DTO; contact fields `null` pre-accept (INV-4) |
 | Tutor setup + evidence | `POST /tuition/tutor-profile` · `POST /tuition/tutor-profile/submit-for-review` (+ 05 media flow) | Draft-safe; tracker reads status from profile |
-| Verification queue (web) | `GET /school/tutor-verifications` · `POST /school/tutor-verifications/{id}/approve|reject` | Reviewer-scoped; reject requires `decisionNote`; evidence via 05 media URLs |
+| Verification queue (web) | `GET /institution/tutor-verifications` · `POST /institution/tutor-verifications/{id}/approve|reject` | Reviewer-scoped; reject requires `decisionNote`; evidence via 05 media URLs |
 | Oversight (web) | `GET /tuition/requirements` (School Admin role) · `PATCH /tuition/requirements/{id}` (close) | Read-only except close; audit note stored |
 
 ## 7. Contract Stability
@@ -138,3 +138,15 @@ module 06 — unknown payload types are ignored by clients.
 - [x] `TUT-INT-010` Cache tags `tuition:tutors:{area}` / `tuition:tutor:{id}` / count key + invalidations — 2026-10-03 (`bustTutorTags` invalidation set — UT-010; wired via the shared tag cache)
 - [x] `TUT-INT-011` Failure-matrix drills (06-down stub, 05-down stub, worker lag) in CI smoke — 2026-10-03 (06-down/05-down degradation proven with fakes in the IT file — runs pending owner)
 - [x] `TUT-INT-012` Tests `TUT-UT-010`–`011`, `TUT-IT-011`–`017`, `TUT-E2E-001` green in CI — 2026-10-03 (UT green `-race`; IT + Maestro written — **runs pending owner**, G-6/G-1)
+
+### Additions from the 2026-10-04 marketplace build (integration pass owns these)
+
+- Web surfaces `/tuition`, `/tuition/post`, `/tuition/register` run on `fixtures/tuition-market.ts`
+  — swap to the generated client when the contracts below land.
+- Additive OpenAPI: tuition **requirements without an institution FK** (poster name/phone,
+  subject, class level, area, sessions/week, budget), **tutor registrations** (user-linked,
+  subject/class levels/area), **matching + tutor notification** (06 push type `tuition.match`
+  already exists — fire it on match), **interview calls** (`mode: in_person | online`, slot,
+  venue/meeting link), **tutor ratings** (1–5, unique per rater per session).
+- Keep the institution-side P0 (verification queue, oversight) untouched — it is consumed by
+  school admins at `/institution/tuitions` and platform admins via the marketplace page's arrange flow.

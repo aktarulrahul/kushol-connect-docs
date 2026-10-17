@@ -246,17 +246,17 @@ Auth requires connectivity by design — nothing is silently queued.
 
 ## 9. Task Checklist
 
-- [ ] `IDT-AP-001` onboarding navigator (zustand draft, back-guard, resume-safe)
-- [ ] `IDT-AP-002` language screen (bn default enforced)
-- [ ] `IDT-AP-003` role screen + admin→web hint
-- [ ] `IDT-AP-004` searchable hierarchy picker (04 interface)
-- [ ] `IDT-AP-005` contact form + guardian link fields
-- [ ] `IDT-AP-006` OTP screen (countdown, delayed-SMS, rate-limit states)
-- [ ] `IDT-AP-007` SSO screens + deep-link return + link flow
-- [ ] `IDT-AP-008` pending gate screen + `/(tabs)` layout guard + rejected/resubmit
-- [ ] `IDT-AP-009` secure token store + single-flight refresh interceptor
-- [ ] `IDT-AP-010` settings language switch (`PATCH /me`)
-- [ ] `IDT-AP-011` settings logout / logout-all
+- [x] `IDT-AP-001` onboarding navigator (zustand draft, back-guard, resume-safe) — 2026-10-15
+- [x] `IDT-AP-002` language screen (bn default enforced) — 2026-10-15
+- [x] `IDT-AP-003` role screen + admin→web hint — 2026-10-15
+- [x] `IDT-AP-004` searchable hierarchy picker (04 interface) — 2026-10-15
+- [x] `IDT-AP-005` contact form + guardian link fields — 2026-10-15
+- [x] `IDT-AP-006` OTP screen (countdown, delayed-SMS, rate-limit states) — 2026-10-15
+- [x] `IDT-AP-007` SSO screens + deep-link return + link flow — 2026-10-15
+- [x] `IDT-AP-008` pending gate screen + `/(tabs)` layout guard + rejected/resubmit — 2026-10-15
+- [x] `IDT-AP-009` secure token store + single-flight refresh interceptor — 2026-10-15
+- [x] `IDT-AP-010` settings language switch (`PATCH /me`) — 2026-10-15
+- [x] `IDT-AP-011` settings logout / logout-all — 2026-10-15
 - [ ] `IDT-AP-012` device list (P1)
-- [ ] `IDT-AP-013` bn/en catalog wiring (`auth.*`, `verification.*`, `validation.*`)
+- [x] `IDT-AP-013` bn/en catalog wiring (`auth.*`, `verification.*`, `validation.*`) — 2026-10-15
 - [ ] `IDT-AP-014` Maestro golden-path spec + reduced-motion + 360px verification

@@ -271,7 +271,7 @@ endpoint row only.
 
 | ID | Job | Trigger | Idempotent? | Failure handling |
 | --- | --- | --- | --- | --- |
-| `LMS-BE-020` | `roster.import.process` worker | `POST /school/roster/imports` via 01 `jobs.Enqueue` | Yes — rows re-parsed into the same `(import_id, row_no)` keys; totals recomputed | Retry ×5 backoff → import `failed` + `fail_reason_key`; School Admin re-uploads |
+| `LMS-BE-020` | `roster.import.process` worker | `POST /institution/roster/imports` via 01 `jobs.Enqueue` | Yes — rows re-parsed into the same `(import_id, row_no)` keys; totals recomputed | Retry ×5 backoff → import `failed` + `fail_reason_key`; School Admin re-uploads |
 | `LMS-BE-021` | `roster.import.commit` worker | `POST …/commit` via 01 `jobs.Enqueue` | Yes — `processed_at` cursor + immutable row results; chunks of 500 | Crash → reaper requeues → resume at first unprocessed row; row-level failures recorded, never retried silently (`LMS-BR-004`) |
 | `LMS-BE-022` | `erp.test.dispatch` | `POST …/test` (inline await, job for retry evidence) | Yes — outcome logged per attempt | Timeout/5xx surfaced to the admin; no state change |
 

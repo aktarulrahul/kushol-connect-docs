@@ -27,7 +27,7 @@ All paths are idempotent, produce reconciliation evidence, and sit behind the B2
 (`brd.md` §7). Partner brief: [`vendor-lms-api-spec.md`](./vendor-lms-api-spec.md). Plan:
 [`lms-pull-integration-plan.md`](./lms-pull-integration-plan.md).
 
-> **Note:** Older stories below may still say “School Admin” / `/school/…` / `schoolId` — those are
+> **Note:** Older stories below may still say “School Admin” / `/institution/…` / `schoolId` — those are
 > **deferred renames** (terminology §5). New pull work uses Institution wording.
 
 ## 2. Actors
@@ -73,7 +73,7 @@ All paths are idempotent, produce reconciliation evidence, and sit behind the B2
 | 04 organization-hierarchy | `hierarchy.CreateEnrollments(batch, source)` + `hierarchy.GetSection`; verified-user group/topic chain |
 | 05 media | Roster file storage (`media_assets` presign + confirm) |
 | 01 foundations | `jobs.Enqueue`/`Register`, `audit.Record`, RFC-7807 envelope, rate-limit middleware |
-| 07 command-center-web + shared | `/school/roster` + `/school/integrations` nav stubs (14 fills both); `sync.*`/`validation.*` bn + en catalogs |
+| 07 command-center-web + shared | `/institution/roster` + `/institution/integrations` nav stubs (14 fills both); `sync.*`/`validation.*` bn + en catalogs |
 
 ---
 
@@ -256,7 +256,7 @@ All paths are idempotent, produce reconciliation evidence, and sit behind the B2
 
 | # | Scenario | Expected behaviour |
 | --- | --- | --- |
-| 1 | Unauthenticated call to any `/school/roster/*`, `/school/erp/*`, `/school/roster/reconciliation` | `UNAUTHENTICATED`, no side effect |
+| 1 | Unauthenticated call to any `/institution/roster/*`, `/institution/erp/*`, `/institution/roster/reconciliation` | `UNAUTHENTICATED`, no side effect |
 | 2 | School Admin A addresses school B's import/endpoint/event | `TENANT_MISMATCH` (404 body), nothing leaked |
 | 3 | Webhook to unknown/revoked `{schoolId}` endpoint | `INVALID_SIGNATURE` rejection + security log; nothing applied |
 | 4 | Commit job crashes mid-commit | Resume by row cursor; processed rows skipped (immutable results) |
@@ -269,7 +269,7 @@ All paths are idempotent, produce reconciliation evidence, and sit behind the B2
 ## 8. Reporting Needs
 
 - Import totals (rows/created/updated/skipped/errored) per school — 07 dashboard cards + history table.
-- Reconciliation drift (last import vs platform roster per section) — `GET /school/roster/reconciliation`; flags only, no auto-correction.
+- Reconciliation drift (last import vs platform roster per section) — `GET /institution/roster/reconciliation`; flags only, no auto-correction.
 - Endpoint health (`last_success_at`, applied/duplicate/rejected/error counts) — 07 integrations table; feeds module 15 alerting.
 - Security counters (rejected signatures, stale timestamps) — audit log (01) + monitoring; never cross-tenant visible.
 
@@ -285,5 +285,5 @@ All paths are idempotent, produce reconciliation evidence, and sit behind the B2
 | 6 | Rate ceiling 60 events/min/school; 429 + `Retry-After` beyond | Rahul | Open (default accepted) | Exactly the default (`LMS-BR-012`) |
 | 7 | Licence-flag provisioning UX (07 tenants screen?) + pilot defaults | Rahul | Open | Flag ON for pilot schools; managed via 07 (`LMS-BR-014`) |
 | 8 | LMS partner default: pull API vs inbound webhook | Rahul | Open (default accepted 2026-10-03) | **Pull** for new LMS partners; webhook remains supported; vendor brief = `vendor-lms-api-spec.md` |
-| 9 | Kushol admin route style for LMS connections | Rahul | Open | Prefer claim-scoped `…/lms/connections*`; path prefix `/school/` → `/institution/` when terminology migration runs |
+| 9 | Kushol admin route style for LMS connections | Rahul | Open | Prefer claim-scoped `…/lms/connections*`; path prefix `/institution/` → `/institution/` when terminology migration runs |
 | 10 | Rename FCM `school-{id}` → `institution-{id}` | Rahul | Open — follow-up gap (module 06) | Defer; requires device resubscribe / backfill; do not block LMS vendor brief |

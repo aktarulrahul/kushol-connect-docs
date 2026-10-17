@@ -1,6 +1,6 @@
 # 12-payments — Build Progress
 
-Module: payments · Surfaces: api + web (school ledger) + app (payer) · **Last updated:** 2026-10-03
+Module: payments · Surfaces: api + web (school ledger) + app (payer) · **Last updated:** 2026-10-15
 
 > Owner instruction: "go next" after the 11 build — same through-stages precedent (06/10/11);
 > gates 1–3 stay owner-manual.
@@ -11,10 +11,10 @@ Module: payments · Surfaces: api + web (school ledger) + app (payer) · **Last 
 | --- | --- | --- |
 | 1 Plan | ✅ 2026-10-03 | plan in-session; defaults OQ-1…6; deps 07/11 🚧 accepted per owner instruction |
 | 2 UI (web + app, mock-driven) | ✅ 2026-10-03 | contract-first: 11 REST routes + 24 `Payments*` schemas landed FIRST (incl. the `security: []` webhook exception with the full verification order documented in the spec); both clients generated |
-| Gate 1 | ⏳ pending owner | |
+| Gate 1 | ✅ owner 2026-10-15 | owner approved in session ("complete all from Gate 1") |
 | 3 Docs sync | ✅ 2026-10-03 | this file, 08-gaps, README → 🚧, checklist ticks, change log |
 | 4 Backend | ✅ code-complete 2026-10-03 | 5 migrations (+ append-only trigger), 5 sqlc files, `internal/payments` (service, orders/webhook pipeline, money helpers, sandbox adapter, renderer, jobs, handler, dto) + config env + cmd/httpapi wiring |
-| Gate 2 (SQL on Neon) | ⏳ pending owner | SQL hand-off below |
+| Gate 2 (SQL on Neon) | ✅ owner | 2026-10-09 — all migrations applied to Neon via 15 first deploy (`v0 → 20270302090001 dirty=false`), covers `20270210090000–093000` |
 | 5 Integration | ✅ code-complete 2026-10-03 | app: live client + session-token selector, hooks re-pointed; deep links additive; web: fixture seam until 07's console glue (G-3) |
 | Gate 3 | ⏳ pending | — |
 
@@ -65,7 +65,7 @@ Run in order against Neon; each has a `.down` reverse. New env: `PAYMENTS_WEBHOO
 
 ## Gate 1 review hand-off
 
-Web (`pnpm dev`, school-admin fixture): `/school/ledger` (summary cards, invoices tab + void
-dialog, ledger tab) → `/school/invoices/new`. App (fixture): Marketplace → ফি পরিশোধ → invoice →
+Web (`pnpm dev`, school-admin fixture): `/institution/ledger` (summary cards, invoices tab + void
+dialog, ledger tab) → `/institution/invoices/new`. App (fixture): Marketplace → ফি পরিশোধ → invoice →
 pay (gateway chooser) → status (settles in sandbox) → receipt. Fixture modes:
 `success/offline/forbidden/conflict/gateway_down`. 360px bn+en.

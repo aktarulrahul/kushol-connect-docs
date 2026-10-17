@@ -1,7 +1,7 @@
 # 06-notifications — Build Progress
 
 Module: notifications · Surfaces: api + app (web N/A by design — all `04` sections declare N/A) ·
-Repos: `applications/api`, `applications/app` · **Last updated:** 2026-10-03 (Stage 5 app integration)
+Repos: `applications/api`, `applications/app` · **Last updated:** 2026-10-15
 
 > The build prompt's `TODAY=2026-10-01` lags the actual date; recorded truthfully as 2026-10-03.
 
@@ -11,10 +11,10 @@ Repos: `applications/api`, `applications/app` · **Last updated:** 2026-10-03 (S
 | --- | --- | --- |
 | 1 Plan | ✅ approved 2026-10-02 | owner: "go ahead" (Conflict-2 default: header badge, tab bar untouched; Conflict-3: FCM SDK pinned after docs check) |
 | 2 UI (app, mock-driven) | ✅ 2026-10-02 | NTF-AP-001…011 on fixtures; my files lint-clean · tsc green · notifications unit tests 14/14 |
-| Gate 1 (UI approval) | ⏳ pending owner (review hand-off below) — building continued on the owner's standing "complete the pending tasks" instruction (2026-10-03: owner re-issued "complete the module, then 10") | |
-| 3 Docs sync | ✅ 2026-10-02, refreshed 2026-10-03 | this file, `08-gaps.md`, README → 🚧, checklist ticks (`03` §7, `05` §7, `06` §10), change log |
+| Gate 1 (UI approval) | ✅ owner 2026-10-15 | owner approved in session ("complete all from Gate 1"); 360px bn/en device pass still recommended (rides the app device run, G-1) |
+| 3 Docs sync | ✅ 2026-10-02, refreshed 2026-10-03 · checklist sync 2026-10-15 | this file, `08-gaps.md`, README → 🚧, checklist ticks (`03` §7, `05` §7, `06` §10), change log; `NTF-BE-023` recorded as deferred (G-5) |
 | 4 Backend | ✅ code-complete 2026-10-02/03 | evidence table + Gate 2 hand-off below |
-| Gate 2 (SQL on Neon) | ⏳ pending owner | — |
+| Gate 2 (SQL on Neon) | ✅ owner | 2026-10-09 — all migrations applied to Neon via 15's first deploy (`v0 → 20270302090001 dirty=false`), covers block `20261006090001–090002` |
 | 5 Integration | ✅ code-complete 2026-10-03 | app live client + selector, FCM token via `getDevicePushTokenAsync`, runtime attached; contracts re-synced `no drift`; IT/E2E runs pending owner |
 | Gate 3 | ⏳ pending | — |
 
@@ -90,3 +90,16 @@ Fixtures: dev switcher (`ntfFixtureFlags`) still toggles success/offline/rate_li
 the screens; live paths need the owner's stack. Screens: `/(modals)/notifications-primer` (3 class
 rows, allow/denied/permanent-denied → OS settings), `/settings/notifications` (3 switches, device
 row, admin test push, history). Review at 360 px in bn + en.
+
+## Fix log — 2026-10-09 (owner `make test-integration` run 1 failure)
+
+**NTF-IT-002 (TestIT002MuteAndPrune)** panicked in `subscribeBoundTopics`: `s.hierarchy` is nil
+when the harness wires no 04 port, and the method called the nil interface. Fix: nil-guard returns
+an error so `RegisterDevice` takes its existing degraded path (warn + `topics.backfill` enqueue)
+instead of panicking. Agent-side checks green (build · vet · lint 0 · unit ok · `-tags=integration`
+compiles); suite re-run **pending owner**.
+
+**2026-10-09 (evening, owner-authorised run):** `make test-integration` fully green — 32 packages
+ok. IT002 passes with the nil-hierarchy degrade; IT006's fake hierarchy now keys nodes by the
+seeded caller id (it previously keyed a random uuid, so bound-topic resolution missed; the panic
+in IT002 had been aborting the package before IT006 could assert).

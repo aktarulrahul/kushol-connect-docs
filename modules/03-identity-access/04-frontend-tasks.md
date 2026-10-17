@@ -156,9 +156,9 @@ clear-space); every string ships in bn + en from the `auth.*` / `verification.*`
 
 ## 9. Task Checklist
 
-- [ ] `IDT-FE-001` `/login` route shell + `LanguageToggle` · `IDT-FE-002` `PhoneOtpForm` with all §2.1 states
-- [ ] `IDT-FE-003` `PasswordForm` (staff) with generic-error handling · `IDT-FE-004` `SsoButtons` + `/auth/sso/return` routing
-- [ ] `IDT-FE-005` `/verification-pending` screen incl. rejected state · `IDT-FE-006` csrf + credentials-inclusive client; cookie-presence middleware
-- [ ] `IDT-FE-007` problem+json → field errors + `RATE_LIMITED` countdown mapping · `IDT-FE-008` bn/en keys wired from each app's `src/i18n`
+- [x] `IDT-FE-001` `/login` route shell + `LanguageToggle` · `IDT-FE-002` `PhoneOtpForm` with all §2.1 states — 2026-10-15
+- [x] ~~`IDT-FE-003` `PasswordForm` (staff)~~ — SUPERSEDED 2026-10-02 (owner: passwordless email OTP; password login removed; teacher-registration password = G-1) · `IDT-FE-004` `SsoButtons` + `/auth/sso/return` routing — 2026-10-15
+- [x] `IDT-FE-005` `/verification-pending` screen incl. rejected state · `IDT-FE-006` csrf + credentials-inclusive client; cookie-presence middleware — 2026-10-15
+- [x] `IDT-FE-007` problem+json → field errors + `RATE_LIMITED` countdown mapping · `IDT-FE-008` bn/en keys wired from each app's `src/i18n` — 2026-10-15
 - [ ] `IDT-FE-009` axe pass + reduced-motion verification on both screens
 - [ ] `IDT-FE-010` hand-off note + contract reference for 07's `/school/users` queue (no layout duplicated)

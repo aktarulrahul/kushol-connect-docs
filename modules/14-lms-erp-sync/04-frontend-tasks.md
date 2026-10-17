@@ -14,15 +14,15 @@ tokens only from each app's `src/theme`, every user-facing string in Bengali + E
 
 | # | Route | Screen | Rendering | Access |
 | --- | --- | --- | --- | --- |
-| 1 | `/school/roster` | Roster home: imports history + summary cards (fills the 07 stub §2.13 row 21) | Dynamic | School Admin |
-| 2 | `/school/roster/new` | Upload wizard (3 steps + summary: template → upload → dry-run report → commit) | Dynamic | School Admin |
-| 3 | `/school/roster/imports/[id]` | Import status + totals + error rows + error-CSV download | Dynamic | School Admin |
-| 4 | `/school/integrations` | ERP webhook endpoints (fills 07's `/school/integrations` stub, row 22; nav label "ইন্টিগ্রেশন / Integrations") | Dynamic | School Admin |
-| 5 | `/school/roster/reconciliation` | Reconciliation report (roster vs platform drift) — linked from roster home + `/school` dashboard card | Dynamic | School Admin |
+| 1 | `/institution/roster` | Roster home: imports history + summary cards (fills the 07 stub §2.13 row 21) | Dynamic | School Admin |
+| 2 | `/institution/roster/new` | Upload wizard (3 steps + summary: template → upload → dry-run report → commit) | Dynamic | School Admin |
+| 3 | `/institution/roster/imports/[id]` | Import status + totals + error rows + error-CSV download | Dynamic | School Admin |
+| 4 | `/institution/integrations` | ERP webhook endpoints (fills 07's `/institution/integrations` stub, row 22; nav label "ইন্টিগ্রেশন / Integrations") | Dynamic | School Admin |
+| 5 | `/institution/roster/reconciliation` | Reconciliation report (roster vs platform drift) — linked from roster home + `/school` dashboard card | Dynamic | School Admin |
 
 ## 2. Screen Breakdown
 
-### 2.1 Roster home — `/school/roster`
+### 2.1 Roster home — `/institution/roster`
 
 **Layout**
 
@@ -45,7 +45,7 @@ TABLET 640–1023 (portal ≥768 target)
 | Component | Server/Client | Notes |
 | --- | --- | --- |
 | `ImportSummaryCards` | Server | Last import totals + platform ACTIVE count + drift flag |
-| `ImportsTable` (TanStack Table) | Client | Status badges; row click → `/school/roster/imports/[id]`; polls while `validating`/`committing` |
+| `ImportsTable` (TanStack Table) | Client | Status badges; row click → `/institution/roster/imports/[id]`; polls while `validating`/`committing` |
 | `ReconciliationLink` | Server | Deep link to §2.5 |
 
 **States**
@@ -58,7 +58,7 @@ TABLET 640–1023 (portal ≥768 target)
 | Running import | Status badge + auto-poll (3 s) until terminal state |
 | Success | Totals toast after commit lands (bn/en, see §8 examples) |
 
-### 2.2 Upload wizard — `/school/roster/new`
+### 2.2 Upload wizard — `/institution/roster/new`
 
 **Layout**
 
@@ -77,8 +77,8 @@ Step 1              Step 2                Step 3 (report → commit)
 
 | Component | Server/Client | Notes |
 | --- | --- | --- |
-| `TemplateStep` | Server + client button | Download via `GET /school/roster/template`; explains bn/en sheet + English headers |
-| `UploadStep` | Client (RHF + zod) | Presigned PUT → confirm (05 flow) → `POST /school/roster/imports`; progress bar for > 500 rows |
+| `TemplateStep` | Server + client button | Download via `GET /institution/roster/template`; explains bn/en sheet + English headers |
+| `UploadStep` | Client (RHF + zod) | Presigned PUT → confirm (05 flow) → `POST /institution/roster/imports`; progress bar for > 500 rows |
 | `DryRunReport` | Client | Error table: `rowNo`, i18n `errorKey` message, detail; commit disabled while `validated_with_errors` (`LMS-BR-003`) |
 | `CommitSummary` | Client | created/updated/skipped/errored counts + link to detail; unsaved-changes guard on wizard exit |
 
@@ -92,7 +92,7 @@ Step 1              Step 2                Step 3 (report → commit)
 | Hash no-op | Same-file re-upload → panel "এই ফাইল আগে আপলোড হয়েছে" + link to the original import (200 no-op) |
 | Success | Summary counts + audit note ("কমিট হয়েছে") |
 
-### 2.3 Import detail — `/school/roster/imports/[id]`
+### 2.3 Import detail — `/institution/roster/imports/[id]`
 
 **Components**
 
@@ -106,7 +106,7 @@ Step 1              Step 2                Step 3 (report → commit)
 **States** — Loading (skeleton) · Empty (no errors → success panel) · Error (retry) ·
 Polling while `committing` · Cross-tenant → branded 404 · Success (terminal totals).
 
-### 2.4 Integrations — `/school/integrations`
+### 2.4 Integrations — `/institution/integrations`
 
 **Layout**
 
@@ -142,7 +142,7 @@ Polling while `committing` · Cross-tenant → branded 404 · Success (terminal 
 | Test failed | Failure reason + "check your ERP URL" hint; endpoint stays ACTIVE |
 | Success | Test ✓ inline; rotation/creation modals close after ack |
 
-### 2.5 Reconciliation — `/school/roster/reconciliation`
+### 2.5 Reconciliation — `/institution/roster/reconciliation`
 
 **Components** — `BaselineCard` (last import + totals or "no baseline" state) ·
 `PlatformCountsCard` · `DriftTable` (per-section delta, flagged rows highlighted, no PII).
@@ -170,7 +170,7 @@ pending · map `fields` errors · never lose input · unsaved-changes guard on t
 | Need | Mechanism |
 | --- | --- |
 | Portal reads (history, endpoints, events, report) | Server Component first paint → TanStack Query tables; poll 3 s while `validating`/`committing` (stop on terminal) |
-| Upload | Client → `POST /media/upload-url` → PUT R2 → `POST /media/{id}/confirm` → `POST /school/roster/imports` (multipart ref) → job id + poll |
+| Upload | Client → `POST /media/upload-url` → PUT R2 → `POST /media/{id}/confirm` → `POST /institution/roster/imports` (multipart ref) → job id + poll |
 | Mutations (commit, endpoints, rotate, test, revoke, redrive) | Route Handler → generated `openapi-fetch` → api → toast + table invalidation (`school:{id}:roster`) |
 | Template / error CSV | `GET` streams with `Content-Disposition: attachment`; `no-store` |
 | Secret display | Only from the create/rotate response kept in memory — never refetched, never cached |
@@ -219,19 +219,19 @@ en). Representative catalog entries:
 
 ## 9. Task Checklist
 
-- [x] `LMS-FE-001` `/school/roster` home (cards + history table + polling) — ____
+- [x] `LMS-FE-001` `/institution/roster` home (cards + history table + polling) — ____
 - [x] `LMS-FE-002` wizard step 1: template download + bn/en instruction explainer — ____
 - [x] `LMS-FE-003` wizard step 2: upload (05 presign flow) + `dryRun` toggle + progress — ____
 - [x] `LMS-FE-004` wizard step 3: dry-run report (error table + error-CSV) + hash no-op panel — ____
 - [x] `LMS-FE-005` commit action + summary panel + totals toast — ____
-- [x] `LMS-FE-006` `/school/roster/imports/[id]` detail (status, totals, error rows, commit button) — ____
-- [x] `LMS-FE-007` `/school/integrations` endpoints table + create form — ____
+- [x] `LMS-FE-006` `/institution/roster/imports/[id]` detail (status, totals, error rows, commit button) — ____
+- [x] `LMS-FE-007` `/institution/integrations` endpoints table + create form — ____
 - [x] `LMS-FE-008` `SecretRevealModal` (show-once, copy, bn+en warning, ack) — ____
 - [x] `LMS-FE-009` test-event button + success/failure feedback — ____
 - [x] `LMS-FE-010` rotate-secret dialog + overlap display — ____
 - [x] `LMS-FE-011` event log drawer + redrive action — ____
-- [x] `LMS-FE-012` `/school/roster/reconciliation` report screen + dashboard link — ____
-- [x] `LMS-FE-013` replace 07 stubs: `/school/roster` + `/school/integrations` nav entries — ____
+- [x] `LMS-FE-012` `/institution/roster/reconciliation` report screen + dashboard link — ____
+- [x] `LMS-FE-013` replace 07 stubs: `/institution/roster` + `/institution/integrations` nav entries — ____
 - [x] `LMS-FE-014` bn/en catalog entries (`sync.*`) in each app's `src/i18n` + zod schemas mirrored — ____
 - [x] `LMS-FE-015` a11y pass (§7) + axe specs in `e2e/lms.spec.ts` — run pending owner (G-1) — 2026-10-04
 - [x] `LMS-FE-016` responsive pass (cards stack < 640, tables scroll-x, wizard max-w-2xl) — 2026-10-04

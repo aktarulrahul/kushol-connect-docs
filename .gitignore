@@ -1,2 +1,6 @@
 .DS_Store
 .vscode
+
+# Deploy bundle: only the *.env.example files are committed; real env and server state never are
+/infra/deploy/env/*.env
+/infra/deploy/state/

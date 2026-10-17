@@ -31,57 +31,55 @@
 | 10 | `/admin/campaigns` | Campaign moderation stub ("ships in module 13") | Dynamic | Super Admin |
 | 11 | `/admin/audit` | Audit log viewer | Dynamic | Super Admin |
 | 12 | `/school` | School Admin dashboard | Dynamic | School Admin |
-| 13 | `/school/users` | Verification queue (SLA badges) | Dynamic | School Admin |
-| 14 | `/school/notices` | Notice board (pinned-first, pin/delete) | Dynamic | School Admin |
-| 15 | `/school/notices/new` | Notice composer (bn+en, scope, pin, attachment, preview) | Dynamic | School Admin |
-| 16 | `/school/clubs` | Club (custom group) approval queue | Dynamic | School Admin |
-| 17 | `/school/sections` | Sections manager (create/archive) | Dynamic | School Admin |
-| 17a | `/school/sections/[sectionId]` | Section detail + roster + class-teacher assignment (04 `04-frontend-tasks` screen 5) | Dynamic | School Admin |
-| 18 | `/school/migrations` | Migration runs list | Dynamic | School Admin |
-| 19 | `/school/migrations/new` | Migration wizard (select → dry-run → review → commit) | Dynamic | School Admin |
-| 20 | `/school/migrations/[id]` | Migration status page (poll while COMMITTING) | Dynamic | School Admin |
-| 21 | `/school/roster` | Stub → module 14 | Dynamic | School Admin |
-| 22 | `/school/ledger` · `/school/ai-matrix` · `/school/tutors` · `/school/integrations` | Stubs → modules 12/09/10/14 (route names owned by those modules) | Dynamic | School Admin (`/school/ai-matrix` also Teacher — own sections only, 09) |
+| 13 | `/institution/users` | Verification queue (SLA badges) | Dynamic | School Admin |
+| 14 | `/institution/notices` | Notice board (pinned-first, pin/delete) | Dynamic | School Admin |
+| 15 | `/institution/notices/new` | Notice composer (bn+en, scope, pin, attachment, preview) | Dynamic | School Admin |
+| 16 | `/institution/clubs` | Club (custom group) approval queue | Dynamic | School Admin |
+| 17 | `/institution/sections` | Sections manager (create/archive) | Dynamic | School Admin |
+| 17a | `/institution/sections/[sectionId]` | Section detail + roster + class-teacher assignment (04 `04-frontend-tasks` screen 5) | Dynamic | School Admin |
+| 18 | `/institution/migrations` | Migration runs list | Dynamic | School Admin |
+| 19 | `/institution/migrations/new` | Migration wizard (select → dry-run → review → commit) | Dynamic | School Admin |
+| 20 | `/institution/migrations/[id]` | Migration status page (poll while COMMITTING) | Dynamic | School Admin |
+| 21 | `/institution/roster` | Stub → module 14 | Dynamic | School Admin |
+| 22 | `/institution/ledger` · `/institution/ai-matrix` · `/institution/tutors` · `/institution/integrations` | Stubs → modules 12/09/10/14 (route names owned by those modules) | Dynamic | School Admin (`/institution/ai-matrix` also Teacher — own sections only, 09) |
 | 23 | `/vendor` | Vendor shell (pending/approved state) | Dynamic | Vendor |
 | 24 | `*` | Branded 404 + role-aware FORBIDDEN pages | Dynamic | All |
 
 ## 2. Screen Breakdown
 
-### 2.1 Landing — `/`
+### 2.1 Landing — `/` (Redesigned 2026-10-09 per Owner Direction)
 
-**Layout**
+**Layout & Funnel Rhythm**
 
-```text
-DESKTOP ≥1024                          TABLET 640–1023
-┌──────────────────────────────────┐   ┌──────────────────────────┐
-│ ◉ কুশল CONNECT      [বাং|EN] CTA │   │ logo    [বাং|EN]  ☰ CTA  │
-├──────────────────────────────────┤   ├──────────────────────────┤
-│ H1 hero (bn) · subhead           │   │ hero stacked             │
-│ [পাইলট শুরু করুন] [ডাউনলোড]      │   │ [CTA] [ডাউনলোড]          │
-├──────────────┬───────────────────┤   ├──────────────────────────┤
-│ FOR SCHOOLS  │ ROI calculator    │   │ value prop → calculator  │
-│ value prop   │ 3 inputs + result │   │ (full width, stacked)    │
-├──────────────┴───────────────────┤   ├──────────────────────────┤
-│ FOR VENDORS pitch [inquiry form] │   │ vendors → form           │
-├──────────────────────────────────┤   ├──────────────────────────┤
-│ DOWNLOADS (2 links + QR)         │   │ downloads                │
-├──────────────────────────────────┤   ├──────────────────────────┤
-│ TRUST: hierarchy·verification·   │   │ trust (accordion)        │
-│ tenant-isolation explainer       │   ├──────────────────────────┤
-├──────────────────────────────────┤   │ footer                   │
-│ footer: contact · bn/en · brand  │   └──────────────────────────┘
-└──────────────────────────────────┘
-```
+The landing page is an illustrated, high-density promotional funnel targeting 3 actions:
+1. **Schools/Colleges:** Join the pilot (`#pilot`)
+2. **Vendors & Education Brands:** Apply as a vendor (`#vendors`)
+3. **Guardians & Students:** Download the app (`/download` or `#download`)
 
-**Components**
+Section rhythm alternates surfaces (`Paper` `#FAFBFC` → `teal-50` `#EDF6F8` → `white` → full-bleed deep-teal `#095777` band) to eliminate dead white space.
 
-| Component | Server/Client | Notes |
+**Modular Landing Components (`src/components/landing/`)**
+
+| Component | Client/Server | Role & Interactions |
 | --- | --- | --- |
-| `SiteHeader` / `LocaleToggle` / `SiteFooter` | Server (toggle client) | Logo per module 02 rules (28–32 px lockup, accessible name) |
-| `HeroSection`, `TrustSection`, `VendorsPitch` | Server | Static copy from `landing.*` catalog |
-| `RoiCalculator` | Client | Deterministic formula, `ROI_ASSUMPTIONS` constant, formula + estimate disclaimer rendered |
-| `PilotForm` / `VendorInquiryForm` | Client (RHF) | POST via Route Handler → api |
-| `DownloadButtons` | Server | Flag-gated; disabled placeholders + `TODO: Confirm` |
+| `AnnouncementBar` | Client | Dismissible thin deep-teal top banner with session storage memory |
+| `LandingHeader` | Client | Sticky header (64px → 56px on scroll), logo lockup, compact 4-item nav, `LanguageToggle variant="switch"`, login link, `#pilot` CTA |
+| `HeroSection` | Client | LCP-optimized hero (H1 + 3 verified fact chips: 0 subscription fees during pilot, CSV/Excel instant upload, 100% institution control) + I-1 illustration |
+| `BeforeAfterSlider` | Client | Draggable comparison slider (WhatsApp chaos vs Kushol order) with mouse/touch/keyboard handles and 4 contrast rows |
+| `FeatureSlider` | Client | 12-feature spotlight carousel (`framer-motion`) with 5 category filters, 6s autoplay progress bar, play/pause controls, keyboard navigation (ArrowLeft/Right) |
+| `HowItWorks` | Client | 3-step structured process cards (Upload Roster → Auto-Group → Connect Safely) |
+| `RoleTabs` | Client | 4-tab role switch (Guardians, Teachers, Institutions, Vendors) with 3 verified benefits each and role-specific CTAs |
+| `DeskDemo` | Client | Interactive school admin desk illustration with clickable feature hotspots (Roster, Notices, Sync) |
+| `RoiCalculator` | Client | Dual range slider + number inputs, 400ms count-up payoff, instant comparison bar against traditional SMS costs |
+| `TrustSafety` | Server | Full-bleed deep-teal band with City → Institution → Section hierarchy diagram and 4 security pillars |
+| `PilotSection` | Client | Pilot school pitch with strictly real "২–৩টি প্রতিষ্ঠান" seat limit + `PilotForm` |
+| `VendorSection` | Client | Vendor pitch with I-10 audience targeting illustration + `VendorInquiryForm` |
+| `AppDownloadSection` | Client | Mobile app promo with QR code, disabled store badges, and pointer 3D tilt |
+| `FaqAccordion` | Client | 6 real objection-resolving questions in clean accordion |
+| `FinalCtaBand` | Server | Full-bleed deep-teal closing banner with dual CTAs |
+| `LandingFooter` | Client | Brand lockup, compact nav links, legal, contact, and copyright |
+| `MobileStickyCta` | Client | Floating mobile bottom action bar that auto-hides when forms/footer are in viewport |
+| `Illustrations` | Client/Server | 14 custom inline SVG vector scenes (I-1 to I-14) using exclusively token palette |
 
 **States**
 
@@ -182,11 +180,11 @@ mutation affordance exists (append-only by 01).
 ### 2.8 School dashboard — `/school`
 
 Four `StatCard`s (students, active sections, pending verifications, notices last 30 d) from
-`GET /school/stats`; pending-verification card links to `/school/users`; revenue/ledger-style cards
+`GET /institution/stats`; pending-verification card links to `/institution/users`; revenue/ledger-style cards
 use placeholder variant. Partial stats render with per-source flags ("notices count temporarily
 unavailable").
 
-### 2.9 Verification queue — `/school/users`
+### 2.9 Verification queue — `/institution/users`
 
 **Layout** — filter tabs (pending/approved/rejected) + TanStack table: name, role badge, masked
 phone, evidence link (opens in new tab), submitted (relative), reminder count, SLA badge
@@ -201,7 +199,7 @@ row actions Approve / Reject.
 **States** — approve → confirm → row leaves queue (toast); `CONFLICT` → "already decided" +
 refetch; empty → "no pending requests" with dashboard link.
 
-### 2.10 Notice board + composer — `/school/notices`, `/school/notices/new`
+### 2.10 Notice board + composer — `/institution/notices`, `/institution/notices/new`
 
 **Board layout** — pinned-first list: pin icon, title, scope badge (school/section), date,
 attachment chip; row actions pin-toggle (`PATCH …/pin`) and delete (confirm). Composer layout:
@@ -216,13 +214,13 @@ pin switch; one-way explainer banner; Preview dialog; Publish.
 | `NoticeBoard` | Client (TanStack Query) | Reuses 05's `notices:*` revalidation |
 | `NoticePreview` | Client | Renders exactly the assembled body + attachment |
 
-### 2.11 Clubs + sections — `/school/clubs`, `/school/sections`
+### 2.11 Clubs + sections — `/institution/clubs`, `/institution/sections`
 
 Clubs: queue table (group name, creator, created) with Approve (creator becomes owner; 05 endpoints)
 / Decline. Sections: table grouped by session year + "new section" dialog (classLevel, name,
 sessionYear); archive with `CONFLICT` explanation when enrollments exist (`hierarchy.section.*` copy).
 
-### 2.12 Migration wizard + status — `/school/migrations/new`, `/school/migrations/[id]`
+### 2.12 Migration wizard + status — `/institution/migrations/new`, `/institution/migrations/[id]`
 
 **Layout**
 
@@ -239,9 +237,9 @@ Step 1            Step 2                  Step 3           Status page
 ```
 
 Errors in step 2 keep commit disabled with fix guidance (US-015); step 3 posts `dryRun:false`
-(PREVIEWED) then commit on confirm; runs list (`/school/migrations`) re-opens any run.
+(PREVIEWED) then commit on confirm; runs list (`/institution/migrations`) re-opens any run.
 
-### 2.13 Stubs — `/school/roster|ledger|matrix|tutors|webhooks`, `/vendor`
+### 2.13 Stubs — `/institution/roster|ledger|matrix|tutors|webhooks`, `/vendor`
 
 `StubRoute`: icon + "ships in module NN" (bn/en) + what will live there + back link. `/vendor`:
 shell + status card — pending → "your account is pending approval" (`vendor.state.pending`);
@@ -274,14 +272,19 @@ the composer.
 | Public write (leads) | Client form → Route Handler → generated `openapi-fetch` → api → success panel |
 | Portal reads | Server Component first paint → TanStack Query hydration for tables (queues, vendors, leads, sections) |
 | Mutation | Server Action / Route Handler → generated client → api → toast + `revalidateTag`/query invalidation |
-| Migration status | Poll `GET /school/migrations/{id}` every 3 s while COMMITTING → stop on terminal state |
+| Migration status | Poll `GET /institution/migrations/{id}` every 3 s while COMMITTING → stop on terminal state |
 | Attachment | Client → `POST /media/upload-url` → PUT R2 → `POST /media/{id}/confirm` → attach id to notice |
 
 ## 5. Motion Spec
 
 | Element | Variant / technique | Trigger | Communicates | Reduced motion |
 | --- | --- | --- | --- | --- |
+| Hero illustration I-1 | 1.6 s SVG scene animation + ≤6px subtle idle float | page load | chaos → order transformation | static final frame |
+| Feature spotlight carousel | 6 s autoplay progress bar + slide crossfade via `framer-motion` | autoplay timer / user click / arrow key | feature discovery | pause autoplay; instant slide switch |
+| Draggable comparison slider | Smooth clip-path resize with mouse/touch/keyboard handles | drag / ArrowLeft / ArrowRight | contrast of WhatsApp vs Kushol | slider buttons still functional |
 | ROI result | 400 ms count-up (once per change, interruptible) | inputs change | payoff attention | instant value swap |
+| Admin desk demo hotspots | 250 ms fade + scale popover with highlight pulse | hotspot click | admin feature interaction | instant highlight without pulse |
+| Mobile sticky CTA bar | 200 ms translate-y slide in/out | scroll past hero / form entering viewport | persistence of primary action | instant show/hide without transition |
 | Wizard panel slide | 200 ms translate + fade | step change | progression | crossfade-instant |
 | Dialog/sheet | scale-fade 150 ms | open/close | context switch | instant |
 | Toast | slide-in 150 ms, auto-dismiss 4 s | mutation result | feedback | fade only |
@@ -307,7 +310,7 @@ the composer.
 - [ ] `<html lang>` flips bn/en; Bengali never rendered in Inter; `lang` attributes correct on mixed copy
 - [ ] Contrast WCAG 2.2 AA in light theme, both locales
 - [ ] Motion: reduced-motion variant verified per §5
-- [ ] axe (Playwright) clean on `/`, `/download`, `/admin/*`, `/school/*`, `/vendor`
+- [ ] axe (Playwright) clean on `/`, `/download`, `/admin/*`, `/institution/*`, `/vendor`
 
 ## 8. Design-System Compliance
 
@@ -336,7 +339,7 @@ added to module 02's whitelist — additive, parity-gated).
 - [x] `WEB-FE-014` — 2026-10-03 Leads pipeline (filters, transition dropdown, optimistic update)
 - [x] `WEB-FE-015` — 2026-10-03 Audit viewer (`GET /admin/audit-log`, filters + pager)
 - [x] `WEB-FE-016` — 2026-10-03 Campaigns stub route
-- [x] `WEB-FE-017` — 2026-10-03 School dashboard (`GET /school/stats`, partial-flags)
+- [x] `WEB-FE-017` — 2026-10-03 School dashboard (`GET /institution/stats`, partial-flags)
 - [x] `WEB-FE-018` — 2026-10-03 Verification queue (03 endpoints, SLA badge, reject reason, poll)
 - [x] `WEB-FE-019` — 2026-10-03 Notice board (pin/delete controls)
 - [x] `WEB-FE-020` — 2026-10-03 Notice composer (bn/en tabs, scope picker, pin, preview, one-way banner)

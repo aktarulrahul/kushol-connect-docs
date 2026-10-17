@@ -12,7 +12,7 @@
 Module 07 ships the web surface of Kushol Connect: the public B2B funnel (bilingual landing page —
 bn default — ROI calculator, pilot registration, vendor campaign inquiry, download links) and the
 Command Center portals: Super Admin (`/admin` — tenants, cities, vendor approvals, leads, audit
-log), School Admin (`/school` — dashboard, verification queue, notice composer, clubs, sections,
+log), School Admin (`/institution` — dashboard, verification queue, notice composer, clubs, sections,
 migration wizard) and the gated Vendor shell (`/vendor`). It converts the zero-CAC funnel of
 `brd.md` §2 Goal 1 and the dashboard duties of `prd.md` §4A into working screens on top of modules
 01–05 contracts.
@@ -53,7 +53,7 @@ defined by module 03; verification gates every participatory action (`prd.md` §
 **Out of scope** (explicit — prevents scope drift)
 
 - `/login` screen — module 03 delivers it; 07 only gates shells behind it
-- Roster CSV upload screen — module 14 (07 ships the `/school/roster` stub + nav entry only)
+- Roster CSV upload screen — module 14 (07 ships the `/institution/roster` stub + nav entry only)
 - Ledger / AI Matrix / tutor verification / webhooks screens — modules 12/09/10/14 (stubs)
 - Vendor portal inventory/orders/campaign screens — module 11; campaign moderation logic — 13;
   revenue/fee data — modules 11/12 (placeholder empty states); chat/notice fan-out — 05/06
@@ -234,8 +234,8 @@ defined by module 03; verification gates every participatory action (`prd.md` §
 
 **Acceptance criteria**
 
-- **Given** a School Admin session, **when** `/school` loads, **then** `GET /school/stats` renders the four cards scoped to my school only.
-- **Given** pending verifications > 0, **when** the card renders, **then** it links to `/school/users` as the primary action; another school's admin sees only their tenant's numbers (claim-scoped).
+- **Given** a School Admin session, **when** `/school` loads, **then** `GET /institution/stats` renders the four cards scoped to my school only.
+- **Given** pending verifications > 0, **when** the card renders, **then** it links to `/institution/users` as the primary action; another school's admin sees only their tenant's numbers (claim-scoped).
 
 ---
 
@@ -247,7 +247,7 @@ defined by module 03; verification gates every participatory action (`prd.md` §
 
 **Acceptance criteria**
 
-- **Given** `/school/users`, **when** it loads, **then** `GET /verification-requests` (03) lists pending requests with name, role, masked phone, evidence, submitted time and reminder count.
+- **Given** `/institution/users`, **when** it loads, **then** `GET /verification-requests` (03) lists pending requests with name, role, masked phone, evidence, submitted time and reminder count.
 - **Given** a request older than 48 h, **when** the row renders, **then** an overdue SLA badge (amber > 48 h, red > 72 h) stands out — SLA from 03's data, never guessed.
 - **Given** approve, **when** confirmed, **then** the row leaves the queue; **given** reject, **then** a reason (10–500) is mandatory; a stale row surfaces `CONFLICT` and refreshes.
 
@@ -261,7 +261,7 @@ defined by module 03; verification gates every participatory action (`prd.md` §
 
 **Acceptance criteria**
 
-- **Given** `/school/notices/new`, **when** I fill title + Bengali body (+ optional English), choose scope (school or section from 04 data), toggle pin and attach a PDF, **then** preview shows exactly what recipients will read.
+- **Given** `/institution/notices/new`, **when** I fill title + Bengali body (+ optional English), choose scope (school or section from 04 data), toggle pin and attach a PDF, **then** preview shows exactly what recipients will read.
 - **Given** submit with attachment, **when** publishing, **then** the file uploads via 05's presign → R2 PUT → confirm first; `POST /notices` carries the confirmed `attachmentId`.
 - **Given** the composer, **when** it opens, **then** the one-way rule ("recipients cannot reply") is visible; the board lists pinned-first with pin/delete controls.
 
@@ -277,9 +277,9 @@ defined by module 03; verification gates every participatory action (`prd.md` §
 
 **Acceptance criteria**
 
-- **Given** `/school/migrations/new`, **when** I pick the session and start, **then** `POST /school/migrations {dryRun:true}` returns a DRAFT run and a per-item table (PROMOTED/GRADUATED/RETAINED/ERROR) with counters.
+- **Given** `/institution/migrations/new`, **when** I pick the session and start, **then** `POST /institution/migrations {dryRun:true}` returns a DRAFT run and a per-item table (PROMOTED/GRADUATED/RETAINED/ERROR) with counters.
 - **Given** any ERROR item, **when** review renders, **then** commit stays disabled with row-level detail; only a zero-ERROR run reaches confirm (`dryRun:false` → PREVIEWED).
-- **Given** confirmation, **when** I commit, **then** `POST …/commit` starts the run and `/school/migrations/[id]` polls `GET /school/migrations/{id}` until COMMITTED; audit-logged (04).
+- **Given** confirmation, **when** I commit, **then** `POST …/commit` starts the run and `/institution/migrations/[id]` polls `GET /institution/migrations/{id}` until COMMITTED; audit-logged (04).
 
 ---
 
@@ -291,8 +291,8 @@ defined by module 03; verification gates every participatory action (`prd.md` §
 
 **Acceptance criteria**
 
-- **Given** `/school/sections`, **when** I create a section (class level, name, session), **then** `POST /school/sections` creates it and the list revalidates; duplicates surface `hierarchy.section.name_duplicate`.
-- **Given** `/school/clubs`, **when** it loads, **then** pending custom groups list with creator; approve assigns the creator as owner (05 approval endpoints, audit-logged in 05); decline records the decision.
+- **Given** `/institution/sections`, **when** I create a section (class level, name, session), **then** `POST /institution/sections` creates it and the list revalidates; duplicates surface `hierarchy.section.name_duplicate`.
+- **Given** `/institution/clubs`, **when** it loads, **then** pending custom groups list with creator; approve assigns the creator as owner (05 approval endpoints, audit-logged in 05); decline records the decision.
 - **Given** a section with ACTIVE enrollments, **when** archive is attempted, **then** the 04 `CONFLICT` renders with the explanation, not a generic error.
 
 ---
@@ -357,7 +357,7 @@ Mirrored exactly by the OpenAPI contract (server validation) and the zod form sc
 ## 8. Reporting Needs
 
 - `GET /admin/stats` (this module): tenants, active cities, leads by status/type, pending vendors — `/admin` dashboard; revenue intentionally placeholder until modules 11/12 exports exist.
-- `GET /school/stats` (this module): students, active sections, pending verifications (03), notices last 30 days (05) — `/school` dashboard.
+- `GET /institution/stats` (this module): students, active sections, pending verifications (03), notices last 30 days (05) — `/school` dashboard.
 - `audit_log` reads (01's table, exposed here read-only) — `/admin/audit`.
 - Lead-conversion figures feed future marketing dashboards (module 13+); none defined yet.
 
@@ -366,7 +366,7 @@ Mirrored exactly by the OpenAPI contract (server validation) and the zod form sc
 | # | Question | Owner | Status | Default if unanswered |
 | --- | --- | --- | --- | --- |
 | 1 | ROI time-saved assumptions — realistic minutes per notice and per student per fee cycle? | Rahul | Open | `minutesPerNotice = 4`, `minutesPerFeeStudent = 0.5` in `ROI_ASSUMPTIONS`; labelled estimate; `TODO: Confirm` pre-launch |
-| 2 | Roster CSV format (template/headers) for the `/school/roster` stub tooltip | Rahul | Open | Template generated by the portal (module 14); strict header validation with row-level error report |
+| 2 | Roster CSV format (template/headers) for the `/institution/roster` stub tooltip | Rahul | Open | Template generated by the portal (module 14); strict header validation with row-level error report |
 | 3 | Final APK / TestFlight URLs | Rahul | Open | Disabled placeholders; `TODO: Confirm` store URLs at module 15 (EAS) |
 | 4 | Notices are single-body in 05 — is the assembled bn-first `bn\n\n—\nen` body acceptable for the composer? | Rahul + 05 owner | Open | Assembled bilingual body, bn first, fixed separator, per-part caps |
 | 5 | Vendor reinstate path after suspension/rejection? | Rahul | Open | `PATCH …/approve` allowed again from `suspended`/`rejected` (additive, audit-logged) |

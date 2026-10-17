@@ -140,6 +140,11 @@ chat bubbles or playful illustration on web).
 
 ### 7.1 Landing page (`/`, `/download`)
 
+> **Owner direction 2026-10-09:** the landing page becomes a promotional, illustrated, animated
+> funnel with denser sections (56–72 px desktop / 40–48 px mobile) and an auto + manual feature
+> slider. `docs/prompt/prompt-landing-design.md` supersedes the **Visual** and **Imagery** rows
+> below for `/` and `/download`; every other rule here, §1–§5 and §7.2 still apply.
+
 | Rule | Value |
 | --- | --- |
 | Reference class | Modern B2B SaaS marketing site (clean hero, product screenshots, proof, clear CTAs) |

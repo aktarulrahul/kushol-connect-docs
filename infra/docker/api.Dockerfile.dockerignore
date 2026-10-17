@@ -1,0 +1,21 @@
+# Ignore rules for docs/infra/docker/api.Dockerfile (BuildKit reads <Dockerfile>.dockerignore next to
+# the Dockerfile). The context is the api repo: Go sources only — secrets and local tooling never enter it.
+.git
+.github
+.claude
+.neon
+.env
+.env.*
+!.env.example
+node_modules
+neon.ts
+package.json
+package-lock.json
+skills-lock.json
+bin
+dist
+tmp
+coverage.out
+coverage.html
+*.log
+.DS_Store

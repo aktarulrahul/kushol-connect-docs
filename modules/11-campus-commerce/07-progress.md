@@ -1,7 +1,7 @@
 # 11-campus-commerce — Build Progress
 
 Module: campus-commerce · Surfaces: api + web (vendor portal + admin stub) + app (buyer) ·
-Repos: `applications/api`, `applications/web`, `applications/app` · **Last updated:** 2026-10-03
+Repos: `applications/api`, `applications/web`, `applications/app` · **Last updated:** 2026-10-15
 
 > Owner instruction (this session): "go ahead" after the Stage-1 plan — building continued through
 > the stages on that instruction (precedent: modules 06/10); gates 1–3 stay owner-manual.
@@ -12,10 +12,10 @@ Repos: `applications/api`, `applications/web`, `applications/app` · **Last upda
 | --- | --- | --- |
 | 1 Plan | ✅ 2026-10-03 | plan delivered in-session; defaults OQ-1…6 + README manual-courier default; dep 07 🚧 accepted per owner instruction |
 | 2 UI (web + app, mock-driven) | ✅ 2026-10-03 | contract-first: 20 OpenAPI paths + 26 `Commerce*` schemas landed FIRST; both clients generated; web: 8 vendor routes + commission stub on `fixtures/commerce.ts`; app: 7 buyer routes + shared bits on `fixtures/commerce.ts` |
-| Gate 1 (UI approval) | ⏳ pending owner — build continued on the owner's "go ahead" | |
+| Gate 1 (UI approval) | ✅ owner 2026-10-15 | owner approved in session ("complete all from Gate 1") |
 | 3 Docs sync | ✅ 2026-10-03 | this file, `08-gaps.md`, README → 🚧, checklist ticks (`03` §7, `04` §9, `05` §9, `06` §10), change log |
 | 4 Backend | ✅ code-complete 2026-10-03 | 4 migrations + 4 sqlc query files + `internal/commerce` (service, orders, lifecycle, payload, jobs, handler, dto, cache) + httpapi/cmd wiring; `go build ./...` + `go vet ./...` clean; golangci-lint 0 issues in `internal/commerce`; **SQL hand-off below — Gate 2 pending owner** |
-| Gate 2 (SQL on Neon) | ⏳ pending owner | — |
+| Gate 2 (SQL on Neon) | ✅ owner | 2026-10-09 — all migrations applied to Neon via 15 first deploy (`v0 → 20270302090001 dirty=false`), covers `20270201090000–093000` |
 | 5 Integration | ✅ code-complete 2026-10-03 | app: live `openapi-fetch` client (`live.ts`) behind the session-token selector (`backend.ts`), hooks re-pointed; web: stays on the fixture seam until 07's console session glue (G-3, same boundary as 10-G-8); IT + Playwright + Maestro written — runs pending owner |
 | Gate 3 | ⏳ pending | — |
 

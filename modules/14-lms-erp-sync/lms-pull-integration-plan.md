@@ -18,7 +18,7 @@ CSV upload and inbound HMAC webhooks. Pull sync is in-scope for Phase 3.
 | Module folder | **`docs/modules/14-lms-erp-sync/`** — do **not** create `07-lms-integration` (07 is command-center-web) |
 | Prefix | `LMS` |
 | Spec / build | Spec `📝`; build `⬜ Not started` until Phase 3 |
-| Web surface | Extends integrations UI (today `/school/integrations` — **deferred rename** to `/institution/integrations`) with an **LMS connection** panel |
+| Web surface | Extends integrations UI (today `/institution/integrations` — **deferred rename** to `/institution/integrations`) with an **LMS connection** panel |
 | Apps | `api` + `web` only |
 
 Product noun everywhere in this plan: **educational institution** / UI **Institution** /
@@ -113,7 +113,7 @@ jobs.Enqueue(lms.pull.sync)
 | --- | --- | --- |
 | Hierarchy APIs may still be fixtures | Cannot prove live groups until 04+05 Gate 3 | Pending owner run |
 | No `external_id` columns yet | Need `lms_external_ids` in 14 | Prefer map table in 14 |
-| Product still uses `schools` / `schoolId` / `/school/*` | Copy vs wire mismatch | Deferred rename (§7) |
+| Product still uses `schools` / `schoolId` / `/institution/*` | Copy vs wire mismatch | Deferred rename (§7) |
 | FCM topic `school-{id}` | Institution wording + future `institution-{id}` | **Follow-up gap for module 06** — devices must resubscribe; do not silently rename in pull sync |
 
 ---
@@ -136,7 +136,7 @@ jobs.Enqueue(lms.pull.sync)
 
 ## 6. Kushol admin API sketch (internal — later build)
 
-Prefer claim-scoped routes. Legacy path prefix `/school/` remains until terminology migration;
+Prefer claim-scoped routes. Legacy path prefix `/institution/` remains until terminology migration;
 **product docs** say Institution.
 
 ### 6.1 Preferred (Institution Admin)
@@ -198,10 +198,10 @@ Jobs: `lms.pull.sync`, `lms.pull.test`, schedule tick.
 | --- | --- | --- |
 | DB `schools` | `institutions` (or API alias) | 04 |
 | Claim `schoolId` / role `SCHOOL_ADMIN` | `institutionId` / `INSTITUTION_ADMIN` | 03 |
-| Routes `/school/*`, `/admin/schools` | `/institution/*`, `/admin/institutions` | 07 / 04 |
+| Routes `/institution/*`, `/admin/schools` | `/institution/*`, `/admin/institutions` | 07 / 04 |
 | FCM topic `school-{id}` | `institution-{id}` | **06** — **explicit follow-up gap**; rename requires device resubscribe / backfill job |
 | Cache `school:{id}:*` | `institution:{id}:*` | 01 / 14 |
-| Web `/school/integrations` | `/institution/integrations` | 07 |
+| Web `/institution/integrations` | `/institution/integrations` | 07 |
 
 Vendor-facing docs already use Institution + `institution_type`. Internal renames must not block
 sending the vendor brief.

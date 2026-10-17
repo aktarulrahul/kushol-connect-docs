@@ -12,9 +12,9 @@
 
 | # | Counterparty | Direction | Mechanism | Failure is… |
 | --- | --- | --- | --- | --- |
-| I-1 | `03-identity-access` | we call them | REST via generated client: session auth (cookie + CSRF), `GET /verification-requests`, `POST …/{id}/approve\|reject`, `GET /school/users`, additive export `verification.PendingCount(schoolID)` | fatal to portal routes (no unauthenticated portal); queue screen degrades to error state |
-| I-2 | `04-organization-hierarchy` | we call them | REST via generated client: `POST/PATCH /admin/schools`, `POST /admin/cities`, picker reads, `POST /school/sections*`, migration create/get/commit; additive exports `hierarchy.PlatformCounts()` / `hierarchy.SchoolCounts(schoolID)` | degraded — dashboard card shows partial flag; wizard blocks with error + retry |
-| I-3 | `05-communication-engine` | we call them | REST via generated client: `GET/POST /notices`, `PATCH /notices/{id}/pin`, `DELETE /notices/{id}`, media #19/#20, custom-group approval endpoints (its §2 web-seam note: `/school/clubs`); additive export `chat.NoticeStats(schoolID)` | degraded — composer/board/clubs show API error; nothing else affected |
+| I-1 | `03-identity-access` | we call them | REST via generated client: session auth (cookie + CSRF), `GET /verification-requests`, `POST …/{id}/approve\|reject`, `GET /institution/users`, additive export `verification.PendingCount(schoolID)` | fatal to portal routes (no unauthenticated portal); queue screen degrades to error state |
+| I-2 | `04-organization-hierarchy` | we call them | REST via generated client: `POST/PATCH /admin/schools`, `POST /admin/cities`, picker reads, `POST /institution/sections*`, migration create/get/commit; additive exports `hierarchy.PlatformCounts()` / `hierarchy.SchoolCounts(schoolID)` | degraded — dashboard card shows partial flag; wizard blocks with error + retry |
+| I-3 | `05-communication-engine` | we call them | REST via generated client: `GET/POST /notices`, `PATCH /notices/{id}/pin`, `DELETE /notices/{id}`, media #19/#20, custom-group approval endpoints (its §2 web-seam note: `/institution/clubs`); additive export `chat.NoticeStats(schoolID)` | degraded — composer/board/clubs show API error; nothing else affected |
 | I-4 | `01-foundations` | we call them | generated contract code, `/healthz`, `audit.Record` (called by our api services), `audit_log` scoped-list queries surfaced at `GET /admin/audit-log` | audit failure aborts the wrapped action (01 I-3); viewer shows error state |
 | I-5 | `11-campus-commerce`, `13-b2b-ads-events` | they call us | exported Go service functions `leads.Create`-shaped REST + `vendors.Approve` (see §2) + `GET /admin/stats` reads | our outage blocks vendor onboarding (11) — fatal to that path only |
 | I-6 | `02-design-system` | we consume | tokens, web primitives, `LocaleProvider`/`t()`; namespace whitelist extended with `landing`/`school`/`vendor` (additive, parity-gated) | build-time fatal if missing; runtime bn fallback |
@@ -51,14 +51,14 @@ HTTP; signature changes are additive first.
 | We call | Owner | On failure |
 | --- | --- | --- |
 | `auth.Authenticate` chain + session cookies + CSRF (web auth model) | 03 | Portal routes redirect to `/login`; api errors `UNAUTHENTICATED` |
-| `GET /verification-requests`, `POST …/approve\|reject`, `GET /school/users`, additive `verification.PendingCount(schoolID)` | 03 | Queue shows error state + retry; dashboard card partial flag |
-| `POST/PATCH /admin/schools`, `POST /admin/cities`, picker reads (`GET /hierarchy/cities…`), `POST /school/sections*`, `POST /school/migrations*`, additive `hierarchy.PlatformCounts()/SchoolCounts(schoolID)` | 04 | Wizard blocked with mapped error (`CONFLICT` → field copy); stats partial |
+| `GET /verification-requests`, `POST …/approve\|reject`, `GET /institution/users`, additive `verification.PendingCount(schoolID)` | 03 | Queue shows error state + retry; dashboard card partial flag |
+| `POST/PATCH /admin/schools`, `POST /admin/cities`, picker reads (`GET /hierarchy/cities…`), `POST /institution/sections*`, `POST /institution/migrations*`, additive `hierarchy.PlatformCounts()/SchoolCounts(schoolID)` | 04 | Wizard blocked with mapped error (`CONFLICT` → field copy); stats partial |
 | `GET/POST /notices`, `PATCH …/pin`, `DELETE /notices/{id}`, `POST /media/upload-url`, `POST /media/{id}/confirm`, custom-group approval endpoints, additive `chat.NoticeStats(schoolID)` | 05 | Composer/board/clubs degrade per §8; attachment retry |
 | `audit.Record`, `audit_log` scoped lists, `/healthz`, error envelope + `X-Request-Id`, `leads` limiter class | 01 | Audit failure aborts the destructive action (by design) |
 
 Additive note: the three count exports (`verification.PendingCount`, `hierarchy.PlatformCounts`/
 `SchoolCounts`, `chat.NoticeStats`) are declared here so 03/04/05 include them in their Phase-1
-build; until they exist, `GET /school/stats` serves partial payloads with per-source flags
+build; until they exist, `GET /institution/stats` serves partial payloads with per-source flags
 (`WEB-UT-005`), and queue/dashboard counts fall back to the existing list endpoints' metadata.
 
 ## 4. Cache-Tag Contract
@@ -80,7 +80,7 @@ build; until they exist, `GET /school/stats` serves partial payloads with per-so
 | `/admin/leads`, `/admin/vendors` | `admin:leads` · `admin:vendors` |
 | `/admin/audit` | none (no-store, read-only viewer) |
 | `/school` dashboard | `school:{id}:stats` |
-| `/school/notices*` | 05's `notices:*` tags (shared, never duplicated) |
+| `/institution/notices*` | 05's `notices:*` tags (shared, never duplicated) |
 
 ## 5. External Systems
 
@@ -101,12 +101,12 @@ build; until they exist, `GET /school/stats` serves partial payloads with per-so
 | Vendor queue | `GET /admin/vendors` → `PATCH /admin/vendors/{id}/approve\|reject\|suspend` | §2 lifecycle; reason required on reject/suspend |
 | Leads pipeline | `GET /admin/leads` → `PATCH /admin/leads/{id}` | Transition table enforced both sides |
 | Audit viewer | `GET /admin/audit-log` | Read-only pages + filters |
-| School dashboard | `GET /school/stats` | Partial-payload flags |
-| Verification queue | `GET /verification-requests` → `POST …/approve\|reject` + `GET /school/users` | 03 contract; SLA from 03 data |
+| School dashboard | `GET /institution/stats` | Partial-payload flags |
+| Verification queue | `GET /verification-requests` → `POST …/approve\|reject` + `GET /institution/users` | 03 contract; SLA from 03 data |
 | Notice composer/board | `POST /notices`, `PATCH /notices/{id}/pin`, `DELETE /notices/{id}`, `GET /notices`, media #19/#20 | 05 contract; bn-first assembled body |
 | Clubs queue | 05 custom-group approval endpoints (its §2 web-seam note) | Approve → creator owner |
-| Sections manager | `POST /school/sections`, `PATCH /school/sections/{id}` | 04 contract |
-| Migration wizard | `POST /school/migrations` (dryRun true→false) → `POST …/commit` → `GET /school/migrations/{id}` poll | 04 contract; commit only from PREVIEWED, zero ERROR |
+| Sections manager | `POST /institution/sections`, `PATCH /institution/sections/{id}` | 04 contract |
+| Migration wizard | `POST /institution/migrations` (dryRun true→false) → `POST …/commit` → `GET /institution/migrations/{id}` poll | 04 contract; commit only from PREVIEWED, zero ERROR |
 
 ## 7. Contract Stability
 
@@ -149,7 +149,7 @@ ADR plus migration notes in consumer modules' `07-progress.md`.
 
 - [ ] `WEB-INT-001` OpenAPI paths #1–#9 + schemas merged; Go + TS clients regenerated (CI drift green)
 - [ ] `WEB-INT-002` `leads` rate-limit class registered on 01's limiter (Redis + DB fallback)
-- [ ] `WEB-INT-003` Additive count exports agreed + merged with 03/04/05; `GET /school/stats` partial-flag fallback in place until merged
+- [ ] `WEB-INT-003` Additive count exports agreed + merged with 03/04/05; `GET /institution/stats` partial-flag fallback in place until merged
 - [ ] `WEB-INT-004` Catalog namespaces `landing`/`school`/`vendor` added with 02; parity gate green
 - [ ] `WEB-INT-005` Middleware + role layouts + CSRF wiring against 03 sessions
 - [ ] `WEB-INT-006` Cache tags (`landing:content`, `admin:*`, `school:{id}:stats`) + revalidation wired per §4

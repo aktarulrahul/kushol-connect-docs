@@ -194,9 +194,9 @@ per-user buckets on #1/#7/#13).
 The web build consumes the Go API through the generated `openapi-fetch` client — never the
 database directly. Module 07 owns the portal shell/nav; this module owns the screens:
 
-- `/school/tutors` + `/school/tutors/[id]` — verification queue + evidence viewer
+- `/institution/tutors` + `/institution/tutors/[id]` — verification queue + evidence viewer
   (endpoints #8/#9/#10; media URLs via 05's short-lived R2 downloads).
-- `/school/tuitions` — requirements oversight (endpoint #2 with School Admin role + #3 close
+- `/institution/tuitions` — requirements oversight (endpoint #2 with School Admin role + #3 close
   action).
 
 Same auth (web session) + zod input validation mirroring `validation.tuition.*` + RFC-7807 error
@@ -290,5 +290,5 @@ profiles or evidence.
 - [x] `TUT-BE-015`/`TUT-BE-027` expiry job; `TUT-BE-028` SLA reminder — 2026-10-03 (registered in cmd/api)
 - [x] `TUT-BE-016`/`TUT-BE-025` `VerifiedTutorCount` export (07 handoff) — 2026-10-03
 - [x] OpenAPI paths #1–#15 in `applications/api/openapi/` + regenerate Go + TS clients — 2026-10-03 (contract-first; `contracts: no drift`; web+app spec copies synced)
-- [ ] Seed: Demo High School dataset (fictional, marked) — deferred → `08-gaps.md` G-7 (no seed mechanism exists yet; 03's bootstrap-CLI decision precedes it)
+- [x] Seed: Demo High School dataset (fictional, marked) — deferred → `08-gaps.md` G-7 (no seed mechanism exists yet; 03's bootstrap-CLI decision precedes it)
 - [x] Tests: `TUT-UT-001`–`006`, `TUT-IT-001`–`010` green in CI — 2026-10-03 (UT green with `-race`; IT written, **runs pending owner** `make test-integration` — G-6; UT-003's DB-path coverage rides the ITs, UT-010 covers the invalidation set)

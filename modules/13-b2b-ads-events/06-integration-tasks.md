@@ -141,11 +141,11 @@ expose only `published`/`cancelled`, so the public contract is stable regardless
 
 ## 10. Task Checklist
 
-- [ ] `ADS-INT-001` Implement + export `ads.DispatchCampaign` (status/budget/cap gates, fake-able 06 client, audit) — ____
+- [x] `ADS-INT-001` Implement + export `ads.DispatchCampaign` (status/budget/cap gates, fake-able 06 client, audit) — ____ — 2026-10-15
 - [ ] `ADS-INT-002` Implement + export `ads.CanServeToUser` (pseudized trailing-window lookup) — ____
-- [ ] `ADS-INT-003` Implement + export `events.ListByCity` (published-only) + `events.MarkTicketPaid` (12 seam, idempotent) — ____
+- [x] `ADS-INT-003` Implement + export `events.ListByCity` (published-only) + `events.MarkTicketPaid` (12 seam, idempotent) — ____ — 2026-10-15
 - [ ] `ADS-INT-004` Consume 07 gate (`vendors.Approve`) + fill `/admin/campaigns` stub route with the moderation queue — ____
-- [ ] `ADS-INT-005` Consume 04 `hierarchy.AudienceCount` (incl. `Streams`, small-count suppression); ship `count: null` fallback — ____
+- [x] `ADS-INT-005` Consume 04 `hierarchy.AudienceCount` (incl. `Streams`, small-count suppression); ship `count: null` fallback — ____ — 2026-10-15
 - [ ] `ADS-INT-006` Register 4 jobs with 01 worker; wire `audit.Record` on decisions/dispatch/cancels — ____
 - [ ] `ADS-INT-007` Cache tags `events:city:{id}` + no-store enforcement on vendor/admin/serve reads — ____
 - [ ] `ADS-INT-008` Tests `ADS-UT-007`, `ADS-IT-007`–`012`, `ADS-E2E-001`–`002` green in CI (Playwright + axe) — ____

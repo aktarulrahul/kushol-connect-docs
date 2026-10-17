@@ -33,7 +33,7 @@ The five roles are defined by module 03; verification gates every participatory 
 - Webhook ingestion with signature verification + idempotency (`UNIQUE(gateway, gateway_txn_id)`); browser/app callback as UX-only return path
 - Ledger entries per success (fee_payment + convenience_fee split; commission for orders), manual refunds as adjustments
 - PDF receipt generation (job) → R2 → deep-linked push
-- School ledger dashboard + reconciliation report data (`GET /school/ledger*`, `GET /school/payments/reconciliation`)
+- School ledger dashboard + reconciliation report data (`GET /institution/ledger*`, `GET /institution/payments/reconciliation`)
 - bn/en string catalogs `payments.*`, `validation.*` entries for this module
 
 **Out of scope** (explicit — prevents scope drift)
@@ -44,7 +44,7 @@ The five roles are defined by module 03; verification gates every participatory 
 
 | Module | What this module needs from it |
 | --- | --- |
-| 07 command-center-web | The `/school/ledger` nav stub (WEB-FE-025) that this module fills |
+| 07 command-center-web | The `/institution/ledger` nav stub (WEB-FE-025) that this module fills |
 | 11 campus-commerce | `commerce.OrderAmount(orderId)` + the `payment_transaction_id` attach seam (defined in 11's spec) |
 | 03 identity-access | Auth chain, roles, verification status, guardian↔student link (03 `guardians.IsGuardianOf` / `LinkedStudents`), `users.locale` |
 | 04 organization-hierarchy | `hierarchy.ResolveUserNodes` (school scoping; section→student resolution for bulk invoices) |
@@ -188,11 +188,11 @@ The five roles are defined by module 03; verification gates every participatory 
 
 **Priority:** P0 · **Traces:** prd.md §5.4 (dashboard ledger) · **Depends on:** PAY-US-001, PAY-US-007, 07
 
-**Story** — As a **School Admin**, I want a ledger dashboard at `/school/ledger` (filling 07's stub) with invoice and transaction tables, status/class/month filters and totals, so that fee collection status is one glance away.
+**Story** — As a **School Admin**, I want a ledger dashboard at `/institution/ledger` (filling 07's stub) with invoice and transaction tables, status/class/month filters and totals, so that fee collection status is one glance away.
 
 **Acceptance criteria**
 
-- **Given** I am a School Admin, **when** I open `/school/ledger`, **then** I see tabs **Invoices** and **Transactions** (TanStack Table), filterable by status, class and month, with a totals row (count + ৳ sums) computed server-side — never client-side math over money.
+- **Given** I am a School Admin, **when** I open `/institution/ledger`, **then** I see tabs **Invoices** and **Transactions** (TanStack Table), filterable by status, class and month, with a totals row (count + ৳ sums) computed server-side — never client-side math over money.
 - **Given** another school's invoices exist, **when** any ledger query runs, **then** only my school's rows are returned (tenant scope in the repository layer; cross-tenant probe → `TENANT_MISMATCH`).
 - **Given** I filter + export, **when** I click CSV export, **then** the current filtered view downloads with bn/en headers per my locale.
 
@@ -209,7 +209,7 @@ The five roles are defined by module 03; verification gates every participatory 
 **Acceptance criteria**
 
 - **Given** the daily reconciliation job runs, **when** it compares settled amounts per gateway against `ledger_entries`, **then** it produces per-school totals, a match/mismatch flag list, and audit-logs the summary.
-- **Given** a settlement CSV is imported (manual, per gateway — `TODO: Confirm` format), **when** rows disagree with the ledger (missing/extra/amount-delta), **then** each mismatch is listed with txn id, expected vs settled ৳ on the reconciliation screen (`GET /school/payments/reconciliation?date=`).
+- **Given** a settlement CSV is imported (manual, per gateway — `TODO: Confirm` format), **when** rows disagree with the ledger (missing/extra/amount-delta), **then** each mismatch is listed with txn id, expected vs settled ৳ on the reconciliation screen (`GET /institution/payments/reconciliation?date=`).
 - **Given** `sum(ledger fee_payment credits) ≠ sum(success transactions)` for a school, **when** the invariant check runs, **then** the school is flagged in the report for investigation.
 
 **Notes** — At launch the comparison runs per imported file; auto-fetch is out of scope (`03` §5 job table).
@@ -338,7 +338,7 @@ Mirrored exactly by the OpenAPI contract (server validation) and the zod form sc
 
 ## 8. Reporting Needs
 
-- **School Admin (07 `/school/ledger`):** issued vs paid vs overdue counts; collected this month (৳); outstanding (৳); per-class collection rate — served by `GET /school/ledger/summary`.
+- **School Admin (07 `/institution/ledger`):** issued vs paid vs overdue counts; collected this month (৳); outstanding (৳); per-class collection rate — served by `GET /institution/ledger/summary`.
 - **Super Admin (07 revenue):** platform convenience-fee revenue (৳, per month), gateway success/failure rates, order commission totals — `ledger_entries` type-filtered aggregates.
 - **Ops (reconciliation):** daily per-gateway settled vs ledger delta; mismatch list; invariant-check flag (`PAY-US-010`).
 - Consumption shape: `payments.InvoiceStatus` / `payments.TransactionSummary` exports (06 §2) feed 07 dashboards without new tables.

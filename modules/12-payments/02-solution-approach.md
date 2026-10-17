@@ -100,8 +100,8 @@ payment flow (authoritative vs UX):
 
 | Surface | Rendering | Cached read | Tags |
 | --- | --- | --- | --- |
-| `/school/ledger` (web) | Server shell + client TanStack Table; `no-store` — money screens are always fresh | None (uncacheable by design) | — |
-| Ledger summary cards | Server Component → `GET /school/ledger/summary` | None | invalidated by revalidation on any ledger mutation (06 §4) |
+| `/institution/ledger` (web) | Server shell + client TanStack Table; `no-store` — money screens are always fresh | None (uncacheable by design) | — |
+| Ledger summary cards | Server Component → `GET /institution/ledger/summary` | None | invalidated by revalidation on any ledger mutation (06 §4) |
 | Invoice forms | Client (RHF + zod) | Student/section pickers reuse 04's cached lists | consumes `hierarchy:*` tags |
 | App invoice list / pay screen | TanStack Query, short TTL (30 s) | `payments:invoices:{userId}` (stale-while-revalidate; refetch on focus) | — |
 | Receipt PDFs | Immutable R2 objects served directly (via 05 URL) | Cache-forever (content never changes; new receipt = new object) | — |
@@ -154,7 +154,7 @@ Motion is minimal and functional: the pay-screen gateway chooser uses press feed
 
 ## 9. Performance
 
-- **Volumes:** pilot ≈ hundreds of invoices/school/month; BRD-scale target ≈ 2.4 M transactions/year (`prd.md` §7). Receipt generation is the only heavy work and is fully async (`receipt.generate` job).
+- **Volumes:** pilot ≈ hundreds of invoices/institution/month; BRD-scale target ≈ 2.4 M transactions/year (`prd.md` §7). Receipt generation is the only heavy work and is fully async (`receipt.generate` job).
 - **Hot queries & indexes:** webhook lookup by `UNIQUE(gateway, gateway_txn_id)` (the idempotency hot path); invoice lists by `(school_id, status, due_date)`; payer history by `(payer_id, created_at DESC)`; ledger by `(school_id, created_at DESC)` + `(school_id, type)` for summary aggregates; expiry sweep by partial `(status, updated_at) WHERE status IN ('initiated','redirected')`.
 - **Latency budgets:** initiate ≤ 800 ms p95 (excludes gateway page load); webhook processing ≤ 300 ms p95 (single tx + audit); ledger page ≤ 500 ms p95 with filters (always-fresh reads, so indexes do the work — no cache to absorb).
 - **Bundle impact:** web adds no new deps beyond 07's TanStack stack (CSV export is a small util); app adds `expo-web-browser` for the in-app gateway view — small, already-EAS-compatible.

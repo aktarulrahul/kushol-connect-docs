@@ -141,16 +141,16 @@ depends on them.
 
 ## 10. Task Checklist
 
-- [ ] `COM-INT-001` Implement + export `chat.JoinSectionGroups` (idempotent) and wire 04's call point
-- [ ] `COM-INT-002` Implement + export `chat.PostNotice` incl. tag busts + `BroadcastTopic` call
-- [ ] `COM-INT-003` Implement + export `media.PresignUpload` / `media.ConfirmUpload` (shared sniffer)
-- [ ] `COM-INT-004` Implement + export `chat.GroupMembers` (aggregate DTOs only) for 09
-- [ ] `COM-INT-005` Consume `hierarchy.ResolveUserNodes` in WS room resolution + notice scoping
-- [ ] `COM-INT-006` Register jobs (archival / request-expiry / asset-cleanup) with 01 runner
-- [ ] `COM-INT-007` Redis pub/sub channels `room:{id}` + presence keys (TTL 60 s) + messaging rate-limit class
-- [ ] `COM-INT-008` R2 client: presign PUT/GET, CopyObject archive/rehydrate, env-parsed secrets
-- [ ] `COM-INT-009` Cache-tag contract live (`notices:school:{id}` / `notices:section:{id}`) + 07 handoff verified (`COM-FE-001`)
-- [ ] `COM-INT-010` WS reconnect contract documented + tested (backoff, re-subscribe, REST catch-up)
-- [ ] `COM-INT-011` Failure-matrix drills scripted (Redis down, R2 down, gateway kill) in CI smoke
+- [x] `COM-INT-001` Implement + export `chat.JoinSectionGroups` (idempotent) and wire 04's call point — 2026-10-15
+- [x] `COM-INT-002` Implement + export `chat.PostNotice` incl. tag busts + `BroadcastTopic` call — 2026-10-15
+- [x] `COM-INT-003` Implement + export `media.PresignUpload` / `media.ConfirmUpload` (shared sniffer) — 2026-10-15
+- [x] `COM-INT-004` Implement + export `chat.GroupMembers` (aggregate DTOs only) for 09 — 2026-10-15
+- [x] `COM-INT-005` Consume `hierarchy.ResolveUserNodes` in WS room resolution + notice scoping — 2026-10-15
+- [x] `COM-INT-006` Register jobs (archival / request-expiry / asset-cleanup) with 01 runner — 2026-10-15
+- [x] `COM-INT-007` Redis pub/sub channels `room:{id}` + presence keys (TTL 60 s) + messaging rate-limit class — 2026-10-15
+- [x] `COM-INT-008` R2 client: presign PUT/GET, CopyObject archive/rehydrate, env-parsed secrets — 2026-10-15
+- [x] `COM-INT-009` Cache-tag contract live (`notices:school:{id}` / `notices:section:{id}`) + 07 handoff verified (`COM-FE-001`) — 2026-10-15
+- [x] `COM-INT-010` WS reconnect contract documented + tested (backoff, re-subscribe, REST catch-up) — 2026-10-15
+- [x] `COM-INT-011` Failure-matrix drills scripted (Redis down, R2 down, gateway kill) in CI smoke — 2026-10-15
 - [ ] `COM-INT-012` Tests `COM-IT-001`–`011` + `COM-E2E-001`–`003` green in CI
-- [ ] `COM-INT-013` Implement + export `ArchiveSectionGroups` (04), `NoticeStats` (07), `SectionQuestionSamples` with PII masking + no-author guarantee (09), `media.PutObject` + `receipt_pdf` kind (12); contract tests per export
+- [x] `COM-INT-013` Implement + export `ArchiveSectionGroups` (04), `NoticeStats` (07), `SectionQuestionSamples` with PII masking + no-author guarantee (09), `media.PutObject` + `receipt_pdf` kind (12); contract tests per export — 2026-10-15

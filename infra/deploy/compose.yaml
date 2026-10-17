@@ -1,0 +1,129 @@
+# Kushol Connect — the one server stack on the Hostinger KVM 2 (module 15 Part A, OPS-BE-003).
+#
+# api + worker + web + redis only: Postgres is Neon and media is Cloudflare R2, both off-box
+# (tech-stack.md §Infrastructure). HestiaCP's Nginx terminates TLS and proxies to the loopback
+# ports below. Always run through ops/compose.sh, which supplies env/stack.env and the release
+# tags (state/release.env). Images are only pulled here — never built (OPS-BR-001).
+#
+# Rules checked by deploy/tests/run.sh: every port binds 127.0.0.1 (Docker-published ports bypass
+# HestiaCP's firewall — F5); every service declares mem_limit, restart and a healthcheck
+# (OPS-BR-006); no build: keys; no Postgres/MinIO services.
+
+name: kushol
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  api:
+    image: ${API_IMAGE:?set in env/stack.env}:${API_TAG_PREFIX-}${API_TAG:?deploy with ops/deploy.sh}
+    command: ["serve"]
+    env_file: [env/api.env]
+    environment:
+      # Container wiring — fixed here, not in env/api.env.
+      HTTP_PORT: "8080"
+      REDIS_URL: redis://redis:6379/0
+      GOMEMLIMIT: 400MiB
+      # Nginx reaches the api through Docker's port proxy, so the TCP peer is this network's
+      # gateway: trust X-Forwarded-For from the project subnet only (F19, FND-BE-006).
+      TRUSTED_PROXIES: ${KUSHOL_SUBNET:?set in env/stack.env},127.0.0.1/32,::1/128
+    ports: ["127.0.0.1:${API_PORT:?set in env/stack.env}:8080"]
+    mem_limit: 512m
+    restart: unless-stopped
+    stop_grace_period: 30s
+    read_only: true
+    tmpfs: ["/tmp:size=16m"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      # Liveness only (/healthz); the deploy gate checks /readyz separately (OPS-US-006 notes).
+      test: ["CMD", "/usr/local/bin/api", "healthcheck"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks: [kushol]
+    logging: *logging
+
+  worker:
+    image: ${API_IMAGE:?set in env/stack.env}:${API_TAG_PREFIX-}${API_TAG:?deploy with ops/deploy.sh}
+    command: ["worker"]
+    env_file: [env/api.env]
+    environment:
+      HTTP_PORT: "8080"
+      REDIS_URL: redis://redis:6379/0
+      GOMEMLIMIT: 200MiB
+    mem_limit: 256m
+    restart: unless-stopped
+    stop_grace_period: 30s
+    read_only: true
+    tmpfs: ["/tmp:size=16m"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      # The worker serves no HTTP and the distroless image has no shell, so there is nothing to
+      # probe yet; a crash still exits and `restart` brings it back. Gap G-2 (15 08-gaps.md).
+      disable: true
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks: [kushol]
+    logging: *logging
+
+  web:
+    image: ${WEB_IMAGE:?set in env/stack.env}:${WEB_TAG_PREFIX-}${WEB_TAG:?deploy with ops/deploy.sh}
+    env_file: [env/web.env]
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+    ports: ["127.0.0.1:${WEB_PORT:?set in env/stack.env}:3000"]
+    mem_limit: 512m
+    restart: unless-stopped
+    init: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      # Node has fetch built in; follows the /login redirect for logged-out visitors.
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks: [kushol]
+    logging: *logging
+
+  redis:
+    # Cache, presence and rate limits only — never a store; losing it degrades, never loses data.
+    image: redis:7.4.11-alpine3.21@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+    command: ["redis-server", "--maxmemory", "200mb", "--maxmemory-policy", "volatile-lru", "--save", "", "--appendonly", "no"]
+    # The image's redis user: starting non-root skips the entrypoint's chown/su-exec, which would
+    # need the capabilities dropped below.
+    user: "999:1000"
+    mem_limit: 256m
+    restart: unless-stopped
+    read_only: true
+    tmpfs: ["/data:size=16m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks: [kushol]
+    logging: *logging
+
+networks:
+  kushol:
+    ipam:
+      config:
+        # Fixed so TRUSTED_PROXIES can name it; outside Docker's default pools so it cannot collide
+        # with the co-tenant apps' networks (host/prepare-host.sh checks).
+        - subnet: ${KUSHOL_SUBNET:?set in env/stack.env}

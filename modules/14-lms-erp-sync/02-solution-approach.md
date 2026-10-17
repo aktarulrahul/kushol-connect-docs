@@ -17,7 +17,7 @@
 | `users` | Read/written ONLY via 03's exported user upsert (PENDING on create; verification untouched) | No — module 03 |
 | `sections` / `enrollments` | Resolved/upserted only via 04 exports (`GetSection`, `CreateEnrollments`) | No — module 04 |
 | `media_assets` | Uploaded roster file bytes live in R2 via 05's presign/confirm flow | No — module 05 |
-| School Admin portal surfaces | `/school/roster` + `/school/integrations` screens fill 07's nav stubs | No — module 07 shell |
+| School Admin portal surfaces | `/institution/roster` + `/institution/integrations` screens fill 07's nav stubs | No — module 07 shell |
 
 ### 1.2 Relationships
 
@@ -58,7 +58,7 @@ reconciliation report query.
 | 04 organization-hierarchy | `hierarchy.CreateEnrollments(batch, source)` · `hierarchy.GetSection` | Enrollment rules, idempotency and the verified-user group/topic chain live in 04/05/06 |
 | 05 media | presigned upload + confirm (`media_assets`) for roster files | R2 handling exists once for all modules |
 | 01 foundations | `jobs.Enqueue`/`jobs.Register`, `audit.Record`, rate-limit middleware | No new queue infra (`tech-stack.md`: in-DB jobs, no Kafka) |
-| 07 command-center-web | shell + nav stubs (`/school/roster`, `/school/integrations`) | Portal chrome is 07's; 14 ships screens into it |
+| 07 command-center-web | shell + nav stubs (`/institution/roster`, `/institution/integrations`) | Portal chrome is 07's; 14 ships screens into it |
 
 **Cache keys / tags revalidated / consumed:** see `06-integration-tasks.md` §4 (`school:{id}:roster`).
 
@@ -89,9 +89,9 @@ erp_sync_events: received ──verify──▶ applied | rejected (signature/ti
 
 | Surface | Rendering | Cached read | Tags |
 | --- | --- | --- | --- |
-| `/school/roster` (history + totals) | Dynamic, Server Component first paint + TanStack Query polling while `validating`/`committing` | None — import lists/totals always fresh (stale results would mislead commits) | `school:{id}:roster` invalidated on every mutation |
-| `/school/roster/new` wizard | Client steps; upload via presigned PUT + multipart confirm | None | — |
-| `/school/integrations` + event log | Dynamic; log paged, fresh | None (fresh by design) | `school:{id}:roster` |
+| `/institution/roster` (history + totals) | Dynamic, Server Component first paint + TanStack Query polling while `validating`/`committing` | None — import lists/totals always fresh (stale results would mislead commits) | `school:{id}:roster` invalidated on every mutation |
+| `/institution/roster/new` wizard | Client steps; upload via presigned PUT + multipart confirm | None | — |
+| `/institution/integrations` + event log | Dynamic; log paged, fresh | None (fresh by design) | `school:{id}:roster` |
 | Template + error CSV downloads | Streamed responses, `no-store` | None | — |
 | Reconciliation report | Dynamic on request | 5-min Redis cache of computed counts (cheap re-read, drift tolerance) | `school:{id}:roster` |
 
@@ -110,7 +110,7 @@ Nothing about this module is publicly cacheable; every response is tenant-scoped
 
 | Entry point | Auth chain | Tenant scope | Rate limit | Notes |
 | --- | --- | --- | --- | --- |
-| `/api/v1/school/roster/*`, `/school/erp/*`, `/school/roster/reconciliation` | authenticate → role claim `SCHOOL_ADMIN` → tenant-scope | school from JWT/session claim only; path ids joined to claim | default class | `FORBIDDEN` without licence (`LMS-BR-014`) |
+| `/api/v1/school/roster/*`, `/institution/erp/*`, `/institution/roster/reconciliation` | authenticate → role claim `SCHOOL_ADMIN` → tenant-scope | school from JWT/session claim only; path ids joined to claim | default class | `FORBIDDEN` without licence (`LMS-BR-014`) |
 | `POST /api/v1/webhooks/erp/{schoolId}` | **Exception (documented): unauthenticated-but-HMAC-signed**, same pattern as module 12 payment webhooks — no session/JWT exists for ERP systems | `schoolId` from the URL must match an ACTIVE `erp_endpoints` row (`LMS-BR-001`); cross-references fail closed | 60/min/school (`RATE_LIMITED` + `Retry-After`) | constant-time HMAC compare (`LMS-BR-009`); ±5 min timestamp (`STALE_TIMESTAMP`); body cap 1 MB; `audit.Record` on every rejection |
 | Validation/sanitisation | OpenAPI validators on every handler; CSV/XLSX parsed as data only (formulas never evaluated); payload jsonb size-capped | — | — | secrets redacted in slog; raw secret returned exactly once (`LMS-INV-005`) |
 

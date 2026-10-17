@@ -12,7 +12,7 @@
 
 | # | Counterparty | Direction | Mechanism | Failure is… |
 | --- | --- | --- | --- | --- |
-| I-1 | `07-command-center-web` | they call us | REST `/school/invoices*`, `/school/ledger*`, `/school/payments/reconciliation` + exports (`06` §2) for dashboard cards | degraded — ledger screens show error states; payments unaffected |
+| I-1 | `07-command-center-web` | they call us | REST `/institution/invoices*`, `/institution/ledger*`, `/institution/payments/reconciliation` + exports (`06` §2) for dashboard cards | degraded — ledger screens show error states; payments unaffected |
 | I-2 | `11-campus-commerce` | they call us | REST `POST /payments/initiate {orderId}` + export `payments.TransactionSummary` for checkout; 11 attaches `payment_transaction_id` on success (seam defined in 11's spec) | degraded — order checkout falls back to COD; fee payments unaffected |
 | I-3 | `06-notifications` | we call them | `notify.SendToUser` — fee-due push (`/payments/{invoiceId}`) + payment-result push (`/receipts/{txnId}`) | degraded, never fatal — invoices remain payable in-app |
 | I-4 | `05-communication-engine` | we call them | `media.PutObject` (receipt PDFs → R2; declared in 05 `06` §2) | degraded — receipt job retries; money state already final |
@@ -67,7 +67,7 @@ Rules: exports return DTOs (never sqlc row structs); admin-only exports require 
 
 | Read | Tagged with |
 | --- | --- |
-| `GET /school/invoices*`, `/school/ledger*` | **never cached** — money screens are always fresh (`02` §4) |
+| `GET /institution/invoices*`, `/institution/ledger*` | **never cached** — money screens are always fresh (`02` §4) |
 | App invoice list | `payments:invoices:{userId}` (TanStack Query, 30 s TTL) |
 | Receipt PDF | immutable R2 object — cache forever (new receipt = new object) |
 | Gateway health flag (chooser hiding) | `payments:gateway-health` (Redis, TTL 60 s) |
@@ -87,11 +87,11 @@ All webhook payloads are signature-verified before parsing; **secrets and raw pa
 
 | UI element | Calls | Contract |
 | --- | --- | --- |
-| Ledger tabs + filters (web) | `GET /school/invoices` · `GET /school/ledger` | Filtered, paginated rows + server-computed totals; `no-store` |
-| Summary cards (web) | `GET /school/ledger/summary` | counts + ৳ totals for the month |
-| Issue forms (web) | `POST /school/invoices` · `POST /school/invoices/bulk` | `InvoiceDTO` / `{created, failed[]}`; zod mirrors of `01` §6 |
-| Void (web) | `PATCH /school/invoices/{id}/void` | `CONFLICT` surfaced when payments exist |
-| Reconciliation (web) | `GET /school/payments/reconciliation?date=` | per-gateway totals + mismatch rows |
+| Ledger tabs + filters (web) | `GET /institution/invoices` · `GET /institution/ledger` | Filtered, paginated rows + server-computed totals; `no-store` |
+| Summary cards (web) | `GET /institution/ledger/summary` | counts + ৳ totals for the month |
+| Issue forms (web) | `POST /institution/invoices` · `POST /institution/invoices/bulk` | `InvoiceDTO` / `{created, failed[]}`; zod mirrors of `01` §6 |
+| Void (web) | `PATCH /institution/invoices/{id}/void` | `CONFLICT` surfaced when payments exist |
+| Reconciliation (web) | `GET /institution/payments/reconciliation?date=` | per-gateway totals + mismatch rows |
 | Pay now (app) | `POST /payments/initiate` | `RedirectPayload` → in-app browser |
 | Return/status (app) | callback 302 → `payments.InvoiceStatus` poll | success/failure/pending states |
 | Receipt (app/web) | `GET /payments/receipts/{txnId}` | immutable R2 URL + serial no |
@@ -134,9 +134,9 @@ Schema changes expand/contract; JSON shapes versioned; the OpenAPI spec is the s
 
 ## 10. Task Checklist
 
-- [ ] `PAY-INT-001` Publish exports `InitiateInvoicePayment` / `InvoiceStatus` / `TransactionSummary`; 07/11 consumer stubs compile
+- [x] `PAY-INT-001` Publish exports `InitiateInvoicePayment` / `InvoiceStatus` / `TransactionSummary`; 07/11 consumer stubs compile — 2026-10-15
 - [x] `PAY-INT-002` Confirm 11's seam signatures (`commerce.OrderAmount` + attach hook) against 11's spec; adapt names if 11 finalizes differently — flag any drift in `08-gaps.md` — 2026-10-03 (11's seam verified + consumed via adapter: OrderAmount + AttachPaymentTransaction)
-- [ ] `PAY-INT-003` Consume 05 `media.PutObject` (declared in 05 `06` §2, kind `receipt_pdf`); contract test against 05 fake
+- [x] `PAY-INT-003` Consume 05 `media.PutObject` (declared in 05 `06` §2, kind `receipt_pdf`); contract test against 05 fake — 2026-10-15
 - [x] `PAY-INT-004` Wire `notify.SendToUser` payloads: `fee_due` (`/payments/{invoiceId}`, bn "বকেয়া ফি" + amount) and `payment_result` (`/receipts/{txnId}`) — freeze with 06 (`NTF-INT-007`) — 2026-10-03 (fee_due + payment_result additive in 06's builder; ids+amounts only)
 - [x] `PAY-INT-005` Register jobs (`receipt.generate`, `invoice.notify`, `payments.reconcile`, `payments.overdue_sweep`, `payments.expire`) with the 01 worker + cron — 2026-10-03 (3 jobs registered; reconcile + notify fan-out land with G-5/G-7)
 - [x] `PAY-INT-006` Webhook routes outside the auth group with signature middleware; OpenAPI spec annotated as the signature-verified exception — 2026-10-03 (webhook route outside the auth group; spec annotated)

@@ -280,4 +280,4 @@ Same auth + input (zod) + result rows as above.
 - [ ] `ADS-BE-024`–`ADS-BE-034` repositories (batched inserts, FOR UPDATE reservation, aggregates)
 - [ ] `ADS-BE-035`–`ADS-BE-038` jobs registered with the 01 worker
 - [ ] `ADS-UT-001`–`006` unit suite green
-- [ ] `ADS-IT-001`–`006` integration suite green (testcontainers Postgres)
+- [x] `ADS-IT-001`–`006` integration suite green (testcontainers Postgres) — 2026-10-15

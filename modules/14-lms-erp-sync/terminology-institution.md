@@ -56,7 +56,7 @@ Default Bangla for types: use the **primary** column (প্রাইমার�
 | School Admin | **Institution Admin** |
 | Super Admin | Super Admin (unchanged) |
 
-Full role-string migration across 03/04/07 (`SCHOOL_ADMIN`, `/school/*` routes) is a **deferred rename** — see §5.
+Full role-string migration across 03/04/07 (`SCHOOL_ADMIN`, `/institution/*` routes) is a **deferred rename** — see §5.
 
 ---
 
@@ -81,7 +81,7 @@ Full role-string migration across 03/04/07 (`SCHOOL_ADMIN`, `/school/*` routes) 
 | Role claim | `SCHOOL_ADMIN` | `INSTITUTION_ADMIN` | Module 03 |
 | FCM topics | `school-{id}` | `institution-{id}` | **Module 06** — rename is a follow-up gap; devices must resubscribe; record in 06 `08-gaps` when scheduled |
 | Cache tags | `school:{id}:roster`, `hierarchy:school:{id}` | `institution:{id}:…` | 01/04/14 |
-| Web routes | `/school/roster`, `/school/integrations` | `/institution/…` | 07 shell |
+| Web routes | `/institution/roster`, `/institution/integrations` | `/institution/…` | 07 shell |
 | CSV / webhook docs in 14 | “school”, `school_id` | Align when 04 renames land | Pull plan uses Institution wording; columns may stay `school_id` until migration |
 
 LMS vendor-facing docs (**this pack**) use Institution + `institution_type` **now**. Kushol internal path/column renames wait for a dedicated terminology migration.

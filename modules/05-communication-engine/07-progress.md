@@ -2,24 +2,24 @@
 
 Module: communication-engine · Surfaces: api + app (web N/A — 07 builds the composer on these
 endpoints) · Repos: `applications/api`, `applications/app` (branch `module/03-identity-access`
-working tree — ADR-4) · **Last updated:** 2026-10-02
+working tree — ADR-4) · **Last updated:** 2026-10-15
 
 > Note: the build prompt parameter `TODAY=2026-10-01` lags the actual build date; dates are
 > recorded truthfully as 2026-10-02 (same convention as module 04).
 
 ## Stage / gate status
 
-| Stage | Status | Evidence (dated) |
-| --- | --- | --- |
-| 1 Plan | ✅ approved 2026-10-02 | owner: "proceed" with recommended options |
-| 2 UI (app, mock-driven) | ✅ 2026-10-02 | COM-AP-001…019 on fixtures; app gate green (lint · typecheck · unit 176/176) |
-| Gate 1 (UI approval) | ⏳ pending owner — UI reviewable per the hand-off below (owner later instructed to continue building: "complete the pending tasks", 2026-10-02 — recorded, gate still owner-run) |
-| 3 Docs sync | ✅ 2026-10-02 | this file, `08-gaps.md`, README row → 🚧, checklist ticks, change log |
-| 4 Backend | ✅ code-complete 2026-10-02 (migrations · services · gateway · exports · handlers · wiring · unit tests) — Gate 2 hand-off below | evidence table |
-| Gate 2 (SQL on Neon) | ⏳ pending owner — runs **01 → 03 → 04 → 05** blocks in order | — |
-| 5 Integration | ⏳ after Gate 2 | WS gateway live wiring, real R2, push binding with 06, fixture swap |
-| Gate 3 (integrated flows) | ⏳ pending | — |
-| 6 Gaps & verification | 🚧 | `08-gaps.md` |
+| Stage                     | Status                                                                                                                                                                                       | Evidence (dated)                                                                                                                                                                                                                                           |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 Plan                    | ✅ approved 2026-10-02                                                                                                                                                                       | owner: "proceed" with recommended options                                                                                                                                                                                                                  |
+| 2 UI (app, mock-driven)   | ✅ 2026-10-02                                                                                                                                                                                | COM-AP-001…019 on fixtures; app gate green (lint · typecheck · unit 176/176)                                                                                                                                                                               |
+| Gate 1 (UI approval)      | ✅ owner 2026-10-15                                                                                                                                                                          | owner approved in session ("complete all from Gate 1") — covers the 2026-10-02 fixture hand-off **and** the 2026-10-09 Spartens restyle (ADR-9); device pass at 360px bn/en still recommended, recorded as gap G-9a                                        |
+| 3 Docs sync               | ✅ 2026-10-02 · checklist sync 2026-10-15                                                                                                                                                    | this file, `08-gaps.md`, README row → 🚧; `03` backend + `06` integration checklists ticked 2026-10-15 (`COM-BE-001…027`, OpenAPI paths, tests; `COM-INT-001…011/013`). Open: seed item (no demo chat-group seed verified), `COM-INT-012` (E2E runs — G-1) |
+| 4 Backend                 | ✅ code-complete 2026-10-02 (migrations · services · gateway · exports · handlers · wiring · unit tests) — Gate 2 hand-off below                                                             | evidence table                                                                                                                                                                                                                                             |
+| Gate 2 (SQL on Neon)      | ✅ owner                                                                                                                                                                                     | 2026-10-09 — all migrations applied to Neon via 15's first deploy (`v0 → 20270302090001 dirty=false`), covers the 05 block `20261003090000–094000`                                                                                                         |
+| 5 Integration             | 🚧 resolved 2026-10-09 (owner `make test-integration` green, 32 pkgs — IT011/012/013 + `ListGroupsForUser` SQL fixed); remaining: app fixture swap, MMKV offline queue, real R2/device flows | G-3/G-4                                                                                                                                                                                                                                                    |
+| Gate 3 (integrated flows) | ⏳ pending                                                                                                                                                                                   | —                                                                                                                                                                                                                                                          |
+| 6 Gaps & verification     | 🚧                                                                                                                                                                                           | `08-gaps.md`                                                                                                                                                                                                                                               |
 
 ## Owner decisions (2026-10-02) — ADR
 
@@ -41,6 +41,45 @@ working tree — ADR-4) · **Last updated:** 2026-10-02
 8. **notify port:** `notify.BroadcastTopic` (06) is unbuilt — 05 consumes a narrow `Broadcaster`
    port with a Noop binding (03's `internal/notify` is 03-owned, untouched); 06 binds the real
    fan-out in its build (mirrors the 04↔05 chat port precedent).
+9. **ADR-8 (owner, 2026-10-09): tab shell change (final rev 3)** — bottom bar = Home · Explore ·
+   Chat · Store · Profile. Shop returned as **Store** (same `/shop` stub, relabelled); Explore
+   (events + tuition listings) stays; You/Profile relabelled from "Users". **Notifications moved
+   off the bar**: the bell lives in every tab root's header (Spartens-style — circle action +
+   unread-count bubble → `/notifications`; `ScreenHeader` actions gained an optional `badge`;
+   shared `useNotificationBellAction` hook). Chat header is Spartens chrome: search field inside
+   the header, bell beside the new-club action. Notice board + detail routes highlight no tab.
+   Conversation-surface restyle (Spartens bubbles/composer/date separators) — done, ADR-9.
+10. **ADR-9 (owner, 2026-10-09): "implement same chat or channel screen … like
+    `tec/Spartens/Mobile-App`"** — the chat list and the conversation screen now follow the Spartens
+    `(tabs)/chat` + `channels/[channelId]` screens, in Kushol tokens, on the Stage-2 fixtures (no new
+    dependency, no native rebuild):
+    - **List** (`(tabs)/chat/index.tsx`): search pill + bell header (no title) · filter chips All ·
+      Unread · Official · Community · DMs · rows with presence, "Draft: …", time, unread pill, pin
+      and mute marks · long-press row menu (pin chat ≤ 5, notification settings All / None) · pull to
+      refresh · floating new-club button.
+    - **Conversation** (`components/chat/group-chat-screen.tsx`): channel header (back · avatar +
+      name + members/typing/online · info sheet) · pinned-message bar (tap jumps + cycles) · inverted
+      list with day pills and the "N new unread" pill captured on open · Spartens bubbles (author
+      avatar + name in groups, reply quote with author → tap jumps + highlights, 1–3 emoji large,
+      "edited", pin mark) · swipe-to-reply (PanResponder) · long-press focus menu (blurred room,
+      lifted bubble, quick reactions, Reply / Edit / Pin / Message info / Delete with confirm) ·
+      reply + "Editing message" banners · share sheet (image · PDF · sticker) · typing pill · jump to
+      latest · lock line for read-only rooms · tap a failed bubble to resend.
+    - Fixture-only additions (gap G-7): `editChatMessage`, `setChatMessagePinned` + `editedAt` /
+      `pinnedAt` on `ChatMessage`; pinned chats, mute and drafts in `chat-state`. Not ported: Copy
+      (needs `expo-clipboard`), GIF / poll / location / mentions / tasks (G-8).
+    - **State of the tree (2026-10-09, later pass):** the interaction layer above (pinned bar,
+      swipe-to-reply, edit flow, focus menu, drafts) is NOT in the working tree — only its fixture
+      support landed. What landed in components is the Spartens **visual** system: bubbles
+      (square-outer-corner incoming `bg-card` / teal outgoing, group author avatar + primary name,
+      block reply quotes, Spartens tombstone), centred card date separators, channel header
+      (back · centred avatar/name/status · spacer), composer (soft-tint attach circle, card field
+      pill → rounded-2xl on multiline, in-field arrow-up send, mic swap kept). Chat list: Spartens
+      header chrome (search in header, bell + new-club actions). The remaining interactions ride
+      the existing fixtures and stay open (G-9).
+    - Fixes on the way: history now renders oldest → newest whatever the page order (the fixture
+      page is newest-first); `message.ack` + `message.new` no longer double a sent bubble; the
+      composer avoids the iOS keyboard; test helper stops mutation GC timers keeping Jest alive.
 
 ## Defaults relied on
 
@@ -55,18 +94,20 @@ working tree — ADR-4) · **Last updated:** 2026-10-02
 
 ## Evidence
 
-| Repo | Check | Result |
-| --- | --- | --- |
-| api | `openapi.yaml` + `make contracts` | 22 chat/notices/media paths + WS contract (#21 download-url, #22 club-approve added — ADR-6/7); `contracts: no drift` |
-| api | `go build ./...` + `go vet ./...` (+ `-tags=integration` on chat) | clean, 2026-10-02 |
-| api | `make fmt-check` (gofmt + goimports -local) | clean |
-| api | golangci-lint `./...` | 0 issues in 05 code (1 pre-existing errcheck in 03's uncommitted `smsout.go` WIP — not 05's) |
-| api | `go test -race ./...` (unit) | **22/22 packages ok** (chat guards + media sniffer/SigV4 + WS-app state machine) |
-| api | `gorilla/websocket v1.5.3` pinned | go.mod (tech-stack latest-verify: gorilla/websocket current stable 1.5.3) |
-| api | COM-IT tests written | `it_chat_test.go`: seam idempotency, idempotent send, request lifecycle, notice board matrix, media sniff/authz — **pending owner run** (`make test-integration`, G-6) |
-| wiring | `cmd/api` | real hierarchy service replaces the demo fake (04 entry-point item done: DB-backed pickers + BR-01 seam); chat ⇄ hierarchy mutual binding via `SetHierarchy`; hub on `GET /api/v1/ws` with JWT + verified gate + server-resolved rooms; jobs `chat.request_expiry`, `media.archival`, `media.pending_cleanup` registered; R2 gated by `R2_*` env (501s cleanly when unset) |
-| app | `pnpm lint && pnpm typecheck && pnpm test` | clean · clean · **176/176** (incl. WS-client state machine 4/4, i18n parity 13/13) |
-| app | Maestro specs | `.maestro/communication-{chat-send,offline-replay,notices}.yaml` written; **runs pending owner** (no CLI/device here — G-6) |
+| Repo   | Check                                                                             | Result                                                                                                                                                                                                                                                                                                                                                                     |
+| ------ | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| api    | `openapi.yaml` + `make contracts`                                                 | 22 chat/notices/media paths + WS contract (#21 download-url, #22 club-approve added — ADR-6/7); `contracts: no drift`                                                                                                                                                                                                                                                      |
+| api    | `go build ./...` + `go vet ./...` (+ `-tags=integration` on chat)                 | clean, 2026-10-02                                                                                                                                                                                                                                                                                                                                                          |
+| api    | `make fmt-check` (gofmt + goimports -local)                                       | clean                                                                                                                                                                                                                                                                                                                                                                      |
+| api    | golangci-lint `./...`                                                             | 0 issues in 05 code (1 pre-existing errcheck in 03's uncommitted `smsout.go` WIP — not 05's)                                                                                                                                                                                                                                                                               |
+| api    | `go test -race ./...` (unit)                                                      | **22/22 packages ok** (chat guards + media sniffer/SigV4 + WS-app state machine)                                                                                                                                                                                                                                                                                           |
+| api    | `gorilla/websocket v1.5.3` pinned                                                 | go.mod (tech-stack latest-verify: gorilla/websocket current stable 1.5.3)                                                                                                                                                                                                                                                                                                  |
+| api    | COM-IT tests written                                                              | `it_chat_test.go`: seam idempotency, idempotent send, request lifecycle, notice board matrix, media sniff/authz — **pending owner run** (`make test-integration`, G-6)                                                                                                                                                                                                     |
+| api    | 2026-10-09 owner `make test-integration` run 1                                    | COM-IT-002 (IT011) / COM-IT-003 (IT012) / COM-IT-005 (IT013) failed — **fixed 2026-10-09, re-run pending owner** (see fix log below)                                                                                                                                                                                                                                       |
+| wiring | `cmd/api`                                                                         | real hierarchy service replaces the demo fake (04 entry-point item done: DB-backed pickers + BR-01 seam); chat ⇄ hierarchy mutual binding via `SetHierarchy`; hub on `GET /api/v1/ws` with JWT + verified gate + server-resolved rooms; jobs `chat.request_expiry`, `media.archival`, `media.pending_cleanup` registered; R2 gated by `R2_*` env (501s cleanly when unset) |
+| app    | `pnpm lint && pnpm typecheck && pnpm test`                                        | clean · clean · **176/176** (incl. WS-client state machine 4/4, i18n parity 13/13)                                                                                                                                                                                                                                                                                         |
+| app    | 2026-10-09 Spartens chat/channel (ADR-9): `tsc` · eslint (changed files) · `jest` | clean · clean · **313/314** — the one failure is the pre-existing `src/__tests__/index.test.tsx` holding-screen test (failed before this change too); +41 tests (list filter, message utils, chat-state prefs, fixture edit/pin, menu placement, row/bubble/composer/menu, screen smoke) · `test:rules` 10/10 · `contracts: no drift`                                      |
+| app    | Maestro specs                                                                     | `.maestro/communication-{chat-send,offline-replay,notices}.yaml` written; **runs pending owner** (no CLI/device here — G-6)                                                                                                                                                                                                                                                |
 
 ## Gate 1 review hand-off (owner, on device)
 
@@ -97,8 +138,8 @@ Stage 2; 07's composer UI already existed on fixtures — brought live this run)
   real WS gateway (ws-client, per-socket Authorization header — RN WebSocket; reconnect
   re-reads the rotated token). Errors map onto the shared fixture codes (screens keep their
   states; NOT_IN_LIVE added for spec-less seams). Media pipeline: live presign → client PUT
-  (blob) → confirm → download-url. 
-ealtime.ts: live socket state drives the connection slice;
+  (blob) → confirm → download-url.
+  ealtime.ts: live socket state drives the connection slice;
   reconnect fires a REST catch-up invalidation. Screens untouched (ADR-3 — the swap lives in the
   seam + lib only).
 - **web**: src/lib/chat/live-console-chat.ts — the console messenger seam
@@ -107,9 +148,9 @@ ealtime.ts: live socket state drives the connection slice;
   (credentials include). schema.gen.ts regenerated (chat paths now typed). api-less console
   affordances (reactions, polls, explore, forward, rename, message pin/edit, asset galleries)
   raise ConsoleNotAvailableError (G-9) instead of silently no-opping.
-- **checks**: app 	sc clean · chat-file lint clean · 313/314 tests pass — the 1 failure is
-  pre-existing and unrelated (src/__tests__/index.test.tsx expects the anon holding screen but
-  the 03 auth-store now boots idle until restore — G-8). web 	sc clean · seam lint clean ·
+- **checks**: app sc clean · chat-file lint clean · 313/314 tests pass — the 1 failure is
+  pre-existing and unrelated (src/**tests**/index.test.tsx expects the anon holding screen but
+  the 03 auth-store now boots idle until restore — G-8). web sc clean · seam lint clean ·
   **220/220 tests pass (28 files)**.
 - Sticker pickers degrade live: emoji-as-text (no sticker kind in the OpenAPI — G-7). Console
   reactions/polls/explore/forward/rename/message-pin/asset-galleries: demo-only until the owner
@@ -136,7 +177,6 @@ shared Neon database still needs the manual migration pass before any hosted ver
   web tsc 0 · 220/220 · seam lint clean.
 - gates: 1–3 remain owner-run; Gate 2 note unchanged (Neon manual pass; local dev auto-migrates).
 
-
 ## WhatsApp-like chat on web `/chat` + app, auto-created groups, R2 attachments — 2026-10-17
 
 Owner instructions this run (precedence §1.1 #1): "implement the chat features in both app and
@@ -153,7 +193,7 @@ Android and iOS layout".
   **institution staff** (`institution:{schoolId}`; the school's VERIFIED school_admins as
   moderators + teachers as members — the institution admin's home chat on the web) and **section
   groups** (official, created for every ACTIVE section even before anyone verifies; students and
-  teachers still join via 04's `JoinSectionGroups`). Managed rosters are added *and pruned*
+  teachers still join via 04's `JoinSectionGroups`). Managed rosters are added _and pruned_
   (suspended/unverified users leave); managed groups refuse leave/rename/manual add.
   Interpretation of "chat group will be created automatically" — `TODO: Confirm` with Rahul that a
   per-institution staff group is wanted (it is the only auto group an institution admin is in).
@@ -196,8 +236,8 @@ Android and iOS layout".
    (gorilla forbids them) → per-socket write lock + deadlines (also stops `http.Server.WriteTimeout`
    killing hijacked sockets after 30 s); the in-process bus echoed every publish → node-tagged
    envelopes; clients never subscribed to rooms (the app sends `rooms: []`) → server auto-subscribe
-   + live attach/detach on membership change; presence expired after 60 s while connected →
-   heartbeat refresh + a snapshot on subscribe; no server pings → real ping frames.
+   - live attach/detach on membership change; presence expired after 60 s while connected →
+     heartbeat refresh + a snapshot on subscribe; no server pings → real ping frames.
 6. Response envelopes: 16 handlers wrapped bare-schema responses in a `data` envelope (send, create
    group, add member, reactions, edit, pin, vote, rename, join, confirm upload, …) and 5 were
    double-wrapped (`seen-by`, `forward`, `explore`, `assets`, `notices`) — both clients read
@@ -222,28 +262,28 @@ WS events `message.updated`, `group.updated`, presence snapshot and auto-subscri
 
 ### Migrations (Gate 2 — owner runs; the local `dev-start.sh` applies them automatically)
 
-| Version | File | What |
-| --- | --- | --- |
-| `20270305090000` | `com_chat_rich_messages` | re-stamp of the skipped 2026-10-16 file (reactions, poll votes, edit/pin columns, poll kind) — idempotent |
+| Version          | File                     | What                                                                                                                                                                                                                                                                         |
+| ---------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `20270305090000` | `com_chat_rich_messages` | re-stamp of the skipped 2026-10-16 file (reactions, poll votes, edit/pin columns, poll kind) — idempotent                                                                                                                                                                    |
 | `20270305091000` | `com_chat_system_groups` | `chat_groups.system_key` (unique) + `description`; shape check allows section-less official (institution) groups; Kushol Admin group adopted; media kinds doc/slides/sheet/csv; message kinds doc/sheet/csv; content check fixed (polls, captions); `media_assets.file_name` |
 
 Owner command (shared database): `cd applications/api && go run ./cmd/api migrate up --confirm && go run ./cmd/api migrate-status`
 
 ### Evidence (agent-side checks — no app, no containers)
 
-| Repo | Check | Result |
-| --- | --- | --- |
-| api | `sqlc generate` + `oapi-codegen` | regenerated; `make contracts-check` → **contracts: no drift** |
-| api | `go build ./...` · `go vet ./...` (+ `-tags=integration` on chat) | clean |
-| api | `go test ./...` (unit) | **all packages ok** — new pins: `chat/system_test.go` (17), `chat/gateway/hub_test.go` (6), media sniff + file name (2). `-race` cannot run on this Windows host (no C compiler) — `make test` on the owner's machine/CI |
-| api | golangci-lint (chat, media, cmd) | no findings except gofmt-on-CRLF artefacts (content verified formatted on CR-stripped copies) |
-| api | integration tests written, **pending owner run** | `TestIT015ManagedGroups`, `TestIT016PollsHistoryAndGroupLifecycle` (`make test-integration`) |
-| web | typecheck · eslint (touched files) · prettier | clean (full `pnpm lint` reports 19 pre-existing errors in the untouched `admin/audit/audit-page-client.tsx`) |
-| web | `pnpm test` | **238/238** tests (30 files), including the new chat pins (`live-console-chat.test.ts`, `console-socket.test.ts`) |
-| web/app | spec copy vs api | identical (`sync:api-spec` + `generate:api`) |
-| app | typecheck · eslint (chat scope) | clean (media-viewer lint errors exist identically at HEAD) |
-| app | `pnpm test` | **330/331** (50 suites) — the 1 failure is the pre-existing `src/__tests__/index.test.tsx` (G-8); new `whatsapp-chat.test.ts` green |
-| app | full `pnpm lint` | 15 findings, all in files this run did not change or that carry them identically at HEAD (`media-viewer.tsx`, `(tabs)/_layout.tsx`, two ui tests) |
+| Repo    | Check                                                             | Result                                                                                                                                                                                                                   |
+| ------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| api     | `sqlc generate` + `oapi-codegen`                                  | regenerated; `make contracts-check` → **contracts: no drift**                                                                                                                                                            |
+| api     | `go build ./...` · `go vet ./...` (+ `-tags=integration` on chat) | clean                                                                                                                                                                                                                    |
+| api     | `go test ./...` (unit)                                            | **all packages ok** — new pins: `chat/system_test.go` (17), `chat/gateway/hub_test.go` (6), media sniff + file name (2). `-race` cannot run on this Windows host (no C compiler) — `make test` on the owner's machine/CI |
+| api     | golangci-lint (chat, media, cmd)                                  | no findings except gofmt-on-CRLF artefacts (content verified formatted on CR-stripped copies)                                                                                                                            |
+| api     | integration tests written, **pending owner run**                  | `TestIT015ManagedGroups`, `TestIT016PollsHistoryAndGroupLifecycle` (`make test-integration`)                                                                                                                             |
+| web     | typecheck · eslint (touched files) · prettier                     | clean (full `pnpm lint` reports 19 pre-existing errors in the untouched `admin/audit/audit-page-client.tsx`)                                                                                                             |
+| web     | `pnpm test`                                                       | **238/238** tests (30 files), including the new chat pins (`live-console-chat.test.ts`, `console-socket.test.ts`)                                                                                                        |
+| web/app | spec copy vs api                                                  | identical (`sync:api-spec` + `generate:api`)                                                                                                                                                                             |
+| app     | typecheck · eslint (chat scope)                                   | clean (media-viewer lint errors exist identically at HEAD)                                                                                                                                                               |
+| app     | `pnpm test`                                                       | **330/331** (50 suites) — the 1 failure is the pre-existing `src/__tests__/index.test.tsx` (G-8); new `whatsapp-chat.test.ts` green                                                                                      |
+| app     | full `pnpm lint`                                                  | 15 findings, all in files this run did not change or that carry them identically at HEAD (`media-viewer.tsx`, `(tabs)/_layout.tsx`, two ui tests)                                                                        |
 
 ### Gate hand-off (owner)
 
@@ -276,13 +316,13 @@ Owner: "Do this task here: Enforce R2 upload size at media confirm".
 - Also fixed: CSV object keys had no extension (`objectKey` map lacked `KindCSV`); `DeleteObject`
   gained the same justified `#nosec G704` notes as the other R2 calls.
 
-| Check | Result |
-| --- | --- |
-| `sqlc generate` · `make contracts-check` | regenerated · **contracts: no drift** |
-| `go build ./...` · `go vet` (+ `-tags=integration` on chat) | clean |
-| `go test ./...` | all packages ok — new `internal/media/size_test.go`: `CheckUploadSize` (9 cases), `objectSize` (7), `R2Store.ReadHead` against a canned transport (signed ranged GET, 206/416/unknown/500), object-key extensions |
-| golangci-lint `./internal/media/...` | no findings (besides gofmt-on-CRLF artefacts; content verified formatted) |
-| `TestIT014MediaConfirmAndAuthz` (extended) | over-cap upload rejected + object deleted; confirmed asset carries the real size — **pending owner run** (`make test-integration`) |
+| Check                                                       | Result                                                                                                                                                                                                            |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sqlc generate` · `make contracts-check`                    | regenerated · **contracts: no drift**                                                                                                                                                                             |
+| `go build ./...` · `go vet` (+ `-tags=integration` on chat) | clean                                                                                                                                                                                                             |
+| `go test ./...`                                             | all packages ok — new `internal/media/size_test.go`: `CheckUploadSize` (9 cases), `objectSize` (7), `R2Store.ReadHead` against a canned transport (signed ranged GET, 206/416/unknown/500), object-key extensions |
+| golangci-lint `./internal/media/...`                        | no findings (besides gofmt-on-CRLF artefacts; content verified formatted)                                                                                                                                         |
+| `TestIT014MediaConfirmAndAuthz` (extended)                  | over-cap upload rejected + object deleted; confirmed asset carries the real size — **pending owner run** (`make test-integration`)                                                                                |
 
 ## Conversation wallpaper (WhatsApp-style, education doodles) — 2026-10-17
 
@@ -311,13 +351,13 @@ background with pen pencil book etc related to educational institution".
 - Also fixed: the web demo gallery placeholder pointed at `/brand/logo.svg`, which never existed
   (web has no `public/`) — now the bundled lockup.
 
-| Repo | Check | Result |
-| --- | --- | --- |
-| web | `pnpm typecheck` · eslint (messenger) · prettier | clean |
-| web | vitest (chat + console fixtures) | 30/30 |
-| app | `pnpm typecheck` · eslint (wallpaper + screen) · prettier | clean |
-| app | jest `src/components/chat` + `src/lib/chat` | 75/75 (12 suites) |
-| web | `next build` | not run (would share `.next/` with the owner's running dev server); CSS `url()` bundling is standard Next behaviour — verify on the next build |
+| Repo | Check                                                     | Result                                                                                                                                         |
+| ---- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| web  | `pnpm typecheck` · eslint (messenger) · prettier          | clean                                                                                                                                          |
+| web  | vitest (chat + console fixtures)                          | 30/30                                                                                                                                          |
+| app  | `pnpm typecheck` · eslint (wallpaper + screen) · prettier | clean                                                                                                                                          |
+| app  | jest `src/components/chat` + `src/lib/chat`               | 75/75 (12 suites)                                                                                                                              |
+| web  | `next build`                                              | not run (would share `.next/` with the owner's running dev server); CSS `url()` bundling is standard Next behaviour — verify on the next build |
 
 ## Web hover actions + WhatsApp forward · reply · reactions · Message info · seen — 2026-10-17
 
@@ -341,12 +381,12 @@ question + options, or the file name.
   / WS `message.delivered` frame that clients send when another member's `message.new` arrives.
   `chat_receipt_marks` keeps one row per pointer advance (not per message per member), so
   Message info gets real times: the first mark at or after a message is when that member
-  received / read it. **Bug fixed:** seen-by used to report the *send time of the reader's last
-  read message* as "read at". History pages now carry `deliveredUpTo` beside `readUpTo`.
+  received / read it. **Bug fixed:** seen-by used to report the _send time of the reader's last
+  read message_ as "read at". History pages now carry `deliveredUpTo` beside `readUpTo`.
 - **Message info.** `GET /chat/messages/{id}/seen-by` → `{data: [{userId, name, status:
-  read|delivered, readAt?, deliveredAt?}], pending}` (read rows first in read order, then
+read|delivered, readAt?, deliveredAt?}], pending}` (read rows first in read order, then
   delivered-only; `pending` = members it has not reached). New `GET
-  /chat/messages/{id}/reactions` lists who reacted with what.
+/chat/messages/{id}/reactions` lists who reacted with what.
 - **Reactions (ADR-17).** One per person (WhatsApp): a new emoji replaces mine, the same emoji
   removes it (`DecideReaction`); the migration keeps each person's newest reaction and adds a
   unique `(message_id, user_id)` index.
@@ -374,18 +414,18 @@ received it yet" and a Reactions card; deliveries acked on `message.new` (socket
 fallback). Fixed both clients' tick comparison: ISO strings were compared as text, which
 mis-orders the api's variable-length fractional seconds (`isoAtOrBefore`).
 
-| Repo | Check | Result |
-| --- | --- | --- |
-| api | `go build` · `go vet ./...` · `go vet -tags integration ./internal/chat/...` | clean |
-| api | `go test ./...` | all packages ok — new `receipts_test.go`: `BuildReceipts`, `DecideReaction`, forward limits / targets / hop clamp, `replyQuote` |
-| api | golangci-lint `./internal/chat/...` | only gofmt-on-CRLF artefacts in untouched files (touched files verified on CR-stripped copies) |
-| api | `make contracts-check` | no drift |
-| api | `TestIT017ReceiptsReactionsForwardReply` (new) | **pending owner run** (`make test-integration`) |
-| web | typecheck · eslint · prettier (touched files) | clean |
-| web | vitest (full) | 257/257 (33 files) — new `receipts.test.ts`, hover-menu + Message info + forward UI tests |
-| web/app | client types regenerated from the synced spec | no drift (checked by hand: `contracts:check` cannot spawn `.bin` shims on Windows) |
-| app | typecheck · eslint · prettier (touched files) | clean |
-| app | jest (full) | 352/353 — the one failure is the pre-existing `src/__tests__/index.test.tsx` (G-8) |
+| Repo    | Check                                                                        | Result                                                                                                                          |
+| ------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| api     | `go build` · `go vet ./...` · `go vet -tags integration ./internal/chat/...` | clean                                                                                                                           |
+| api     | `go test ./...`                                                              | all packages ok — new `receipts_test.go`: `BuildReceipts`, `DecideReaction`, forward limits / targets / hop clamp, `replyQuote` |
+| api     | golangci-lint `./internal/chat/...`                                          | only gofmt-on-CRLF artefacts in untouched files (touched files verified on CR-stripped copies)                                  |
+| api     | `make contracts-check`                                                       | no drift                                                                                                                        |
+| api     | `TestIT017ReceiptsReactionsForwardReply` (new)                               | **pending owner run** (`make test-integration`)                                                                                 |
+| web     | typecheck · eslint · prettier (touched files)                                | clean                                                                                                                           |
+| web     | vitest (full)                                                                | 257/257 (33 files) — new `receipts.test.ts`, hover-menu + Message info + forward UI tests                                       |
+| web/app | client types regenerated from the synced spec                                | no drift (checked by hand: `contracts:check` cannot spawn `.bin` shims on Windows)                                              |
+| app     | typecheck · eslint · prettier (touched files)                                | clean                                                                                                                           |
+| app     | jest (full)                                                                  | 352/353 — the one failure is the pre-existing `src/__tests__/index.test.tsx` (G-8)                                              |
 
 Owner steps: run the migration (Gate 2), `make test-integration`, and check the forward sheet,
 ticks and Message info on a device (Gate 1/3).

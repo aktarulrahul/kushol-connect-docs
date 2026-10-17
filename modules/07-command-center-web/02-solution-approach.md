@@ -27,7 +27,7 @@ landing_leads.type = vendor_inquiry ──1:1──▶ vendor_accounts (pending)
 vendor_accounts ──approved──▶ module 11 storefront access (later consumer)
 landing_leads ──converted──▶ 04 school (manual pipeline step, explicit)
 admin screens ──REST──▶ 03 verification · 04 tenants/migration · 05 notices/media/clubs · 01 audit
-/school dashboard ──GET /school/stats──▶ 04 counts + 03 pending + 05 notices (this module aggregates)
+/school dashboard ──GET /institution/stats──▶ 04 counts + 03 pending + 05 notices (this module aggregates)
 ```
 
 ### 1.3 Invariants
@@ -43,7 +43,7 @@ admin screens ──REST──▶ 03 verification · 04 tenants/migration · 05 
 ## 2. Module Boundary
 
 **Owns (writes):** `landing_leads`, `vendor_accounts` tables + their endpoints; the web route
-tree (`/`, `/download`, `/admin/*`, `/school/*`, `/vendor`), per-role layouts + middleware, ROI
+tree (`/`, `/download`, `/admin/*`, `/institution/*`, `/vendor`), per-role layouts + middleware, ROI
 config constant, SEO suite, portal shells and nav; `landing`/`school`/`vendor` catalog namespaces
 (additive to 02's whitelist, parity-gated).
 
@@ -52,8 +52,8 @@ config constant, SEO suite, portal shells and nav; `landing`/`school`/`vendor` c
 | Module | What | Why not duplicated |
 | --- | --- | --- |
 | 01 | `audit.Record`, `audit_log` scoped reads, error envelope, `/healthz` | Append-only store + infra live in 01 |
-| 03 | session auth chain (`auth.Authenticate/RequireRole`), verification queue endpoints, `GET /school/users` | Identity + verification rules are 03's |
-| 04 | `POST/PATCH /admin/schools`, `POST /admin/cities`, picker reads, `POST /school/sections*`, migration create/get/commit, counts | Hierarchy truth lives in 04 |
+| 03 | session auth chain (`auth.Authenticate/RequireRole`), verification queue endpoints, `GET /institution/users` | Identity + verification rules are 03's |
+| 04 | `POST/PATCH /admin/schools`, `POST /admin/cities`, picker reads, `POST /institution/sections*`, migration create/get/commit, counts | Hierarchy truth lives in 04 |
 | 05 | notices CRUD/pin, media presign/confirm, custom-group approval | Communication semantics live in 05 |
 | 02 | tokens, primitives, `LocaleProvider`/`t()` | One visual API |
 
@@ -86,7 +86,7 @@ migration (04-owned, driven by this module's wizard):
 | `/download` | Static + ISR (flag-gated link readiness) | CDN | `landing:content` |
 | `/login` | Dynamic (03 screen) | no-store | — |
 | `/admin/*` | Dynamic, Super Admin layout, server auth gate; tables hydrate via TanStack Query | no-store (admin reads never cached) | mutations revalidate `admin:*` |
-| `/school/*` | Dynamic, School Admin layout; tables via TanStack Query; migration status via poll | no-store | mutations revalidate `school:{id}:stats`, reuse 05's `notices:*` |
+| `/institution/*` | Dynamic, School Admin layout; tables via TanStack Query; migration status via poll | no-store | mutations revalidate `school:{id}:stats`, reuse 05's `notices:*` |
 | `/vendor` | Dynamic, gated shell (pending/approved state from api) | no-store | — |
 | Locale bn/en | Cookie-stored preference; RSC reads it for first paint | — | — |
 

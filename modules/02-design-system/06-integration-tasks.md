@@ -111,9 +111,9 @@ need an ADR note in this module's `07-progress.md`. The catalog JSON schema live
 
 ## 10. Task Checklist
 
-- [ ] `DSN-INT-001` — Catalog JSON schema + validator implemented in each app's `src/i18n`, wired into CI (with `03-backend-tasks §2`)
-- [ ] `DSN-INT-002` — Token-only ESLint rule active for `web` + `app` CI
-- [ ] `DSN-INT-003` — Exported contract (this file §2) published to consumers; `03-identity-access` consumes it first (smoke-proven by `DSN-IT-002`)
-- [ ] `DSN-UT-001` … `DSN-UT-005` — green in CI (in both the web and app repos where applicable)
-- [ ] `DSN-IT-001` … `DSN-IT-002` — green in CI
+- [x] `DSN-INT-001` — Catalog JSON schema + validator implemented in each app's `src/i18n`, wired into CI (with `03-backend-tasks §2`) — 2026-10-15
+- [x] `DSN-INT-002` — Token-only ESLint rule active for `web` + `app` CI — 2026-10-15
+- [x] `DSN-INT-003` — Exported contract (this file §2) published to consumers; `03-identity-access` consumes it first (smoke-proven by `DSN-IT-002`) — 2026-10-15
+- [x] `DSN-UT-001` … `DSN-UT-005` — green in CI (in both the web and app repos where applicable) — 2026-10-15
+- [x] `DSN-IT-001` … `DSN-IT-002` — green in CI — 2026-10-15
 - [ ] `DSN-E2E-001` — green on web (Playwright) + app (Maestro)

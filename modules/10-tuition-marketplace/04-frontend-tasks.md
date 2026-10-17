@@ -19,13 +19,13 @@ screens below and hands the nav contract to 07.
 
 | # | Route | Screen | Rendering | Access |
 | --- | --- | --- | --- | --- |
-| 1 | `/school/tutors` | Tutor-verification queue (routed: own-school rows; Super Admin sees the platform tab for `school_id` NULL rows) | Server Component + Server Actions | School Admin / Super Admin |
-| 2 | `/school/tutors/[id]` | Verification detail + evidence viewer + approve/reject | Server Component + Client (viewer, forms) | School Admin (own school) / Super Admin (platform) |
-| 3 | `/school/tuitions` | Requirements oversight list (read-only; close abusive) | Server Component + Server Actions | School Admin |
+| 1 | `/institution/tutors` | Tutor-verification queue (routed: own-school rows; Super Admin sees the platform tab for `school_id` NULL rows) | Server Component + Server Actions | School Admin / Super Admin |
+| 2 | `/institution/tutors/[id]` | Verification detail + evidence viewer + approve/reject | Server Component + Client (viewer, forms) | School Admin (own school) / Super Admin (platform) |
+| 3 | `/institution/tuitions` | Requirements oversight list (read-only; close abusive) | Server Component + Server Actions | School Admin |
 
 ## 2. Screen Breakdown
 
-### 2.1 Verification queue — `/school/tutors`
+### 2.1 Verification queue — `/institution/tutors`
 
 **Layout**
 
@@ -49,7 +49,7 @@ screens below and hands the nav contract to 07.
 | Component | Server/Client | Notes |
 | --- | --- | --- |
 | `VerificationQueueTable` | Server Component | TanStack Table; columns: tutor, university, subjects (bn labels), submitted, SLA chip; row → detail |
-| `QueueTabs` | Client | School ↔ Platform tabs (platform tab Super-Admin-only); `GET /school/tutor-verifications` scope switch |
+| `QueueTabs` | Client | School ↔ Platform tabs (platform tab Super-Admin-only); `GET /institution/tutor-verifications` scope switch |
 | `SlAChip` | Server | "৪৮ ঘণ্টা পার / SLA overdue" when pending > 48 h (OQ-7 default) |
 
 **States**
@@ -62,7 +62,7 @@ screens below and hands the nav contract to 07.
 | Cross-tenant row | Never renders (server-scoped); direct URL → branded 404 |
 | Success | Decision returns to queue with the row removed + toast |
 
-### 2.2 Verification detail — `/school/tutors/[id]`
+### 2.2 Verification detail — `/institution/tutors/[id]`
 
 **Layout**
 
@@ -96,7 +96,7 @@ screens below and hands the nav contract to 07.
 | Already decided | Read-only banner "সিদ্ধান্ত হয়ে গেছে / Already decided" + decision + reviewer + time |
 | Success | Toast + redirect to queue; `tuition:tutors:{area}` / `tuition:tutor:{id}` tags revalidated |
 
-### 2.3 Requirements oversight — `/school/tuitions`
+### 2.3 Requirements oversight — `/institution/tuitions`
 
 Read-only table of the school's requirements (`GET /tuition/requirements` with School Admin
 role): poster (name + role), subjects (bn), class, budget band ৳, area, status chip
@@ -122,7 +122,7 @@ decision.
 
 | Need | Mechanism |
 | --- | --- |
-| Queue / detail / oversight reads | Server Components → generated `openapi-fetch` client → api (`GET /school/tutor-verifications`, `GET /tuition/requirements`) |
+| Queue / detail / oversight reads | Server Components → generated `openapi-fetch` client → api (`GET /institution/tutor-verifications`, `GET /tuition/requirements`) |
 | Decisions / close | Server Actions → api (`POST …/approve|reject`, `PATCH /tuition/requirements/{id}`) → toast + `revalidateTag` |
 | Evidence media | URLs resolved server-side from 05 media (short-lived R2 downloads); never cached |
 | Tag subscription | `tuition:tutors:{area}`, `tuition:tutor:{id}` (declared in `06` §4) — busts land after decisions/profile edits |
@@ -163,10 +163,10 @@ verification queue"; badge: "ভেরিফাইড টিউটর / Verified
 
 ## 9. Task Checklist
 
-- [x] `TUT-FE-001` Queue route `/school/tutors` (table, tabs, SLA chips, states) + contract handoff of the nav entry to 07's shell — 2026-10-03 (fills 07's stub; platform tab behind the Stage-2 review flag, role gate lands Stage 5)
+- [x] `TUT-FE-001` Queue route `/institution/tutors` (table, tabs, SLA chips, states) + contract handoff of the nav entry to 07's shell — 2026-10-03 (fills 07's stub; platform tab behind the Stage-2 review flag, role gate lands Stage 5)
 - [x] `TUT-FE-002` Verification detail + `EvidenceViewer` (05 media reuse) + degraded-evidence state — 2026-10-03 (placeholder handles until Stage 5 media wiring — G-2)
 - [x] `TUT-FE-003` Approve/reject forms (shared zod `validation.tuition.*`, server actions, tag revalidation) — 2026-10-03 (controlled+zod per ADR-5; revalidation lands with the live client)
-- [x] `TUT-FE-004` Requirements oversight `/school/tuitions` (read-only table + guarded close action + audit note display) — 2026-10-03
+- [x] `TUT-FE-004` Requirements oversight `/institution/tuitions` (read-only table + guarded close action + audit note display) — 2026-10-03
 - [x] `TUT-FE-005` bn/en string keys `tuition.admin.*` added to each app's `src/i18n` + bilingual verification — 2026-10-03 (on-device read-through rides Gate 1)
 - [x] `TUT-FE-006` Motion + reduced-motion variants per §5 — 2026-10-03 (row removal/toast/viewer use the console's motion primitives; static under reduced motion)
 - [x] `TUT-FE-007` Responsive tables/cards per §6 — 2026-10-03 (overflow-x tables ≥ min token width; single column < 640)

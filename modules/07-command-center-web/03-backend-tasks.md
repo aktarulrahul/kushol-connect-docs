@@ -188,7 +188,7 @@ layouts re-check role claims server-side per route group.
 | `WEB-UT-005` | `stats.SchoolStats` partial-payload flags when an upstream count export errors | Unit | §2 #8 degradation |
 | `WEB-IT-001` | Unauthenticated `POST /leads` flood → `RATE_LIMITED` after class limits; valid submit → 201 `new` | Integration (testcontainers Postgres) | `leads` rate class, BR-004 |
 | `WEB-IT-002` | Every protected endpoint (#3–#9) unauthenticated → `UNAUTHENTICATED`; School Admin on admin routes → `FORBIDDEN` | Integration | auth chain |
-| `WEB-IT-003` | School Admin `GET /school/stats` returns only claim-scoped counts; forged query params cannot widen scope | Integration | `WEB-BR-008` |
+| `WEB-IT-003` | School Admin `GET /institution/stats` returns only claim-scoped counts; forged query params cannot widen scope | Integration | `WEB-BR-008` |
 | `WEB-IT-004` | Vendor approve/reject writes `audit.Record` entries (actor, reason) atomically; audit failure aborts decision | Integration | `WEB-BR-007`, 01 I-3 contract |
 | `WEB-IT-005` | Cross-tenant probe on `/admin/audit-log?schoolId=` as School Admin → `TENANT_MISMATCH`/404, no rows leak | Integration | scoped reads (01 pattern) |
 | `WEB-IT-006` | Seed loader idempotent; public reads never expose `DRAFT` demo rows as real partners (fictional marking intact) | Integration | content-truth `prompt.txt` §12 |

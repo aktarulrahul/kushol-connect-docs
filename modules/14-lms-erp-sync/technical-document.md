@@ -51,7 +51,7 @@ Full path/DB/role/`school-*` FCM topic renames to Institution wording are **defe
 | consumes | 04 organization-hierarchy | `hierarchy.CreateEnrollments(batch, source="ROSTER")` + `hierarchy.GetSection`; verified-user group/topic chain (04/05/06) untouched by 14 |
 | consumes | 05 media | presigned upload + confirm (`media_assets`) for roster files |
 | consumes | 01 foundations | `jobs.Enqueue`/`jobs.Register` (in-DB jobs, no Kafka), `audit.Record`, RFC-7807 envelope, rate-limit middleware |
-| consumes | 07 command-center-web + shared | `/school/roster` + `/school/integrations` nav stubs (14 fills both); `sync.*`/`validation.*` bn + en catalogs |
+| consumes | 07 command-center-web + shared | `/institution/roster` + `/institution/integrations` nav stubs (14 fills both); `sync.*`/`validation.*` bn + en catalogs |
 | consumed by | None at launch — inbound-only: schools' LMS/ERP systems POST HMAC-signed events to `POST /api/v1/webhooks/erp/{schoolId}` (external counterparty I-6) |
 | consumed by (future) | bulk features via `sync.IngestRosterBatch` (none at launch; frozen at v0 semantics) |
 
@@ -76,8 +76,8 @@ Full path/DB/role/`school-*` FCM topic renames to Institution wording are **defe
 ### 3.1 Component diagram
 
 ```text
-web (Next.js: /school/roster, /school/roster/new, /school/roster/imports/[id],
-     /school/integrations, /school/roster/reconciliation)
+web (Next.js: /institution/roster, /institution/roster/new, /institution/roster/imports/[id],
+     /institution/integrations, /institution/roster/reconciliation)
         │  generated openapi-fetch client
         ▼
 api (chi handlers) ── sync services ── tenant-scoped repos ── sqlc ── PostgreSQL
@@ -105,9 +105,9 @@ all admin reads fresh/no-store; nothing publicly cacheable.
 ### 3.3 Request / data flows
 
 ```text
-1. Roster upload: School Admin downloads GET /school/roster/template (live 04 sections
+1. Roster upload: School Admin downloads GET /institution/roster/template (live 04 sections
    pre-filled, bn/en instructions, English headers) → wizard upload via 05 presign/confirm →
-   POST /school/roster/imports (sha256 probe first: identical re-upload → 200 original import,
+   POST /institution/roster/imports (sha256 probe first: identical re-upload → 200 original import,
    no-op) → jobs.Enqueue(roster.import.process) → stream-parse + per-row validation (phone,
    section via 04, duplicates-in-file) → status ready (zero errors) / validated_with_errors
    (commit blocked) + row report (+ error CSV ?as=csv).
@@ -122,7 +122,7 @@ all admin reads fresh/no-store; nothing publicly cacheable.
    idempotency probe (endpoint_id, event_id) → duplicate returns original outcome →
    sync.ApplyErpEvent: 03 upsert + 04 enrollments in one per-event tx → log
    applied|rejected|duplicate|error (row always written; every rejection audit.Record-ed).
-4. Reconcile: GET /school/roster/reconciliation → baseline = latest committed import vs platform ACTIVE
+4. Reconcile: GET /institution/roster/reconciliation → baseline = latest committed import vs platform ACTIVE
    counts per section (04) → drift flagged (extra|missing| mismatch); 5-min Redis memo of
    computed counts; no-import state returns baseline: null, not an error.
 ```
@@ -161,15 +161,15 @@ Full shapes: `03` §2.
 
 | # | Method · Path | Roles | Purpose | Key errors | Stories |
 | --- | --- | --- | --- | --- | --- |
-| 1 | `GET /school/roster/template` | School Admin (licence-gated) | CSV stream: fixed English headers + pre-filled sections + bn/en instruction rows | `FORBIDDEN` (licence off, BR-014) | LMS-US-001 |
-| 2 | `POST /school/roster/imports` (multipart, `dry_run` default true) | School Admin | Store via 05, sha256 idempotency probe, enqueue process job; re-upload → 200 original | `VALIDATION_FAILED` (format/20 MB/10k rows) · 10 uploads/h/school | LMS-US-002 |
-| 3 | `GET /school/roster/imports` · `GET …/imports/{id}` · `GET …/imports/{id}/rows?result=error` (+`?as=csv`) | School Admin | History, detail (totals, `fail_reason_key`), row-level report + error CSV | `TENANT_MISMATCH`/`NOT_FOUND` | LMS-US-003/012 |
-| 4 | `POST /school/roster/imports/{id}/commit` | School Admin | 202 `committing`; enqueue commit job (chunks of 500) | `CONFLICT` (not `ready`) · 5/h/school | LMS-US-004 |
-| 5 | `POST/GET /school/erp/endpoints` | School Admin | Register (raw secret in this one response only — ciphertext stored) / list (never the secret) | `FORBIDDEN` (licence) · POST 5/h/school | LMS-US-005 |
-| 6 | `POST /school/erp/endpoints/{id}/rotate-secret` · `POST …/test` | School Admin | Versioned rotation (overlap ≤ 72 h, default 24) / signed test event with outcome | `CONFLICT` (revoked) · test 10/h, rotate 5/h | LMS-US-006/010 |
-| 7 | `GET /school/erp/endpoints/{id}/events` (+ redrive `POST …/events/{eventId}/redrive`) | School Admin | Paged event log (type, status, time, reason) + one-click redrive of `error` rows | `TENANT_MISMATCH` | LMS-US-011 |
+| 1 | `GET /institution/roster/template` | School Admin (licence-gated) | CSV stream: fixed English headers + pre-filled sections + bn/en instruction rows | `FORBIDDEN` (licence off, BR-014) | LMS-US-001 |
+| 2 | `POST /institution/roster/imports` (multipart, `dry_run` default true) | School Admin | Store via 05, sha256 idempotency probe, enqueue process job; re-upload → 200 original | `VALIDATION_FAILED` (format/20 MB/10k rows) · 10 uploads/h/school | LMS-US-002 |
+| 3 | `GET /institution/roster/imports` · `GET …/imports/{id}` · `GET …/imports/{id}/rows?result=error` (+`?as=csv`) | School Admin | History, detail (totals, `fail_reason_key`), row-level report + error CSV | `TENANT_MISMATCH`/`NOT_FOUND` | LMS-US-003/012 |
+| 4 | `POST /institution/roster/imports/{id}/commit` | School Admin | 202 `committing`; enqueue commit job (chunks of 500) | `CONFLICT` (not `ready`) · 5/h/school | LMS-US-004 |
+| 5 | `POST/GET /institution/erp/endpoints` | School Admin | Register (raw secret in this one response only — ciphertext stored) / list (never the secret) | `FORBIDDEN` (licence) · POST 5/h/school | LMS-US-005 |
+| 6 | `POST /institution/erp/endpoints/{id}/rotate-secret` · `POST …/test` | School Admin | Versioned rotation (overlap ≤ 72 h, default 24) / signed test event with outcome | `CONFLICT` (revoked) · test 10/h, rotate 5/h | LMS-US-006/010 |
+| 7 | `GET /institution/erp/endpoints/{id}/events` (+ redrive `POST …/events/{eventId}/redrive`) | School Admin | Paged event log (type, status, time, reason) + one-click redrive of `error` rows | `TENANT_MISMATCH` | LMS-US-011 |
 | 8 | `POST /webhooks/erp/{schoolId}` — **unauthenticated-but-HMAC-signed (documented exception, module 12 payment-webhook pattern)** | Schools' LMS/ERP (external; no session/JWT exists) | Verify (HMAC-SHA256 over `{timestamp}.{rawBody}`, ±5 min, UUID event id, body ≤ 1 MB) → apply via 03/04 in one tx; tenant = ACTIVE endpoint row resolved from `{schoolId}`, never client-claimable data | 403 `INVALID_SIGNATURE` (bad sig / unknown / revoked — indistinguishable on the wire, security-logged) · 400 `STALE_TIMESTAMP` · 400 `VALIDATION_FAILED` · 429 `RATE_LIMITED` + `Retry-After` (60/min/school) | LMS-US-007–009 |
-| 9 | `GET /school/roster/reconciliation` | School Admin | Baseline vs platform counts per section, drift flagged; no-PII beyond section labels | `INTERNAL` (no-baseline state is 200 `baseline: null`) | LMS-US-012 |
+| 9 | `GET /institution/roster/reconciliation` | School Admin | Baseline vs platform counts per section, drift flagged; no-PII beyond section labels | `INTERNAL` (no-baseline state is 200 `baseline: null`) | LMS-US-012 |
 
 ### 5.2 Realtime / jobs
 
@@ -198,11 +198,11 @@ handler; additive-first signature changes (`06` §2/§7).
 
 | Route | Screen | Rendering | Access |
 | --- | --- | --- | --- |
-| `/school/roster` | Roster home: summary cards (last import, active students, drift) + imports history table, polls 3 s while `validating`/`committing` (fills 07 stub §2.13 row 21) | Dynamic, fresh (no-store) | School Admin |
-| `/school/roster/new` | Upload wizard: template → upload (05 presign flow, `dry_run` toggle default on) → dry-run report (error table + error CSV, hash no-op panel) → commit + summary | Dynamic | School Admin |
-| `/school/roster/imports/[id]` | Import status + totals + error rows + error-CSV download + commit button (iff `ready`) | Dynamic | School Admin |
-| `/school/integrations` | ERP webhook endpoints table (name · url · status · version · last success) + `SecretRevealModal` (show-once, bn+en warning, ack required) + test button + rotate dialog (overlap shown) + event-log drawer with redrive (replaces 07's `/school/integrations` stub; nav "ইন্টিগ্রেশন / Integrations") | Dynamic | School Admin |
-| `/school/roster/reconciliation` | Baseline card (or explicit "no baseline") + platform counts + drift table (flags only, no auto-correction, no PII) | Dynamic, 5-min memo | School Admin |
+| `/institution/roster` | Roster home: summary cards (last import, active students, drift) + imports history table, polls 3 s while `validating`/`committing` (fills 07 stub §2.13 row 21) | Dynamic, fresh (no-store) | School Admin |
+| `/institution/roster/new` | Upload wizard: template → upload (05 presign flow, `dry_run` toggle default on) → dry-run report (error table + error CSV, hash no-op panel) → commit + summary | Dynamic | School Admin |
+| `/institution/roster/imports/[id]` | Import status + totals + error rows + error-CSV download + commit button (iff `ready`) | Dynamic | School Admin |
+| `/institution/integrations` | ERP webhook endpoints table (name · url · status · version · last success) + `SecretRevealModal` (show-once, bn+en warning, ack required) + test button + rotate dialog (overlap shown) + event-log drawer with redrive (replaces 07's `/institution/integrations` stub; nav "ইন্টিগ্রেশন / Integrations") | Dynamic | School Admin |
+| `/institution/roster/reconciliation` | Baseline card (or explicit "no baseline") + platform counts + drift table (flags only, no auto-correction, no PII) | Dynamic, 5-min memo | School Admin |
 
 ### 6.2 Mobile (detail in `05-app-tasks.md`)
 
@@ -251,7 +251,7 @@ downloads on the default class, webhook body cap 1 MB, upload cap 20 MB / 10,000
 | Concern | Rule |
 | --- | --- |
 | Auth chain | Admin routes: authenticate → role claim `SCHOOL_ADMIN` → tenant-scope (`02` §6). Webhook route is the **documented exception**: unauthenticated-but-HMAC-signed — identity = valid HMAC over `{timestamp}.{rawBody}`; no session/JWT exists for ERP systems |
-| Role matrix | School Admin: all `/school/roster/*`, `/school/erp/*`, `/school/roster/reconciliation` (licence-gated, BR-014) · Student/Guardian/Teacher/Vendor: no surface · Super Admin: owns the licence flag via 07, reads audit trails · Schools' LMS/ERP: the webhook route only |
+| Role matrix | School Admin: all `/institution/roster/*`, `/institution/erp/*`, `/institution/roster/reconciliation` (licence-gated, BR-014) · Student/Guardian/Teacher/Vendor: no surface · Super Admin: owns the licence flag via 07, reads audit trails · Schools' LMS/ERP: the webhook route only |
 | Tenant scope | Admin routes: school from JWT/session claim only, path ids joined to the claim; repository never accepts a caller-supplied `school_id` (INV-006). Webhook route: `{schoolId}` must resolve to an ACTIVE `erp_endpoints` row (BR-001/013); cross-references fail closed; foreign access → `TENANT_MISMATCH` |
 | Rate limits | Webhook class 60 events/min/school (`RATE_LIMITED` + `Retry-After`); 10 uploads/h, 5 commits/h, 5 rotates/h, 10 tests/h per school; default class elsewhere |
 | Audit events | Import uploaded + commit requested/completed (totals); endpoint registered/rotated/revoked; test dispatched; **every webhook rejection** (`audit.Record`, security log with `signature_valid=false` evidence) |
@@ -341,6 +341,6 @@ Unconfirmed items keep their `TODO: Confirm` marker.
 | Date | Change | Author |
 | --- | --- | --- |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
-| 2026-09-30 | Consistency pass: webhook secrets encrypted (AES-256-GCM, `ERP_SECRET_KEY`) instead of hashed — HMAC verification needs the raw secret; migrations re-versioned `20270301…`; routes `/school/roster/reconciliation` (was colliding with 12) and `/school/integrations`; consumes 03 `users.UpsertRosterUser` + `guardians.*` | Claude |
+| 2026-09-30 | Consistency pass: webhook secrets encrypted (AES-256-GCM, `ERP_SECRET_KEY`) instead of hashed — HMAC verification needs the raw secret; migrations re-versioned `20270301…`; routes `/institution/roster/reconciliation` (was colliding with 12) and `/institution/integrations`; consumes 03 `users.UpsertRosterUser` + `guardians.*` | Claude |
 | 2026-10-03 | LMS pull plan + vendor API; binding Institution terminology (`institution_type`); FCM `school-*` rename deferred to 06 | Agent |
 | 2026-10-04 | Built contract-first: 22 operations + 28 `Lms*` schemas; webhook route is the documented unauthenticated-but-HMAC exception (BR-009/INV-005: constant-time HMAC, ±5-min window, versioned AES-256-GCM secrets under `ERP_SECRET_KEY`, show-once raw); imports are always dry-run-first with content-hash no-op and chunked commits (03 upsert = PENDING creates only, 04 enrollments with ROSTER source); 3 migrations consolidate §1.2's four (registry `20270301090001–090003`) + licence flag + pull tables; pull connector = `VendorClient` port, interval schedule presets, single running sync per institution, `lms_external_ids` map, additive 04 export `EnsureExternalSection`; CSV P0 (xlsx rejected at upload); reconciliation = baseline vs ACTIVE counts with drift flags, no-store reads. App surface: N/A by design. Gaps: G-1…G-9 (IT harness, licence UI, withdrawal export, notices pull, xlsx, SSRF allowlist, Redis memo, e2e runs) | Kilo |
