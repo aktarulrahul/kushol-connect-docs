@@ -492,3 +492,50 @@ Owner steps: `make test-integration` (new `TestIT018`, and `TestIT017` again). N
 Gate 2 does not apply. Gate 3: in a group of 3 or more, check that the sender's ✓✓ appear once
 everyone has received the message and turn blue once everyone has read it, without a reload, on
 web and app.
+
+## Uploads go through the api (no browser → R2) — 2026-10-17
+
+Owner, after a browser upload failed on the R2 preflight: "why this is expose in the browser? it
+should call the backend api and api will connect the r2 storage for upload. also use pre-signed
+url".
+
+- **Decision (ADR-20).** Clients upload attachments to the api, and the api uploads them to R2
+  itself. Before, the client PUT straight to a presigned R2 URL, so the bucket host and access-key
+  ID showed up in the browser's network tab and bucket CORS was mandatory (the failing 403
+  preflight: "CORS not configured for this bucket"). The presigned URL is still used, but only
+  server-side, for the api → R2 leg.
+- **api:** new `POST /api/v1/media/upload?kind=…&fileName=…[&width&height&durationMs]`. The body
+  is the raw file (`application/octet-stream`) with an exact `Content-Length`.
+  - The kind and size cap are checked on that length, and the magic bytes are sniffed from the
+    first 512 bytes before anything is stored, so a renamed `.exe` never reaches the bucket.
+  - The bytes then stream (64 KB buffer, never the whole file in memory) to a presigned PUT
+    minted server-side (`R2Store.PutPresigned`, `UNSIGNED-PAYLOAD`). The response is the
+    confirmed `MediaAsset`: presign, PUT and confirm in one call.
+  - Transport errors are stripped of the signed URL before they can reach a log line.
+  - The handler lifts the server's 30 s read/write deadlines to a 10-minute upload window for
+    this request only (a 20 MB file on a slow mobile link).
+  - The OpenAPI validator skips body validation for this route (kin-openapi would read the
+    whole file into memory); its query parameters are still validated.
+  - The old `upload-url` and `confirm` endpoints stay for compatibility, but no client uses them
+    any more.
+- **Web `/chat`:** `sendAttachment` sends the File to `/api/v1/media/upload` same-origin (cookie
+  + CSRF via the generated client), then sends the message. The browser never contacts storage.
+  `proxy.ts` skips `/api`, so Next does not buffer the body; the dev rewrite streams it.
+- **App:**
+  - Device files stream from disk with `uploadAsync` to the api (bearer + `X-Kushol-Client:
+    mobile`). A token about to expire is rotated first, and a 401 rotates once and retries.
+  - Test bytes go through `liveAuth()`.
+- **Downloads are unchanged:** the viewer still gets a 15-minute presigned GET link, so an R2 URL
+  is visible when a file is opened (G-24).
+
+| Repo | Check | Result |
+| --- | --- | --- |
+| api | `go build` · `go vet ./...` (+ `-tags integration` on chat/media) · `go test ./...` | clean / all ok — new `internal/media/upload_test.go` (PUT shape + exact bytes, URL redaction, 7 rejections before storage, Content-Length required) |
+| api | golangci-lint media/httpx · `make contracts-check` | gofmt-on-CRLF artefacts only (untouched files) · no drift |
+| api | `TestIT019ProxiedUpload` (new) | **pending owner run** (`make test-integration`) |
+| web | typecheck · eslint · prettier (touched) · vitest full | clean · 254/254 — new `lib/chat/upload.test.ts` (same-origin upload, octet-stream body, no storage call) |
+| app | typecheck · eslint · prettier (touched) · jest full | clean · 365/366 — new `lib/chat/upload.test.ts`; the one failure is the pre-existing `src/__tests__/index.test.tsx` (G-8) |
+
+Owner steps: restart the stack (`applications/dev-stop.sh && applications/dev-start.sh`, so the
+api picks up the R2 values from `api/.env`), then retry the upload. No bucket CORS is needed for
+uploads any more.
