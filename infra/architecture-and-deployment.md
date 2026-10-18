@@ -210,10 +210,12 @@ services:
 - Custom **proxy templates** (versioned in repo under `deploy/hestia/`; re-applied after HestiaCP
   upgrades; repo home per F18):
   - `kusholconnect.com`: `/` → `127.0.0.1:3100`; `/api/` → `127.0.0.1:8180`; `www` → 301 to apex;
-    immutable caching for `/_next/static/`; security headers + CSP; `client_max_body_size 2m`
-    (uploads go to R2 directly).
+    immutable caching for `/_next/static/`; security headers + CSP; `client_max_body_size 2m`,
+    except `= /api/v1/media/upload` at 21 MB unbuffered (attachments stream through the api to R2 —
+    05 ADR-20, 2026-10-18).
   - `api.kusholconnect.com`: `/` → `127.0.0.1:8180`; `/ws` with `Upgrade`/`Connection` headers,
-    `proxy_read_timeout 300s`; `client_max_body_size 2m`; payment/ERP webhook paths allowed without
+    `proxy_read_timeout 300s`; `client_max_body_size 2m` (21 MB unbuffered on
+    `= /api/v1/media/upload`); payment/ERP webhook paths allowed without
     auth (signature-verified in the api).
   - Both: `proxy_set_header X-Forwarded-For $remote_addr` (overwrite, not append), `X-Request-Id`
     pass-through, gzip/brotli.

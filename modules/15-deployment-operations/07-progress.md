@@ -141,3 +141,32 @@ Evidence (agent, no containers, no server): `workstation.sh` 67/67 on macOS bash
 | --- | --- | --- | --- |
 | `airahul/ai:api-main-e71c776` | api `e71c776` | 2026-10-09 | `linux/amd64`; built from the workspace with `docs/infra/docker/api.Dockerfile` |
 | `airahul/ai:web-main-bbf6b88` | web `bbf6b88` | 2026-10-09 | `linux/amd64`; `NEXT_PUBLIC_*` = `https://kusholconnect.com` |
+
+## Attachment upload route in the Nginx templates — 2026-10-18
+
+Owner (after 05 moved uploads behind the api, ADR-20): "raise the upload limit in the module 15
+Nginx templates (only /api/v1/media/upload)". All four templates (`kushol-api.tpl/.stpl`,
+`kushol-web.tpl/.stpl`) gain an exact-match `location = /api/v1/media/upload`:
+
+- `client_max_body_size 21m`, covering the largest kind's 20 MB cap. The api enforces each kind's
+  own cap and sniffs the bytes.
+- `proxy_request_buffering off`, so the body streams to the api instead of being spooled to disk.
+- `proxy_read_timeout 660s`, matching the api's 10-minute upload window.
+
+Every other route keeps `client_max_body_size 2m`. Docs updated: `docs/hestia.md` §1.1 and
+`architecture-and-deployment.md`.
+
+Evidence (agent, no containers, no server): `bash infra/deploy/tests/run.sh` 91/91 (placeholders,
+braces, no appended X-Forwarded-For). Not run: `nginx -t` on the server.
+
+New `host/set-api-env.sh` (owner, 2026-10-18: "share the script" for the production R2 / SMS / SMTP
+values). Interactive with hidden prompts, or `--from-stdin` to pipe the workstation's
+`applications/api/.env` lines over SSH. Groups are all-or-nothing, there is a backup first, values are
+single-quoted where Compose would expand them, and nothing is written on a refusal. Agent evidence:
+`bash -n`, 13 helper checks, and 15 end-to-end `--from-stdin` checks on fake values against a
+throwaway root. The one mismatch, file mode 644 instead of 600, comes from Git Bash on NTFS and holds
+on Linux. Not run on the server (owner).
+
+Owner steps: `bash docs/infra/deploy/deploy-web-api-vps.sh --sync-only`, then as root
+`bash /opt/kushol/hestia/setup-web.sh` (it re-applies the templates; HestiaCP runs its own config
+test on rebuild).

@@ -169,6 +169,27 @@ Requires the bundle in `/opt/kushol`. In order:
    `env/` 0700, env files 0600, scripts executable.
 7. **Outbound checks** — port 25 to Gmail's MX (mail delivery) and Docker Hub registry reachability.
 
+## `host/set-api-env.sh [--from-stdin]` — root
+
+Sets the optional integrations in `env/api.env`: Cloudflare R2 (`R2_*`, attachments), SAS Bulk SMS
+(`SMS_GATEWAY_*`, phone OTP in the app), SMTP (`SMTP_HOST/PORT/USERNAME/PASSWORD/FROM`, email
+OTP) and KLIPY (`KLIPY_APP_KEY`, chat GIFs and stickers). Interactive by default (`ssh -t`; secrets
+at hidden prompts; per group Enter keeps, `y` sets, `-` turns it off). `--from-stdin` takes `KEY=VALUE`
+lines for those keys only — CRLF and surrounding quotes are stripped — so the workstation's values can
+be piped over SSH without appearing on a command line:
+
+```bash
+grep -E '^(R2_[A-Z_]+|SMS_GATEWAY_[A-Z_]+|SMTP_[A-Z_]+|KLIPY_APP_KEY)=' applications/api/.env | ssh root@72.61.114.20 'bash /opt/kushol/host/set-api-env.sh --from-stdin'
+```
+
+R2, SMS and SMTP are each all-or-nothing (a partial SMS set stops the api; without `SMTP_HOST` every
+email OTP dies "delivery channel not configured"), unknown keys and values holding a
+single quote are refused, and nothing is written when a check fails. Otherwise it writes a chmod-600
+backup (`env/api.env.bak-<UTC>`, delete it once the release is healthy), replaces or uncomments each
+key in place, and single-quotes values Compose would otherwise expand (`$`, `#`, spaces). The api reads
+the file when its containers are created: the next `ops/deploy.sh`, or
+`sudo -iu kushol /opt/kushol/ops/compose.sh up -d api worker`.
+
 ## `hestia/setup-web.sh` — root, twice
 
 See [`hestia.md`](hestia.md) §1 for the routing it sets up. In order:

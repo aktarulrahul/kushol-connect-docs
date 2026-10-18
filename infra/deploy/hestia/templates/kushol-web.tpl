@@ -15,7 +15,7 @@ server {
 
 	include %home%/%user%/conf/web/%domain%/nginx.forcessl.conf*;
 
-	# Media goes to R2 through presigned URLs; nothing large passes through here.
+	# Only the attachment upload route below takes more (it streams through the api to R2).
 	client_max_body_size 2m;
 
 
@@ -34,6 +34,24 @@ server {
 	location ~ /\.(?!well-known\/) {
 		deny all;
 		return 404;
+	}
+
+	# Attachment upload (05, owner 2026-10-18): the client streams the file to the api, which streams
+	# it on to R2. Only this route takes more than 2 MB: 21 MB covers the largest kind's 20 MB cap
+	# (the api enforces each kind's cap and sniffs the bytes). Not spooled to disk here, and the
+	# read timeout covers the api's 10-minute upload window for slow mobile links.
+	location = /api/v1/media/upload {
+		client_max_body_size    21m;
+		proxy_request_buffering off;
+		proxy_pass         http://127.0.0.1:@API_PORT@;
+		proxy_http_version 1.1;
+		proxy_set_header   Connection        "";
+		proxy_set_header   Host              $host;
+		proxy_set_header   X-Real-IP         $remote_addr;
+		# Overwrite, never append: the api trusts this header from Nginx only (F9/F19).
+		proxy_set_header   X-Forwarded-For   $remote_addr;
+		proxy_set_header   X-Forwarded-Proto $scheme;
+		proxy_read_timeout 660s;
 	}
 
 	location /api/ {

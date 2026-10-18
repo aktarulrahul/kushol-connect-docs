@@ -276,6 +276,7 @@ are skipped); the second deploys those tags over SSH (`--sync` first if the bund
 | Smoke | `/opt/kushol/ops/smoke.sh` |
 | Release history | `cat /opt/kushol/state/releases.log` (`incidents.log` next to it) |
 | Migrations (owner, Gate 2) | `/opt/kushol/ops/migrate.sh main-<sha7> status` / `up --confirm` |
+| R2 / SMS / SMTP settings (root) | `ssh -t root@… bash /opt/kushol/host/set-api-env.sh`, or pipe the workstation's values: [`docs/scripts.md`](docs/scripts.md) |
 | Memory check (weekly) | `docker stats --no-stream` · `free -m` · `df -h /` |
 | Disk: old images | `docker image prune -f` (dangling only — keep recent tags so rollbacks stay fast) |
 | Update templates/scripts | edit in the repo, `deploy-web-api-vps.sh --sync-only` (Mac), rerun `hestia/setup-web.sh` as root |

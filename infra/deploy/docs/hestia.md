@@ -22,7 +22,10 @@ Both domains belong to the HestiaCP user `kusholconnect`.
 | | | | everything else | api (mobile REST, `/healthz`, `/readyz`, payment/ERP webhooks) |
 
 Paths starting with a dot (except `/.well-known/`) return 404 on both. Request bodies are capped at
-2 MB (`client_max_body_size 2m`) — uploads go straight to R2 through presigned URLs.
+2 MB (`client_max_body_size 2m`) except `POST /api/v1/media/upload` on both hosts: attachments stream
+through the api to R2 (05 ADR-20, owner 2026-10-18), so that exact location allows 21 MB (the largest
+kind's 20 MB cap; the api enforces each kind's own), does not spool the body
+(`proxy_request_buffering off`) and waits up to 660 s for the api's 10-minute upload window.
 
 ### 1.2 Headers
 

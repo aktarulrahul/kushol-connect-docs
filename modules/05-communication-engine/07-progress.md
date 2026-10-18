@@ -539,3 +539,107 @@ url".
 Owner steps: restart the stack (`applications/dev-stop.sh && applications/dev-start.sh`, so the
 api picks up the R2 values from `api/.env`), then retry the upload. No bucket CORS is needed for
 uploads any more.
+
+## Mobile web, captions, polls, KLIPY GIFs + stickers, group settings — 2026-10-18
+
+Owner request:
+1. Make the web responsive, with the sidebar as a drawer on phones.
+2. On mobile `/chat`, open the conversation, not group info.
+3. WhatsApp-style captions on images and documents (web and app).
+4. Fix create poll.
+5. Add stickers. Mid-run: "use klipy for stickers, gif".
+6. The group-info Settings button should open a popup for the photo, the name (Kushol admin only) and the description.
+
+### Decisions (ADR-21 … ADR-24)
+
+- **ADR-21 — KLIPY from the client.** KLIPY's integration requirements forbid routing KLIPY requests through partner servers and re-hosting media, and they require a "Search KLIPY" placeholder. So:
+  - The api hands each signed-in user the app key, an opaque customer id (`sha256("kushol-klipy:"+userId)`, 32 hex) and the request params (`locale=bd`, `content_filter=high` for a school audience) via `GET /api/v1/chat/klipy`.
+  - Web and app call `api.klipy.com` themselves and load media straight from KLIPY.
+  - A sent GIF/sticker is stored as a reference only: `chat_messages.klipy {slug, title, url, width, height}`, kinds `gif` and `sticker`.
+  - The api accepts only https URLs on `static.klipy.com`, `static1.klipy.com` and `static2.klipy.com`, so no client can make others load an arbitrary URL (tracking pixels).
+  - The share trigger is posted from the client after a send.
+  - The key is a client key by design (it travels in KLIPY request paths), not a server secret: `KLIPY_APP_KEY` in `api.env`. Unset means the GIF/Sticker tabs stay hidden.
+- **ADR-22 — GIF renditions.** Clients send KLIPY's GIF rendition (GIFs `md`, stickers `sm`). It animates in every browser and in React Native on both platforms. The Android build keeps animated WebP off (`android/gradle.properties` `expo.webp.animated=false`), so WebP would show one frame. The web picker grid still loads the lighter WebP previews.
+- **ADR-23 — group settings rights (owner).**
+  - Name: Kushol admins (`super_admin`) only, on custom groups including the managed ones. Official class groups keep the section's name.
+  - Photo and description: group owner/moderator, the School Admin or a Kushol admin.
+  - Every check runs before the first write (one transaction), so a refused rename leaves the description unchanged.
+  - The photo is a confirmed image the caller uploaded (`POST /media/upload?kind=image`), stored in `chat_groups.photo_asset_id`. Members fetch it like attachments (download URL); `AuthorizeAsset` admits members of the group using it.
+  - School admins and group owners can no longer rename (the earlier rule).
+- **ADR-24 — mobile `/chat` layout.** Group info sits beside the chat only from 1280 px (`xl`), where it starts open. Below that it is an overlay that starts closed, so phones land on the conversation. Picking another chat on a narrow screen closes it again.
+
+### Defect fixed — "create poll is not working"
+
+The REST `POST /chat/messages` handler (and the WS `message.send` frame decoder) never read the `poll` object. Every poll reached `Send` with `Poll == nil` and failed "poll needs a question and 2–6 distinct options". Both now decode it (and `klipy`).
+
+The web poll dialog was also rebuilt:
+- 2–6 options with add/remove and "Allow multiple answers".
+- The api's rules are checked before sending (question 3–200 chars, options 1–80 chars, distinct).
+- Bubbles show "Select one / Select one or more · N votes".
+
+The app had no poll support at all. It now renders polls (tallies, my vote, tap to vote via `POST …/poll/vote`) and composes them from the attach sheet.
+
+### What changed
+
+- **api:**
+  - Migration `20270308090000_com_chat_klipy_group_photo`: `chat_messages.klipy` + kinds `gif`/`sticker` + content/klipy checks; `chat_groups.photo_asset_id` + index.
+  - `internal/chat/klipy.go` (reference type, host allowlist, customer id, config).
+  - `UpdateGroup(GroupEdit{Name, Description, PhotoAssetID})` replaces `RenameGroup`. It audits `chat_group.renamed`.
+  - `CanEditGroupInfo` / `CanRenameGroup`.
+  - Forward copies the KLIPY reference.
+  - Tombstones drop it.
+  - `KLIPY_APP_KEY` config + `GetChatKlipyConfig`.
+  - OpenAPI:
+    - `GET /chat/klipy`.
+    - `ChatKlipyMedia` / `ChatKlipyConfig`.
+    - `klipy` on messages and sends.
+    - `photoAssetId` on `ChatGroup` and the PATCH.
+    - Kinds `gif`/`sticker`.
+- **web:**
+  - **Shell:** below `md`, a top-bar menu button opens the nav as a left drawer that closes on navigation. The title and actions shrink, and the persona switcher moves into the drawer below `lg`.
+  - **Chat layout:**
+    - Group info is an overlay below `xl` (ADR-24).
+    - Paddings are tighter on phones.
+    - A back button returns to the list.
+  - **Attachments:** picking or pasting a file opens a WhatsApp send preview (photo or document card) with "Add a caption…". Composer text starts as the caption.
+  - **Composer panel:** an Emoji · GIFs · Stickers panel (KLIPY, "Search KLIPY", "Powered by KLIPY", infinite scroll); GIF and Sticker tiles in the attach menu. GIFs render in the bubble with a badge; stickers render without a bubble.
+  - **Group settings dialog:** photo change/remove, name (read-only with the reason for non-Kushol admins), description. The pencil on the description opens it too.
+  - Group photos in the list, header, info panel and forward dialog.
+  - Test setup: `matchMedia` stub guard fixed (this jsdom declares it undefined).
+- **app:**
+  - Caption sheet before every photo/document upload.
+  - KLIPY picker sheet (GIFs/Stickers tabs, search, load more). The emoji sticker set remains when KLIPY is off or in demo.
+  - Poll sheet and poll bubble.
+  - GIF/sticker bubbles.
+  - Group photos in avatars (list, header, info, forward).
+  - Group description in chat info.
+  - bn/en keys.
+
+### Migrations (Gate 2 — owner runs)
+
+`20270308090000_com_chat_klipy_group_photo` (local `dev-start.sh` applies it). Production: `ops/migrate.sh <api tag> up --confirm` after the next api image is built.
+
+### Evidence (agent-side checks — no app, no containers)
+
+| Repo | Check | Result |
+| --- | --- | --- |
+| api | `go build ./...` · `go vet` (chat, config, cmd; `-tags integration` on chat) · `golangci-lint` · `make contracts` | clean · 0 issues · regenerated |
+| api | `go test ./internal/chat/... ./internal/config/... ./internal/media/...` | ok — new `klipy_test.go`: host allowlist incl. look-alike hosts, userinfo, ports; customer id; WS frame decoding of poll/klipy; settings rules |
+| api | `TestIT020PollsKlipyGroupSettings` (new): REST poll body, GIF history/list/forward, foreign host refused, rename rights, photo set/clear, a refused field writes nothing, photo visible to members only | **pending owner run** (`make test-integration`) |
+| web | `tsc` (sources) · eslint (touched) · prettier (touched) · vitest full | clean · clean · clean · 276/276. New: `klipy.test.ts`, `poll.test.ts`, mapping tests, `admin-messenger-features.test.tsx` (narrow layout, poll, caption preview, settings), `admin-shell.test.tsx` (drawer) |
+| web | `pnpm typecheck` / `pnpm lint` (whole repo) | blocked by files outside this change: stale `.next/dev/types/*.d.ts` written by a running dev server (syntax errors), and pre-existing lint errors in `app/admin/audit/audit-page-client.tsx` + `hooks/use-auth-mutations.ts` |
+| app | `tsc` · eslint (touched) · jest full | clean · clean · 383/384. New: `chat-rich-messages.test.tsx` (poll bubble + vote, KLIPY GIF/sticker, poll sheet, caption sheet), `klipy.test.ts`, `poll.test.ts`. The one failure is the pre-existing `src/__tests__/index.test.tsx` (G-8); whole-repo eslint still flags untouched `media-viewer.tsx`, `(tabs)/_layout.tsx`, `floating-tab-bar.test.tsx`, `glass-surface.test.tsx` |
+| docs | `host/set-api-env.sh` KLIPY group: `bash -n`, `--from-stdin` with a fake key, the 16 earlier stdin checks | ok — key written in place, masked in output |
+
+### Gate hand-off (owner)
+
+1. **KLIPY key:** create an app key at partner.klipy.com → API Keys. Set `KLIPY_APP_KEY` in `applications/api/.env` and, for production, `env/api.env` (the `set-api-env.sh` KLIPY group). Restart the api. Request production access in the KLIPY Partner Panel before launch, and set content filtering there too (G-27).
+2. Run migration `20270308090000` (local: `dev-start.sh`; production: Gate 2).
+3. `cd applications/api && make test-integration` (IT017–IT020).
+4. **Gate 1 UI review:**
+   - Phone-width web: drawer, `/chat` lands on the conversation.
+   - Caption preview.
+   - Poll dialog.
+   - GIF/sticker panel.
+   - Group settings (as a Kushol admin and as a school admin).
+   - App: caption sheet, poll sheet/bubble, KLIPY sheet; needs a rebuilt dev client only if native modules changed. None were added.
