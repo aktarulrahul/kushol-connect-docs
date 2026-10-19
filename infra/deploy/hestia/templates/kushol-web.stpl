@@ -60,6 +60,22 @@ server {
 		proxy_read_timeout 660s;
 	}
 
+	# Chat gateway (05) at the contract path GET /api/v1/ws; 300 s idle is plenty.
+	# The session token travels in the query string or session cookie, so this route is not access-logged.
+	location = /api/v1/ws {
+		access_log off;
+		proxy_pass         http://127.0.0.1:@API_PORT@;
+		proxy_http_version 1.1;
+		proxy_set_header   Upgrade           $http_upgrade;
+		proxy_set_header   Connection        "upgrade";
+		proxy_set_header   Host              $host;
+		proxy_set_header   X-Real-IP         $remote_addr;
+		proxy_set_header   X-Forwarded-For   $remote_addr;
+		proxy_set_header   X-Forwarded-Proto $scheme;
+		proxy_read_timeout 300s;
+		proxy_send_timeout 300s;
+	}
+
 	# The api sets its own security headers (01 httpx); Nginx adds none here.
 	location /api/ {
 		proxy_pass         http://127.0.0.1:@API_PORT@;
