@@ -237,3 +237,23 @@ still asks consumers for phone OTP, which the api now refuses: G-12, owner decis
    The check is now pinned to `Status "0"`, and the reply logs at info.
 4. `make test-integration`: no new integration test, but every testcontainer suite now applies
    the new migration.
+
+### 2026-10-19 run — platform access management (owner instruction, Kushol admins only)
+
+Additive extension (owner: "add platform access in sidebar", scope: Kushol admins only).
+**api**: migration `20270311090000_plt_access` (platform_roles / platform_role_permissions /
+platform_user_roles; system roles super_admin + viewer seeded); static module×action registry in
+code (`internal/platformaccess`, ten modules; audit is read-only); OpenAPI `/api/v1/platform/*`
+(#23–style additive block: modules, roles CRUD, permissions get/replace, users list/grant/revoke);
+service gates every operation on principal.SuperAdmin, system roles immutable, last-super_admin
+revoke protected (CONFLICT), permission pairs registry-validated; role/permission/grant changes
+are audit-recorded in the same transaction. Wired via httpapi `platformOps` (notifyOps pattern).
+**web**: sidebar "Platform access" entry (super_admin nav, ShieldCheck → /admin/platform);
+console page: roles list + create dialog, permission matrix (modules × read/write/admin, system
+roles read-only), platform users table with grant-by-email and revoke; live lib over the
+generated client (`src/lib/platform-access.ts`); bn/en sidebar keys.
+**Also this session (chat, module 05)**: fixed the parallel session's failing `hasMentionToken`
+test (whole-run boundary — "@Atiqul Islam Khan" no longer tags "Atiqul Islam").
+**Evidence**: api build/vet/gofmt clean; platformaccess unit tests green (registry + key regex
+pins); web typecheck clean, eslint clean on touched files, 40/40 suites / 294/294 tests.
+**Pending owner**: migration run (Gate 2), UI review (Gate 1), end-to-end flows (Gate 3).

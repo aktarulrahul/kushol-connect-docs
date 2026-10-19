@@ -61,6 +61,7 @@ HTTP; signature changes are additive first.
 | --- | --- | --- |
 | `hierarchy.ResolveUserNodes(userID)` — school/section membership for room resolution + notice scoping | 04 | WS: disconnect client (cannot resolve rooms safely); REST: refuse with `INTERNAL` + alert — never guess scope |
 | `notify.BroadcastTopic(topic, payload)` — topics `school-{id}` / `section-{id}` on notice publish; `school-{id}` on accepted request (via 06) | 06 | Log + continue; in-app/WS delivery unaffected; 06 owns retry |
+| `notify.SendToUser(userID, payload)` — directed @mention pushes (owner 2026-10-18): type `chat_mention`, class `chat` (NTF-BR-004 mute respected), deep link `/groups/{groupId}`, ids only (NTF-BR-003). Bound through 05's `MentionPusher` port; adapter in `cmd/api` | 06 | Degraded, never fatal — adapter logs; in-app/WS delivery unaffected |
 | `jobs.Runner.Register(name, schedule, fn)` — archival, request-expiry, asset-cleanup jobs | 01 | Job misses logged; runner alarms; jobs are idempotent so late runs are safe |
 | Verified/role claims middleware (`authenticate → load role claims → tenant-scope`) | 03 | Writes refused with `NOT_VERIFIED`/`FORBIDDEN` — the gate is the feature |
 
@@ -154,3 +155,4 @@ depends on them.
 - [x] `COM-INT-011` Failure-matrix drills scripted (Redis down, R2 down, gateway kill) in CI smoke — 2026-10-15
 - [ ] `COM-INT-012` Tests `COM-IT-001`–`011` + `COM-E2E-001`–`003` green in CI
 - [x] `COM-INT-013` Implement + export `ArchiveSectionGroups` (04), `NoticeStats` (07), `SectionQuestionSamples` with PII masking + no-author guarantee (09), `media.PutObject` + `receipt_pdf` kind (12); contract tests per export — 2026-10-15
+- [x] `COM-INT-014` Mentions + stars integration surface (owner 2026-10-18): `SendToUser` consumed-contract row above, OpenAPI #23–#25 + `mentions` on send/DTO, both clients regenerated (`sync:api-spec` + `generate:api` in web and app) — 2026-10-18

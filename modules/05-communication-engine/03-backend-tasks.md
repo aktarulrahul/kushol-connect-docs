@@ -72,6 +72,25 @@ media kinds require `media_asset_id`. **Indexes:** `(group_id, created_at DESC, 
 history pagination (hot query); `(sender_id, client_msg_id)` UNIQUE → replay dedupe;
 `(group_id, deleted_at)` → tombstone filtering.
 
+**Additions (owner 2026-10-18 — `20270309090000_com_chat_mentions_stars`):** `mentions uuid[]
+NOT NULL DEFAULT '{}'` on `chat_messages` — the roster-validated member ids (BR-014); clients
+render the "@Name" tokens from ids + roster.
+
+#### `chat_message_stars` (model `ChatMessageStar`)
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| `user_id` | `uuid` | no | — | PK part; FK → 03 users. Stars are per-viewer (BR-015) |
+| `message_id` | `uuid` | no | — | PK part; FK → `chat_messages` |
+| `group_id` | `uuid` | no | — | Copied from the message row (never client-supplied; CHECKs cannot hold subqueries) |
+| `school_id` | `uuid` | yes | — | Tenant column, mirrors the message's (NULL for dm — access by membership) |
+| `starred_at` | `timestamptz` | no | `now()` | List ordering |
+
+**Constraints:** PK `(user_id, message_id)` (idempotent star). **Indexes:**
+`(user_id, starred_at DESC)` → my starred list; `(user_id, group_id, starred_at DESC)` → the
+group-scoped sheet. **Tenant rule:** `school_id` mirrors the message; every list re-checks live
+membership (`EXISTS` on `chat_group_members`) so a removed member loses the room's rows.
+
 #### `message_requests` (model `MessageRequest`)
 
 | Column | Type | Null | Default | Notes |
@@ -138,6 +157,7 @@ tenant storage stats.
 | 3 | `20261003092000_com_message_requests` (requests + partial unique pending + expiry index) | ✅ |
 | 4 | `20261003093000_com_notices` (notices + board composite index) | ✅ |
 | 5 | `20261003094000_com_media_assets` (assets + archival indexes) | ✅ |
+| 6 | `20270309090000_com_chat_mentions_stars` (mentions column + chat_message_stars; stamped after `20270308090000` per the README registry) | ✅ |
 
 ### 1.3 Seed
 
@@ -173,6 +193,12 @@ tenant storage stats.
 | 18 | `PATCH /api/v1/notices/{id}/pin` | Toggle pin | `FORBIDDEN` | US-010 |
 | 19 | `POST /api/v1/media/upload-url` | Presigned R2 PUT (TTL 15 min) | `VALIDATION_FAILED` kind/size | US-003/004/005 |
 | 20 | `POST /api/v1/media/{id}/confirm` | Magic-byte sniff → `confirmed` | `VALIDATION_FAILED` mismatch | US-003 |
+| 23 | `PUT /api/v1/chat/messages/{messageId}/star` | Star (private bookmark; idempotent) | `NOT_FOUND` · `CONFLICT` tombstone | US-018 |
+| 24 | `DELETE /api/v1/chat/messages/{messageId}/star` | Unstar (idempotent) | — | US-018 |
+| 25 | `GET /api/v1/chat/starred?groupId=&limit=` | My starred messages (newest star first; roster re-checked) | `FORBIDDEN` group filter | US-018 |
+
+`POST /chat/messages` + WS `message.send` also accept `mentions` (US-017); `ChatMessage` gains
+`mentions` — additive, unknown-field-tolerant clients unaffected.
 
 Common errors on every route: `UNAUTHENTICATED` · `FORBIDDEN` · `VALIDATION_FAILED` ·
 `TENANT_MISMATCH` · `NOT_FOUND` · `NOT_VERIFIED` · `RATE_LIMITED` · `CONFLICT` · `INTERNAL`
@@ -272,6 +298,8 @@ generated `openapi-fetch` client (never the database directly):
 | `COM-BE-013` | `chat.DeleteMessage(msgID, actor)` | Author ≤ 15 min; mod/owner/School-Admin anytime; soft delete + `message.deleted` fan-out | — | Yes |
 | `COM-BE-014` | `jobs.ArchiveMedia` (see §5) | Idempotent batch; hot→`archive/` prefix; status-guarded | — | Yes (job run) |
 | `COM-BE-015` | `chat.WSCatchup(groupID, cursor)` | REST-shaped catch-up used after reconnect; same repository path as #4 | — | No |
+| `COM-BE-028` | `chat.StarMessage / UnstarMessage / ListStarred` | Verified + member guards; star copies group/school from the row; list re-checks membership, 50/page cap 100, optional group filter | — | No |
+| `COM-BE-029` | mention normalization in `chat.Send` | `NormalizeMentions`: dedupe, drop sender + non-members, cap 20; pushes via the `MentionPusher` port (06 `SendToUser` adapter, degraded never fatal) after the room fan-out — replays never re-push | — | No |
 
 ## 4. Repository Tasks
 
@@ -342,3 +370,5 @@ publish guard blocks `TODO:`; public reads never return drafts.
 - [x] OpenAPI paths #1–#20 + WS contract documented in `applications/api/openapi/` — 2026-10-15 (#21 download-url + #22 club-approve added; ADR in module docs)
 - [ ] Seed: Demo High School dataset (fictional, marked)
 - [x] Tests: `COM-UT-001`–`007`, `COM-IT-001`–`009` green in CI — 2026-10-15 (unit 22/22 pkgs `-race`; IT-001–009 green in owner run 2026-10-09; GitHub CI pending 01 G-2)
+- [x] `COM-BE-028`/`COM-BE-029` @mentions + stars (OpenAPI #23–#25, migration `20270309090000`, sqlc/oapi regen, `NormalizeMentions` unit pins) — 2026-10-18; IT run pending owner (standing rule)
+- [x] `COM-IT-010`/`COM-IT-011` mentions + stars integration tests (`it_mentions_stars_test.go`: roster validation + replay no-repush; star guards, idempotency, tombstone CONFLICT, non-member FORBIDDEN, per-user list + tombstone masking) — written 2026-10-18; suite run owner-executed per the standing rule

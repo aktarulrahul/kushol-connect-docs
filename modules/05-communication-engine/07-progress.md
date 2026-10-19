@@ -643,3 +643,78 @@ The app had no poll support at all. It now renders polls (tallies, my vote, tap 
    - GIF/sticker panel.
    - Group settings (as a Kushol admin and as a school admin).
    - App: caption sheet, poll sheet/bubble, KLIPY sheet; needs a rebuilt dev client only if native modules changed. None were added.
+
+## G-28 closed — "Edit group" on the app — 2026-10-18
+
+Follow-up to the web group settings dialog above: the app's chat info now edits a group too, with the same rights (ADR-23) and the same `PATCH /api/v1/chat/groups/{groupId}`. No api, OpenAPI or migration change (the app's `schema.gen.ts` already had `photoAssetId`).
+
+### What changed (app only)
+
+- **Chat info** (`channel-header.tsx` `ChatInfoSheet`): groups show an **Edit group** button when the account may change something. Rights come from the cached group row (`myRole`) and the account role (`me.role`). DMs, archived groups and plain members get no button.
+- **Group settings sheet** (new `group-settings-sheet.tsx`, the web dialog's layout):
+  - The photo with a camera badge (change) and **Remove photo**. Live sessions open the system photo picker (`pickImage()`, ≤ 10 MB); demo sessions use the bundled demo picture.
+  - The name. Editable for Kushol admins on custom groups. Otherwise it is read-only with the reason: "Only Kushol admins can change the group name", or "Class group names follow their section" for a Kushol admin on an official group.
+  - The description (≤ 500, counter), with Cancel and Save.
+  - Save is off until something changed. It sends only the changed fields, trimmed. A name outside 3–60 code points is refused before sending.
+- **Save** (new `lib/chat/group-settings.ts`):
+  - A new photo is uploaded first with `uploadMedia()` (kind `image`); its confirmed asset id goes in `photoAssetId`. Removing sends `photoAssetId: ""`, and an empty description sends `""`.
+  - On success, `chatKeys.groups` and the `["chat_group_photo"]` queries are invalidated, so the title, the description in chat info and every group avatar refresh. A toast confirms. Failures toast: CONFLICT → "Another club already uses this name", FORBIDDEN → "Not allowed", anything else → "Couldn't save the group settings". On a failure the sheet stays open.
+  - The rules live in `groupSettingsRights`, which mirrors `CanRenameGroup` / `CanEditGroupInfo`. The api re-checks every field.
+- **Seam:**
+  - `liveChat.updateChatGroup`: the PATCH through the generated client.
+  - `fixtures/chat.ts` `updateChatGroup`: the demo checks the api's shape rules (no dm settings, archived → CONFLICT, name on custom only, 3–60 / ≤ 500, name clash → CONFLICT, image asset) and emits `group.updated`. `resetChatFixtures` restores the seeded names.
+- **i18n:** 17 `chat.settings.*` keys in bn and en.
+- **Scope note:** `group-chat-screen.tsx` is unchanged. `ChatInfoSheet` reads the group row from the chat list itself; for groups, its `avatarId` is the group id. This kept the change out of the screen while another session works there.
+
+### Evidence (agent-side checks — no app, no containers)
+
+| Check | Result |
+| --- | --- |
+| `npx tsc --noEmit` | clean |
+| eslint `--max-warnings=0` + prettier `--check` on the touched files | clean |
+| jest: `lib/chat/group-settings.test.ts` (new) | rights for Kushol admin / official group / owner / moderator / School Admin / member / dm / archived; the draft keeps only the changed fields; name length in code points; demo save: photo upload → the PATCH carries the confirmed image asset id; `""` removes the photo and clears the description; rename on custom only; reset; save-error copy |
+| jest: `components/chat/group-settings-sheet.test.tsx` (new) | the sheet: rename + description payload; read-only name with the reason (group admin, official group); pick a photo → `photo` in the payload; remove → `photo: null`; short name refused; a failed save stays open. From chat info via the real `/groups/[id]` route: the moderator edits the description and chat info shows it; a Kushol admin renames a club and the header title follows; no Edit group for a plain member or in a DM |
+| jest full suite | 405/406 — the one failure is the pre-existing `src/__tests__/index.test.tsx` (G-8) |
+
+### Gate hand-off (owner)
+
+Gate 1 on a phone (dev client, live api). No native module was added (`expo-image-picker` was already in the build):
+1. **As a teacher who moderates a class group:** Chat info → Edit group. Change the photo (system picker) and the description, then Save. Check that the list, the header and the info avatar show the new photo. The name stays read-only with the reason.
+2. **As a School Admin on a club where they are a plain member:** photo and description are editable; the name is not.
+3. **As a Kushol admin (`super_admin`):** rename a custom group. On an official group the name stays read-only ("Class group names follow their section").
+4. Remove a photo and clear a description. Both disappear for the other members after their list refreshes (`group.updated`).
+
+### 2026-10-18 run — @mentions + starred messages (owner instruction, Stage 1 pre-approved)
+
+Additive extension (G-9 closure pattern). **api**: migration `20270309090000_com_chat_mentions_stars`
+(`chat_messages.mentions uuid[]` + private `chat_message_stars`); OpenAPI `PUT/DELETE
+/chat/messages/{messageId}/star` + `GET /chat/starred` (#23–#25) and `mentions` on
+`ChatMessageSendInput`/`ChatMessage`; sqlc `chat_stars.sql` + oapi regen; `chat.NormalizeMentions`
+(dedupe, drop sender/non-members, cap 20 — unit-pinned in `mentions_test.go`); star services
+(`stars.go`) re-check live membership on every list; mention pushes via a `MentionPusher` port
+bound to 06's frozen `SendToUser` in `cmd/api` (`chat_mention` / class `chat` / mute respected).
+**web** (`/chat`): composer "@" roster picker, mention highlight in bubbles, Star/Unstar in the ⋮
+menu (`message-actions` unit-pinned), star badge on bubbles, "Starred messages" card in the group
+info panel with jump-to-message; spec synced + client regenerated.
+**app**: composer "@" picker (`listChatGroupMembers` seam), Star/Unstar in the focus menu,
+"Starred messages" in the chat info sheet, bn/en keys; spec synced + client regenerated.
+**ADR-21**: stars are private per-user bookmarks — no WS event, no push, invisible to others;
+unfollow = membership loss filters the list (not a delete cascade).
+**Evidence**: api `go build`/`go vet`/`gofmt` clean, chat+notify unit tests green (unit pins for
+NormalizeMentions/carriesBody); web typecheck clean, 277/277 vitest, lint clean on touched files;
+app targeted chat unit suites 50/50 green (typecheck has pre-existing failures from the parallel
+session's in-flight edits — none in files this run touched); contracts: web+app `sync:api-spec`
++ `generate:api` against the updated spec.
+**Deferred to 08-gaps G-31**: app bubble star badge + @-highlight rendering (parallel-session
+collision), mentions-cap confirmation, IT suite run.
+**Gates**: Gate 1 (UI) + Gate 2 (SQL) + Gate 3 (flows) pending owner.
+
+**Completion pass, same day (owner: "complete all todos")**: the deferred app bubble polish
+landed — star badge in the bubble meta row + @-mention highlight rendering
+(`mentionSegments`/`escapeRegExp`, unit-pinned in `message-bubble.test.tsx`; screen passes
+`starred` + `mentionNames` from the roster) — and the integration tests were written
+(`it_mentions_stars_test.go`, `COM-IT-010/011`, integration-tagged, `go vet -tags=integration`
+clean). Evidence: app chat suites 22/22 green (bubble + screen + list), api build/vet/gofmt +
+unit tests green, zero new typecheck errors in touched app files (the app tree still carries the
+parallel session's pre-existing catalog-key failures). Remaining owner-only: confirm the
+20-mention cap (G-31a) and run the container IT suite + the three gates.

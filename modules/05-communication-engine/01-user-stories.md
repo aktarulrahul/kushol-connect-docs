@@ -251,6 +251,34 @@ Provides the real-time communication core of Kushol Connect: hierarchy-driven gr
 - **Given** an archived asset, **when** a member opens it, **then** it rehydrates to the hot prefix on demand and serves a URL; UI shows "recovering attachment", never a crash.
 - **Given** a failed run, **when** it retries, **then** it resumes idempotently — nothing lost or double-moved.
 
+### `COM-US-017` — Mention a group member with "@"
+
+**Priority:** P1 · **Traces:** owner instruction 2026-10-18 (extends PRD §5.1; G-8/G-16) · **Depends on:** COM-US-002
+
+**Story** — As a **group member**, I want **to @mention a member while composing**, so that **the right person is notified even in a busy class group**.
+
+**Acceptance criteria**
+
+- **Given** I type "@" in the composer, **when** the roster picker opens and I pick a member, **then** "@Full Name" is inserted and the member's id rides the send payload.
+- **Given** my message carries mentions, **when** it is accepted, **then** each mentioned member (verified, not muted for the class) receives a directed push "আপনাকে মেনশন করা হয়েছে / You were mentioned" that deep-links into the group (via 06's frozen `SendToUser`).
+- **Given** a mentioned id is no longer a member at send time, **when** the api validates, **then** it is silently dropped (never a failed send); mentions are deduped, capped at 20, and only text/captioned messages carry them.
+- **Given** any member reads the bubble, **when** the body contains "@name" of a mentioned member, **then** it renders highlighted.
+
+### `COM-US-018` — Star a message (private bookmark)
+
+**Priority:** P1 · **Traces:** owner instruction 2026-10-18 (extends PRD §5.1) · **Depends on:** COM-US-002
+
+**Story** — As a **group member**, I want **to star important messages and find them again from the group info**, so that **exam dates and instructions don't get lost**.
+
+**Acceptance criteria**
+
+- **Given** I open a message's action menu, **when** I tap Star, **then** the message is bookmarked for me alone — no WS event, no push, invisible to other members.
+- **Given** my starred messages, **when** I open the group info's "Starred messages" section, **then** I see them newest-first with a preview, scoped to that room.
+- **Given** I unstar, **when** the list refreshes, **then** the entry disappears; starring is idempotent and keeps the original `starredAt`.
+- **Given** I was removed from a group, **when** I list my stars, **then** that room's starred rows are filtered out (the list re-checks live membership).
+
+**Notes** — stars never delete with the message: a tombstoned starred message renders as the tombstone in the list.
+
 ---
 
 ## 5. Business Rules
@@ -270,6 +298,8 @@ Provides the real-time communication core of Kushol Connect: hierarchy-driven gr
 | `COM-BR-011` | Retention: messages indefinite per tenant; media 90 days R2 hot, then `archive/` prefix (linkable, rehydrate on demand) | Archival job (`COM-BE-025`) |
 | `COM-BR-012` | Tenant isolation: official/custom/notices/media tenant-scoped; the only cross-tenant path is a DM after an accepted request, authorized by membership — never by tenant query | Repository (every query) + `COM-IT-001` |
 | `COM-BR-013` | Chat endpoints + WS sends rate-limited under class `messaging`; Message Request creation stricter (anti-spam) | Redis rate limiter |
+| `COM-BR-014` | Mentions are roster-validated: deduped, sender + non-members silently dropped, capped at 20 (`TODO: Confirm` the cap — 08-gaps G-31); mention pushes ride 06's frozen `SendToUser` (class `chat`, per-user mute respected) | Service (`NormalizeMentions`) + adapter in `cmd/api` |
+| `COM-BR-015` | Stars are private per-user bookmarks: never fanned out (no WS/push), idempotent, listed only with live group membership | Service (`stars.go`) + `chat_message_stars` PK |
 
 > Content-accuracy (`prompt.txt` §12): seeded demo groups/notices use clearly fictional data ("Demo High School") marked in `03` §1.3; real notices are authored only by verified School Admin/Teacher accounts, so no `TODO:` placeholder reaches a live board.
 
@@ -287,6 +317,7 @@ Provides the real-time communication core of Kushol Connect: hierarchy-driven gr
 | Media upload | `kind ∈ image\|pdf\|voice`; size ≤ cap; mime allowlist | `validation.media.kind_invalid` · `too_large` |
 | Message Request `toUserId` | Not self; peer VERIFIED; no duplicate `pending` | `validation.chat.request_invalid` |
 | Voice `durationMs` | ≤ 300000 (5 min) | `validation.chat.voice_too_long` |
+| Message `mentions` | 0–20 member ids; each must be in the group roster (non-members silently dropped); only text/captioned kinds | `validation.chat.mentions_invalid` |
 
 > Mirrored exactly by the OpenAPI contract (server validation) and the zod form schemas (app) generated from it. Both languages from day one.
 
