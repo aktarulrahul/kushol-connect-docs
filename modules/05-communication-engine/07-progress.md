@@ -718,3 +718,31 @@ clean). Evidence: app chat suites 22/22 green (bubble + screen + list), api buil
 unit tests green, zero new typecheck errors in touched app files (the app tree still carries the
 parallel session's pre-existing catalog-key failures). Remaining owner-only: confirm the
 20-mention cap (G-31a) and run the container IT suite + the three gates.
+
+**Realtime on the VPS, 2026-10-20 (owner: "real time user online, message typing, message update
+not happening")**: presence, typing and live message updates all ride the one gateway socket.
+Most likely cause for the web: the site domain's Nginx template got its `location = /api/v1/ws`
+only on 2026-10-20 (docs `33d5f0c`). Until `hestia/setup-web.sh` re-renders the vhost, the browser's
+same-origin upgrade goes through the plain `/api/` route, which drops `Upgrade`/`Connection`, so
+the handshake fails. Hardening landed in the clients and api:
+
+- **App:** the socket rotates an expired access token before every (re)dial. The gateway checks
+  the bearer only at the handshake, so after 15 minutes every reconnect failed until some REST
+  call rotated. A start guard stops concurrent subscribers from opening two sockets.
+- **App and web:** a stale-link watchdog drops and re-dials a socket that has sent nothing for
+  60 s (no `pong` to two pings) instead of sitting "online" while every event is lost.
+- **Web:** the open conversation polls every 5 s while the socket is not online.
+- **Api:** the "gateway: upgrade failed" log now carries host, origin and a proxy hint when the
+  upgrade headers never arrived.
+- **Ops:** `ops/smoke.sh` warns, never fails, when an installed Kushol template is missing a route
+  the bundle's copy has.
+
+Evidence:
+- Api: build, vet, gateway tests and golangci-lint all clean (0 issues). Also removed the unused
+  `presenceRoomKey`.
+- Web: chat vitest 72/72.
+- App: `ws-client` jest 6/6; tsc and eslint clean.
+- `bash -n` on smoke.sh passes; its template check was exercised against an old and a current
+  template.
+
+Server verification and the template re-apply are owner steps (G-32).

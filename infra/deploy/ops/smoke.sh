@@ -37,6 +37,28 @@ check_api_origin() {
   fi
 }
 
+# check_nginx_templates — warn (never fail: the fix needs root, and a rollback would not help) when
+# an installed Kushol template lacks a route the bundle's copy has. Synced template edits only take
+# effect once hestia/setup-web.sh re-installs and re-applies them; until then Nginx keeps the old
+# routes (2026-10-20: the site domain had no /api/v1/ws location, so browsers got no realtime).
+check_nginx_templates() {
+  local dir name ext want have
+  for dir in /usr/local/hestia/data/templates/web/nginx /usr/local/hestia/data/templates/web/nginx/php-fpm; do
+    [[ -r $dir/kushol-web.stpl ]] && break
+  done
+  [[ -r $dir/kushol-web.stpl ]] || return 0 # not a HestiaCP host (or templates not installed yet)
+  for name in kushol-web kushol-api; do
+    for ext in tpl stpl; do
+      want=$(grep -E '^[[:space:]]*location ' "$KC_ROOT/hestia/templates/$name.$ext" | sort) || true
+      have=$(grep -E '^[[:space:]]*location ' "$dir/$name.$ext" 2>/dev/null | sort) || true
+      if [[ $want != "$have" ]]; then
+        log "smoke WARN nginx template $name.$ext is older than the bundle — as root: bash $KC_ROOT/hestia/setup-web.sh"
+      fi
+    done
+  done
+}
+check_nginx_templates
+
 case $mode in
   local)
     check "api liveness" 200 "http://127.0.0.1:$API_PORT/healthz"
