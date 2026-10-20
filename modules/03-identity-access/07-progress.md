@@ -257,3 +257,40 @@ test (whole-run boundary — "@Atiqul Islam Khan" no longer tags "Atiqul Islam")
 **Evidence**: api build/vet/gofmt clean; platformaccess unit tests green (registry + key regex
 pins); web typecheck clean, eslint clean on touched files, 40/40 suites / 294/294 tests.
 **Pending owner**: migration run (Gate 2), UI review (Gate 1), end-to-end flows (Gate 3).
+
+**Profile photos visible to others, 2026-10-20 (owner: "it should show the user photo in
+message, group info, active conversation; right now only the logged-in user sees it")**. Causes
+found:
+- The web's photo upload fell back to a browser-only copy whenever the upload failed. On the VPS
+  that was any photo over the 2 MB proxy default.
+- The navbar and profile read that local copy first, so only the owner saw a photo the server
+  never had.
+- The app had no photo upload at all, only a typed-link field.
+- The public route `/api/v1/users/{id}/avatar` served the user's newest image of any kind. A photo
+  someone later sent in a private chat would have become their public profile photo.
+
+Fixes:
+- **Api:**
+  - The stored value names the uploaded asset (`?v=<assetId>`), and the route serves exactly
+    that. Older values: `?v=<unix>` resolves to the newest image by that time, and a stored R2
+    link resolves by its key.
+  - Replaced photos are deleted from R2 only when the reference is exact.
+  - PATCH `/me` `avatarUrl` accepts only `""` or the current value. A typed link becomes
+    VALIDATION_FAILED, so the public route can no longer redirect chat members to arbitrary URLs.
+  - `userdto.AvatarPath` gives `/me` and every chat payload one stable public path, never inline
+    image bytes.
+  - The avatar redirect cache dropped to 30 min (presign TTL 1 h).
+- **Web:**
+  - The photo is shrunk to a ≤ 512 px JPEG before upload.
+  - Failures show an error, and nothing photo-related is kept in localStorage.
+  - The profile save no longer PATCHes the photo.
+- **App:** gallery picker (square crop) → `POST /me/avatar`, plus a Remove action; the profile
+  Save covers name and language only.
+- **Nginx:** a `location = /api/v1/me/avatar` with an 11 MB body limit (templates; owner applies).
+
+Evidence:
+- Api: users/userdto/media/chat tests green (new: `TestAvatarRef`, `TestAvatarPatch`,
+  `TestUploadAvatarVersionsByAsset`, `TestAvatarPath`). `go vet -tags=integration ./...` clean.
+  `make contracts-check`: no drift.
+- Web: auth/chat vitest 86/86; tsc and eslint clean.
+- App: tsc and eslint clean; jest 59/59 on the touched suites.

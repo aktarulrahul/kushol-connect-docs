@@ -746,3 +746,13 @@ Evidence:
   template.
 
 Server verification and the template re-apply are owner steps (G-32).
+
+**Member photos in chat, 2026-10-20**:
+- The api now gives every chat payload the same stable photo path (`userdto.AvatarPath`):
+  `senderAvatarUrl` on messages and WS frames, `peer.avatarUrl` (DM list rows and the
+  conversation header), member `avatarUrl` (group info) and contact `avatarUrl` (pickers). All are
+  now in the contract; web and app types are regenerated, and the app spec copy is re-synced.
+- The committed sqlc output had been hand-edited (`…AvatarURL` vs the generator's `…AvatarUrl`).
+  It is regenerated and `make contracts-check` passes.
+- The app's group info sheet now lists members with their photos.
+- Root cause of the missing photos: they never reached the server. See 03 07-progress, same date.

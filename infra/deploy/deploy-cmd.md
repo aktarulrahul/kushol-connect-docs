@@ -14,8 +14,10 @@ Commit the api and web changes on main and push both to `origin/main`:
 ## Step 0 — Realtime: put the WebSocket route on the site domain (one time, 2026-10-20)
 
 Online status, typing and live message updates all ride the WebSocket at `/api/v1/ws`. The site
-domain's Nginx template only got that route on 2026-10-20. A template edit reaches Nginx only
-after the server's copy is replaced and `hestia/setup-web.sh` re-renders the vhost.
+domain's Nginx template only got that route on 2026-10-20. The same templates now also accept
+profile photos up to 11 MB on `/api/v1/me/avatar`; the 2 MB default rejected phone photos, so no one
+else saw them. A template edit reaches Nginx only after the server's copy is replaced and
+`hestia/setup-web.sh` re-renders the vhost.
 
 1. Check the live vhosts. A `0` for `kusholconnect.com` means browsers cannot open the socket:
 
