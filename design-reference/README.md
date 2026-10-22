@@ -28,18 +28,51 @@ The Kushol Connect logo has three parts, always used together as a lockup:
 The brand speaks Bengali first: UI copy defaults to Bangla, with English as the secondary language
 (`brd.md` audience, `prd.md` §2).
 
-## 2. Palette (sampled from the PNG 2026-09-29 — `verify` against the SVG when supplied)
+## 2. Palette (owner-approved v2, 2026-10-22 — purple brand anchored at kushol-700 `#662D91`)
 
-| Token | Sampled value | Where it appears | Role in the design system |
-| --- | --- | --- | --- |
-| Deep teal | `#095777` | Wordmark, "CONNECT", swirl core | `--brand-primary`: primary buttons, links, active states, headers |
-| Slate teal | `#386070` | Swirl gradient midpoint | `--brand-secondary`: secondary surfaces, icons, chart series |
-| Swoosh gray | `#707070` | Swirl tail / highlight | Brand graphic only — do not use as a UI text colour |
-| Paper | near-white `#FAFBFC` (proposed) | — | Light background (mobile + web light theme) |
-| Ink | near-black `#111827`-scale (proposed) | — | Primary text; verify contrast against Paper (target WCAG AA ≥ 4.5:1) |
+### 2.1 Full brand scale (`kushol-*`)
 
-Derived tints/shades (10-step scale from deep teal) are generated in code — do not hand-pick
-one-off hex values in components.
+| Step | Hex | Usage in Kushol Connect |
+| --- | --- | --- |
+| 50 | `#FAF5FF` | Page backgrounds, subtle unread message row tint |
+| 100 | `#F3E8FF` | Selected item background, event category pill background |
+| 200 | `#E9D5FF` | Subtle borders, dividers on purple cards, badge outlines |
+| 300 | `#D8B4FE` | Disabled button background (light mode), decorative accents |
+| 400 | `#C084FC` | Active icons or links in Dark Mode |
+| 500 | `#9333EA` | Secondary buttons, progress bars, notification dots |
+| 600 | `#7E3AF2` | Interactive highlight: active bottom-tab icon, chat send button, links |
+| **700** | **`#662D91`** | **Primary Brand Anchor: app header, primary CTAs, QR pass frame, logo** |
+| 800 | `#532178` | Button :active / pressed state, gradient dark end |
+| 900 | `#3B1557` | Deep hero banners, VIP event pass background |
+| 950 | `#220A33` | Dark mode elevated surface / header |
+
+Gradient for event ticket headers, campaign banners and splash screens:
+`linear-gradient(135deg, #7E3AF2 0%, #662D91 50%, #3B1557 100%)` (token: `kushol-gradient`).
+
+### 2.2 Supporting semantic & module colours
+
+| Token | Value | Where it appears |
+| --- | --- | --- |
+| Gold (e-commerce accent) | `#F59E0B` | "Buy Now", flash-sale badges, star ratings, "Featured Event" tags |
+| Coral rose (urgency) | `#F43F5E` (AA text/badge form `#E11D48`) | "Closing Soon" campaign timers, live indicators, discount %, unread message badge counts |
+| Emerald (check-in/verification) | `#10B981` | "QR Pass Verified" at the gate, "Registration Confirmed", "Order Delivered" (text form `#047857`) |
+| Duplicate-scan warning | `#F59E0B` | "Already checked in / Duplicate scan" |
+| Invalid QR | `#EF4444` | Invalid QR code result |
+
+### 2.3 Neutrals (purple-tinted slate)
+
+| Token | Value | Role |
+| --- | --- | --- |
+| Primary text | `#1E1B4B` (deep indigo-slate) | Product titles, sender names, event titles — never pure black |
+| Muted text | `#64748B` | Timestamps, product SKU, event location subtitle |
+| App background | `#F8FAFC` | Crisp off-white so white cards pop |
+| Card surface | `#FFFFFF` + `#E2E8F0` 1px border | Cards |
+
+Heritage logo colours retained for the brand graphic only: swoosh gray `#707070`; the legacy
+slate-teal `#386070` family remains behind the `slate-*` surface/text classes.
+
+Derived scales for gold/coral/slate are generated in code (`pnpm theme:generate` on web); the
+kushol brand scale is hand-pinned to the owner's values above — do not regenerate it.
 
 ## 3. Typography
 

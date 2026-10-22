@@ -12,8 +12,12 @@ ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
     NEXT_TELEMETRY_DISABLED=1
-# pnpm version comes from package.json "packageManager".
-RUN corepack enable
+# pnpm version comes from package.json "packageManager". `corepack prepare` bakes it into this
+# shared (cached) base layer — without it, `corepack enable` only creates shims and the first
+# `pnpm` call in later stages re-downloads pnpm from registry.npmjs.org, so a transient npmjs
+# outage (HTTP 503) fails `pnpm build`.
+COPY package.json ./
+RUN corepack enable && corepack prepare --activate
 WORKDIR /app
 
 FROM base AS deps
