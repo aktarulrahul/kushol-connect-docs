@@ -8,7 +8,7 @@
 
 > `docs/design-reference/README.md` (palette, Hind Siliguri + Inter, logo rules) and
 > `docs/tech-stack.md` (app table) are binding: tokens only, every user-facing string in Bengali +
-> English, 360px-first layouts. Buyer surfaces only — vendors use the web portal (module `04`).
+> English, 360px-first layouts. Buyer surfaces only — partners use the web portal (module `04`).
 
 ---
 
@@ -18,7 +18,7 @@
 | --- | --- | --- | --- | --- |
 | 1 | `/(tabs)/marketplace` | Marketplace home — **adds the "Store / স্টোর" section** (alongside 10's tutor section) | Verified (Pending → gate) | none (tab root) |
 | 2 | `/(tabs)/marketplace/stores` | Store list — stores serving my school | Verified | store section tap |
-| 3 | `/(tabs)/marketplace/stores/[id]` | Store page — vendor trust header + product grid | Verified | store list tap |
+| 3 | `/(tabs)/marketplace/stores/[id]` | Store page — partner trust header + product grid | Verified | store list tap |
 | 4 | `/(tabs)/marketplace/products/[id]` | Product detail — variant picker, qty, stock state, COD note | Verified | store grid tap |
 | 5 | `/(tabs)/marketplace/checkout` | Checkout — fulfilment picker (pickup/courier), summary, place order | Verified | product CTA |
 | 6 | `/(tabs)/marketplace/orders` | My orders — status chips, tracking when shipped | Verified | push `type=commerce_order_status` |
@@ -81,7 +81,7 @@
 └────────────────────────────────────────┘
 ```
 
-**Store page**: vendor header (cover, name bn, approved badge, served-schools list — trust signals
+**Store page**: partner header (cover, name bn, approved badge, served-schools list — trust signals
 per `CMP-US-005`), delivery note, category filter chips (বই/ইউনিফর্ম/স্টেশনারি), 2-col product grid:
 image, bn name, ৳ price, stock state ("স্টক শেষ / Out of stock" label keeps the card visible,
 button disabled).
@@ -172,7 +172,7 @@ states only. **Order detail**: status timeline (chips below), items with snapsho
 | `StatusTimeline` | Client | Placed → … → terminal; timestamps from the order |
 
 **States** — `CONFLICT` on stale cancel: "অর্ডারের অবস্থা বদলেছে / Order status changed" + refetch ·
-auto-cancelled: reason shown ("ভেন্ডর ২৪ ঘণ্টায় নিশ্চিত করেনি / vendor didn't confirm in 24 h") ·
+auto-cancelled: reason shown ("পার্টনার ২৪ ঘণ্টায় নিশ্চিত করেনি / partner didn't confirm in 24 h") ·
 offline: list from cache, actions refused per §8.
 
 ## 3. Forms & Input

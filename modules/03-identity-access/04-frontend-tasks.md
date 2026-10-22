@@ -122,7 +122,7 @@ Submission: same Zod schema server-side · disable while pending · map problem+
 | OTP request/verify, password login | Client island → generated `openapi-fetch` client (`credentials: include`) → api |
 | Session establishment | api sets the http-only session cookie on the shared site domain (`OQ-4`); web never sees the token |
 | `/me` reads · mutations | TanStack Query (`auth:me`, no-store) · `X-CSRF-Token` double-submit header on every POST/PATCH |
-| Redirects only | `middleware.ts` checks cookie presence for `/admin\|/school\|/vendor` — real authorization is always the API's |
+| Redirects only | `middleware.ts` checks cookie presence for `/admin\|/school\|/partner` — real authorization is always the API's |
 
 ## 5. Motion Spec
 

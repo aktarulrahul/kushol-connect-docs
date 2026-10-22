@@ -171,7 +171,7 @@ Exports return DTOs (never sqlc rows); domain errors, never raw HTTP; additive-f
 
 | Route | Screen | Rendering | Access |
 | --- | --- | --- | --- |
-| N/A — no product routes; the web repo scaffold + generated client is `FND-FE-001` (placeholder `/`, brand name only). Routes `/`, `/download`, `/login`, `/admin/*`, `/school/*`, `/vendor/*` belong to 03/07+ | — | — | — |
+| N/A — no product routes; the web repo scaffold + generated client is `FND-FE-001` (placeholder `/`, brand name only). Routes `/`, `/download`, `/login`, `/admin/*`, `/school/*`, `/partner/*` belong to 03/07+ | — | — | — |
 
 ### 6.2 Mobile (detail in `05-app-tasks.md`)
 

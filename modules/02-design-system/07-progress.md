@@ -39,7 +39,7 @@ textfields, input, badge, all kind of popup, toast, card, etc". Built against 01
 | ADR-9 | Splash reveal plays **once per cold start** (≤ 900ms, skipped under reduced motion) | "first launch" read as cold launch until 03/05 bring persistent storage — `TODO: Confirm` (G-7) |
 | ADR-10 | App icon set from the supplied PNG | Swirl separated by connected-component analysis of the PNG's alpha (no redraw/recolour); iOS icon on paper, adaptive foreground + monochrome, white notification silhouette — interim until vectors (G-1) |
 | ADR-11 | Dev-only UI kits for Gate 1 | Web `/dev/ui` (+ `/admin`, `/landing`) returns 404 in production builds (E2E-tested); app `/dev/ui` redirects outside `__DEV__` |
-| ADR-12 | Token-only lint (`DSN-INT-002`) | Local ESLint rule in each repo (`eslint-rules/design-tokens.mjs`): raw hex/rgb/oklch, Tailwind arbitrary colours/lengths, font-family literals and numeric spacing in style objects fail outside `src/theme` and `src/components/ui`. Vendored component folders relax only 3 stylistic strict rules |
+| ADR-12 | Token-only lint (`DSN-INT-002`) | Local ESLint rule in each repo (`eslint-rules/design-tokens.mjs`): raw hex/rgb/oklch, Tailwind arbitrary colours/lengths, font-family literals and numeric spacing in style objects fail outside `src/theme` and `src/components/ui`. vendored component folders relax only 3 stylistic strict rules |
 
 ## Defaults relied on
 

@@ -5,7 +5,7 @@
 | **Audience** | LMS / educational-institution ERP engineering teams |
 | **Purpose** | Copy-pasteable **GET** request + full JSON **200** response examples for Kushol Connect roster + notice sync v1 |
 | **API version** | Path `v1` · response header `Kushol-LMS-API: 1` |
-| **Normative contract** | [`vendor-lms-api-spec.md`](./vendor-lms-api-spec.md) · OpenAPI [`lms-vendor-api.yaml`](../../contracts/lms-vendor-api.yaml) |
+| **Normative contract** | [`partner-lms-api-spec.md`](./partner-lms-api-spec.md) · OpenAPI [`lms-partner-api.yaml`](../../contracts/lms-partner-api.yaml) |
 | **Terminology** | [`terminology-institution.md`](./terminology-institution.md) (**binding**) |
 | **Date** | 2026-10-03 |
 
@@ -383,7 +383,7 @@ Optional filters: `?scope=institution`, `?scope=section&section_external_id=sec-
 
 | Doc | Role |
 | --- | --- |
-| [`vendor-lms-api-spec.md`](./vendor-lms-api-spec.md) | Normative field rules + compliance |
-| [`lms-vendor-api.yaml`](../../contracts/lms-vendor-api.yaml) | OpenAPI machine contract |
+| [`partner-lms-api-spec.md`](./partner-lms-api-spec.md) | Normative field rules + compliance |
+| [`lms-partner-api.yaml`](../../contracts/lms-partner-api.yaml) | OpenAPI machine contract |
 | [`lms-pull-integration-plan.md`](./lms-pull-integration-plan.md) | How Kushol consumes this API |
 | [`terminology-institution.md`](./terminology-institution.md) | Institution / প্রতিষ্ঠান wording |

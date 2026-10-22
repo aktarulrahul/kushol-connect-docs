@@ -48,7 +48,7 @@ prop/signature changes are additive first; renames go deprecate → remove (life
 | We call | Owner | On failure |
 | --- | --- | --- |
 | api contract (`applications/api/openapi/openapi.yaml`) | `01-foundations` | fixtures keep the UI buildable; client generation waits for the spec |
-| Google Fonts (build-time only) | external | web build fails loudly; escape hatch: vendor the subset woff2 (`02-solution-approach §8`) |
+| Google Fonts (build-time only) | external | web build fails loudly; escape hatch: partner the subset woff2 (`02-solution-approach §8`) |
 | npm: radix / zeego / lucide / @expo-google-fonts | external (pinned) | install-time failure — CI blocks |
 
 ## 4. Cache-Tag Contract
@@ -90,7 +90,7 @@ need an ADR note in this module's `07-progress.md`. The catalog JSON schema live
 
 | Dependency down | What still works | User sees | Recovery |
 | --- | --- | --- | --- |
-| Google Fonts build fetch | app fully (bundled fonts); web dev with fallback stacks | slightly different type until fixed | retry CI / vendor woff2 |
+| Google Fonts build fetch | app fully (bundled fonts); web dev with fallback stacks | slightly different type until fixed | retry CI / partner woff2 |
 | Missing catalog key | everything else | bn fallback or key literal + dev warning | add the key; `DSN-UT-001` prevents recurrence |
 | Hind Siliguri missing a glyph | rest of the UI | system-Bengali fallback glyph | specimen test alerts; font-stack fix |
 | NativeWind/Tailwind version mismatch | logic intact | unstyled/mis-styled UI | pinned versions; `DSN-IT-002` smoke |

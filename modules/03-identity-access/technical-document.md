@@ -10,7 +10,7 @@
 
 ### 1.1 Purpose
 
-The trust gateway of Kushol Connect: registers and authenticates every user across the five end-user roles (plus the platform-scoped `vendor` portal login)
+The trust gateway of Kushol Connect: registers and authenticates every user across the five end-user roles (plus the platform-scoped `partner` portal login)
 (Super Admin, School Admin, Teacher, Student, Guardian) via phone OTP (local SMS gateway),
 email+password (staff, argon2id) and Google/GitHub SSO, then runs the `PENDING → VERIFIED`
 workflow `prd.md` §5.1 makes mandatory before anyone participates — no post, message, purchase or
@@ -119,7 +119,7 @@ Mirror of `03-backend-tasks.md` §1 — column detail stays there. uuid v7 PKs, 
 
 | Table | Purpose | Tenant scope | Key indexes | Notes |
 | --- | --- | --- | --- | --- |
-| `users` | one row per person: role (incl. platform-scoped `vendor`), status, locale, school scope, phone/email, argon2id hash, ambassador flag, Kushol Pro `plan` | `school_id` direct (NULL = platform scope, super_admin only — BR-011) | unique partial `phone_e164`, unique partial `email` · `(school_id, role, status)` · partial `(status)` on PENDING | CHECK role/status/locale enums; `is_ambassador` ⇒ role='student' |
+| `users` | one row per person: role (incl. platform-scoped `partner`), status, locale, school scope, phone/email, argon2id hash, ambassador flag, Kushol Pro `plan` | `school_id` direct (NULL = platform scope, super_admin only — BR-011) | unique partial `phone_e164`, unique partial `email` · `(school_id, role, status)` · partial `(status)` on PENDING | CHECK role/status/locale enums; `is_ambassador` ⇒ role='student' |
 | `auth_identities` | provider links per user: phone / password / google / github | via owning user's `school_id` | `user_id` · `(provider, provider_account_id)` UNIQUE | FK → users ON DELETE CASCADE |
 | `otp_codes` | issued OTPs (hashed), purpose, expiry, attempt counter, consumption | pre-auth — scoped by phone + IP counters instead of tenant | `(phone_e164, created_at DESC)` · partial on unconsumed+unexpired | `code_hmac` = HMAC-SHA256(code, `OTP_PEPPER`); `request_ip` for abuse analysis |
 | `sessions` | web http-only sessions (opaque token, SHA-256 stored) | via owning user's `school_id` | `token_hash` UNIQUE · `(user_id, expires_at)` · partial `(expires_at)` for cleanup | 30-day expiry, sliding `last_seen_at`; device metadata for device list (P1) |
@@ -139,9 +139,9 @@ School" accounts, excluded from prod builds.
 | # | Method · Path | Roles | Purpose | Key errors | Stories |
 | --- | --- | --- | --- | --- | --- |
 | 1 | POST `/api/v1/auth/register` | public (+ OTP code; class `auth` 100/h/IP — CGNAT/school Wi-Fi) | create user `PENDING` + verification request in one tx; hierarchy re-validated server-side | `VALIDATION_FAILED` · `CONFLICT` · `RATE_LIMITED` · `INTERNAL` | US-001/002/013 |
-| 2 | POST `/api/v1/auth/otp/request` · `/resend` · `/verify` | public; class `auth` | issue/resend/verify 6-digit OTP by SMS (primary) or email (`noreply@`, staff/vendors, SMS-delay fallback); request always `202` (enumeration-safe); verify issues tokens or `{status:"unknown_phone"}` | `VALIDATION_FAILED` (one generic message) · `RATE_LIMITED` (60s cooldown, 5/h/phone, 20/h/IP, 3/code, 10/h verify) | US-001/003 |
+| 2 | POST `/api/v1/auth/otp/request` · `/resend` · `/verify` | public; class `auth` | issue/resend/verify 6-digit OTP by SMS (primary) or email (`noreply@`, staff/partners, SMS-delay fallback); request always `202` (enumeration-safe); verify issues tokens or `{status:"unknown_phone"}` | `VALIDATION_FAILED` (one generic message) · `RATE_LIMITED` (60s cooldown, 5/h/phone, 20/h/IP, 3/code, 10/h verify) | US-001/003 |
 | 3 | POST `/api/v1/auth/login/password` | public; class `auth` | staff argon2id login; web gets session cookie, app tokens; PENDING still gets a session | `UNAUTHENTICATED` (generic, enumeration-safe) · `VALIDATION_FAILED` · `RATE_LIMITED` (10/h/account, 30/h/IP) | US-004/013 |
-| 3a | POST `/api/v1/auth/password/forgot` · `/password/reset` | public; class `auth` | staff/vendor reset via 6-digit email OTP from `noreply@`; reset revokes all sessions | `VALIDATION_FAILED` · `RATE_LIMITED` | IDT-US-015 |
+| 3a | POST `/api/v1/auth/password/forgot` · `/password/reset` | public; class `auth` | staff/partner reset via 6-digit email OTP from `noreply@`; reset revokes all sessions | `VALIDATION_FAILED` · `RATE_LIMITED` | IDT-US-015 |
 | 4 | POST `/api/v1/auth/refresh` | public (refresh in body) | single-use rotation, claims re-read from DB | `UNAUTHENTICATED` (reuse ⇒ family revoked + audit) · `VALIDATION_FAILED` | US-003, BR-012 |
 | 5 | POST `/api/v1/auth/logout` · `/logout-all` | authenticate | kill current session+token / everything, audited | `UNAUTHENTICATED` | US-012 |
 | 6 | GET `/api/v1/auth/google/start` + `/callback` · `/github/*` | public; 20/h/IP per provider | OIDC round-trip (state+PKCE); link-on-verified-email; SSO never verifies | redirect with error param (never raw 5xx) | US-005 |
@@ -177,7 +177,7 @@ No WebSocket channels of its own; status changes force client re-auth (06 deep l
 | `users.GetWithSelection(userID)` | 04 | `UserSelection{UserID, Role, Status, SchoolID, SectionID}` | `NOT_FOUND` |
 | `users.UpsertRosterUser(schoolID, in)` | 14 | `{UserID, Created}` — PENDING only, never auto-verify | `VALIDATION_FAILED`, `CONFLICT` |
 | `users.PlanOf(userID)` / `users.SetPlan(actor, userID, tier, expiresAt)` | 08 (read) · 07/12 (write) | Kushol Pro tier | `FORBIDDEN` |
-| `users.CreateVendorLogin(actor, in)` | 07 vendor approval | vendor user id | `CONFLICT`, `FORBIDDEN` |
+| `users.CreateVendorLogin(actor, in)` | 07 partner approval | partner user id | `CONFLICT`, `FORBIDDEN` |
 | `guardians.LinkedStudents` / `GuardiansOf` / `IsGuardianOf` | 04 · 05 · 12 · 14 | ACTIVE `guardian_links` | — |
 
 Exports return DTOs; `Principal` and middleware signatures are frozen for 04–14
@@ -228,7 +228,7 @@ Exports return DTOs; `Principal` and middleware signatures are frozen for 04–1
 | --- | --- | --- | --- |
 | `DATABASE_URL` · `REDIS_URL` | yes | (from 01 config module) | pgx pool · Redis client |
 | `JWT_SECRET` · `OTP_PEPPER` | yes | ≥ 32 random bytes · random bytes | HS256 access JWT (`02-solution-approach.md` §6) · HMAC-SHA256 OTP storage |
-| `SMS_GATEWAY_URL` / `_API_KEY` / `_SECRET_KEY` / `_SENDER` | yes (all four or none — config refuses a partial set) | SAS Bulk SMS `sendtext` endpoint; `_SENDER` is the vendor's callerID; real values only in the gitignored `applications/api/.env` / server `env/api.env` | SMS outbox worker (`IDT-INT-007`, `smsout.HTTPGateway`) |
+| `SMS_GATEWAY_URL` / `_API_KEY` / `_SECRET_KEY` / `_SENDER` | yes (all four or none — config refuses a partial set) | SAS Bulk SMS `sendtext` endpoint; `_SENDER` is the partner's callerID; real values only in the gitignored `applications/api/.env` / server `env/api.env` | SMS outbox worker (`IDT-INT-007`, `smsout.HTTPGateway`) |
 | `GOOGLE_CLIENT_ID` / `_SECRET` · `GITHUB_CLIENT_ID` / `_SECRET` | yes | OIDC app credentials | `sso.Google` / `sso.GitHub` (`IDT-INT-008`) |
 | super-admin bootstrap phone/email/password | yes (one-off) | env-fed CLI, argon2id (`TODO: Confirm` contacts) | `bootstrap.CreateSuperAdmin` (`IDT-BE-032`) |
 
@@ -280,10 +280,10 @@ copy resolves via `auth.*` / `verification.*` / `validation.*` keys in each app'
 | Concern | Detail |
 | --- | --- |
 | Logging | slog with `request_id`; phones masked; OTPs/tokens/secrets redacted (01 chain); failures counted (login), successes audited |
-| Metrics / counters | OTP delivery failure + resend ratio (SMS vendor ops input, 01 §8); outbox `failed` count + alert; SLA-breach list per school; pending-vs-verified counts feed 07 dashboards |
+| Metrics / counters | OTP delivery failure + resend ratio (SMS partner ops input, 01 §8); outbox `failed` count + alert; SLA-breach list per school; pending-vs-verified counts feed 07 dashboards |
 | Health contribution | none of its own — `/healthz` `/readyz` are 01's; 03 registers its jobs on the 01 worker and depends on Neon/Redis probes indirectly |
 | Jobs & retries | SLA reminder hourly (idempotent, daily repeat) · OTP outbox every minute (×5 backoff → `failed` + alert) · provisioning per approve (×5 retry → alert, user stays VERIFIED) · daily session/refresh cleanup |
-| Runbook pointers | degradation matrix in `06-integration-tasks.md` §8 (SMS down, OIDC down, Redis down → DB fallback, Neon cold start, `OnUserVerified` failure, 06 outages); vendor SLA belongs in the SMS contract (`OQ-2`); ADRs (unknown-phone response, custom auth) recorded in `07-progress.md` at build |
+| Runbook pointers | degradation matrix in `06-integration-tasks.md` §8 (SMS down, OIDC down, Redis down → DB fallback, Neon cold start, `OnUserVerified` failure, 06 outages); partner SLA belongs in the SMS contract (`OQ-2`); ADRs (unknown-phone response, custom auth) recorded in `07-progress.md` at build |
 
 ---
 
@@ -321,7 +321,7 @@ keep their `TODO: Confirm` marker.
 | # | Item | Impact | Owner | Status | Default if unanswered |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Student Ambassador criteria / verification SLA | queue trust + speed | Rahul | Open | any verified ambassador of the same school verifies same-school student/guardian requests; SLA 48 h with auto-reminder |
-| 2 | SMS gateway vendor (`TODO: Confirm` vendor + contract); nationwide within-seconds delivery | OTP delivery; onboarding churn | Rahul | Open | SSLWireless-class local gateway behind `SMS_GATEWAY_*` env; `auth.smsDelayed` copy, resend, SSO + password alternatives; vendor SLA in contract |
+| 2 | SMS gateway partner (`TODO: Confirm` partner + contract); nationwide within-seconds delivery | OTP delivery; onboarding churn | Rahul | Open | SSLWireless-class local gateway behind `SMS_GATEWAY_*` env; `auth.smsDelayed` copy, resend, SSO + password alternatives; partner SLA in contract |
 | 3 | Guardian↔student linking proof | guardian trust | Rahul | Open | guardian enters school + class + student ID; admin approves in queue; module 14 enables automatic matching later |
 | 4 | Shared registrable domain for web + api (session cookie scope) | web auth redesign if split | Rahul | **Resolved 2026-09-30** | `kusholconnect.com`: web on the apex with same-origin `/api/*` proxy → host-only `__Host-` session cookie; mobile on `api.kusholconnect.com` with JWT + refresh tokens |
 | 5 | Ambassadors mass-approving outsiders | trust erosion with schools | Rahul | Mitigated | same-school + student/guardian only, approve-only, daily cap, full audit, instant flag revocation, admin spot-checks |
@@ -349,7 +349,7 @@ keep their `TODO: Confirm` marker.
 | Date | Change | Author |
 | --- | --- | --- |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
-| 2026-09-30 | Email OTP channel (`otp_codes.channel`/`email`, `reset` purpose) sent from `noreply@kusholconnect.com` via 06; staff/vendor forgot-password endpoints (`IDT-US-015`); per-IP limits raised for CGNAT/school Wi-Fi (per-target caps remain primary) | Claude |
-| 2026-09-30 | Cross-module consistency pass: `vendor` role, `plan`/`plan_expires_at`, `verification_requests.requested_section_id`, `guardian_links` table + migration `20261001090030`, FKs to 04 tables deferred to 04's `20261002090007`; `classId` removed from registration; exports added for 04/07/08/12/14 | Claude |
-| 2026-10-02 | **Passwordless login (owner decision):** `/auth/login/password` removed from the contract; login is email OTP (6-digit code to the staff email) or phone OTP — `OtpVerifyResult` gains `unknown_email`, `otp.UserFinder` gains `StatusByEmail`, web login defaults to the Email OTP tab, app gains an Email OTP tab. Passwords remain provisioned credentials only (bootstrap super admin, teacher registration, `/auth/password/forgot`+`reset`, 07 vendor first-password set). Super admin seeded 2026-10-02 (`contact.aktarul@gmail.com`). | Kilo |
+| 2026-09-30 | Email OTP channel (`otp_codes.channel`/`email`, `reset` purpose) sent from `noreply@kusholconnect.com` via 06; staff/partner forgot-password endpoints (`IDT-US-015`); per-IP limits raised for CGNAT/school Wi-Fi (per-target caps remain primary) | Claude |
+| 2026-09-30 | Cross-module consistency pass: `partner` role, `plan`/`plan_expires_at`, `verification_requests.requested_section_id`, `guardian_links` table + migration `20261001090030`, FKs to 04 tables deferred to 04's `20261002090007`; `classId` removed from registration; exports added for 04/07/08/12/14 | Claude |
+| 2026-10-02 | **Passwordless login (owner decision):** `/auth/login/password` removed from the contract; login is email OTP (6-digit code to the staff email) or phone OTP — `OtpVerifyResult` gains `unknown_email`, `otp.UserFinder` gains `StatusByEmail`, web login defaults to the Email OTP tab, app gains an Email OTP tab. Passwords remain provisioned credentials only (bootstrap super admin, teacher registration, `/auth/password/forgot`+`reset`, 07 partner first-password set). Super admin seeded 2026-10-02 (`contact.aktarul@gmail.com`). | Kilo |
 | 2026-10-02 | **OTP email delivery + letter templates:** `jobs.SetConn(pool)` at api/worker boot so `auth.otp_email` jobs run; bilingual HTML/plain letter via `smsout.RenderOTPEmail` (deep-teal wordmark, digit figures, purpose-specific subjects). Web local `/api/v1` rewrite avoids CORS on the api. App `AuthProvider` + refresh-token restore (no welcome flash). Stage 5 partial: phone OTP / register / `/me` / logout / web SSO on generated client; hierarchy still fixtures. | Kilo |

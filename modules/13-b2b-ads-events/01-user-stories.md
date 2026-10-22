@@ -6,7 +6,7 @@
 
 ## 1. Purpose
 
-Module 13 is revenue Stream 2 (`brd.md` §7): approved vendors run **demographic-targeted campaigns**
+Module 13 is revenue Stream 2 (`brd.md` §7): approved partners run **demographic-targeted campaigns**
 (BR-05 — e.g. "শুধুমাত্র চট্টগ্রামের ক্লাস ১২ এর বিজ্ঞান বিভাগ") as sponsored push over module 06's hierarchy
 topics and native banners on web surfaces, every campaign Super-Admin-moderated — no exploitative targeting
 of minors, demographic dimensions only (`prompt.txt` §9, `persona.md` SME duty). It also ships **city-wide
@@ -18,12 +18,12 @@ event listings with ticketing** at a 10% platform commission (PRD §7).
 | --- | --- |
 | Unverified user (pending) | Cannot buy tickets and receives no sponsored pushes — hierarchy topics (and thus campaign reach) attach only on verification (module 06 via module 04) |
 | Student / Guardian / Teacher | Receives labelled, frequency-capped sponsored pushes on their `city-{id}`/`section-{id}` topics; browses public events; registers/buys tickets; cancels before start — guardians buy for their child; teachers are never an ad target distinct from their section topics |
-| School Admin | No ads role — school data reaches vendors only as aggregate counts via module 04 exports |
+| School Admin | No ads role — school data reaches partners only as aggregate counts via module 04 exports |
 | Super Admin | Moderates the campaign/event queue (approve / reject with reason + checklist, audit-logged); views the platform ads overview; can organize platform events |
-| Vendor / EdTech brand | Creates campaigns and events (only after `vendors.Approve` from module 07), submits for review, edits drafts/rejected, pauses/resumes, views aggregate analytics and ticket revenue |
+| Partner / EdTech brand | Creates campaigns and events (only after `partners.Approve` from module 07), submits for review, edits drafts/rejected, pauses/resumes, views aggregate analytics and ticket revenue |
 | System (jobs, webhooks) | `campaign.dispatch` / `campaign.complete` / `ads.daily_aggregate` / `tickets.sweep` jobs; module 06 broadcast at schedule time; module 12 fills `payment_transaction_id` when delivered |
 
-> The five roles (Super Admin / School Admin / Teacher / Student / Guardian) plus Vendors are defined by
+> The five roles (Super Admin / School Admin / Teacher / Student / Guardian) plus Partners are defined by
 > module 03 (`03-identity-access`). Verification gates every participatory action (`prd.md` §5.1) — here it
 > gates ticket purchase and campaign reach.
 
@@ -31,9 +31,12 @@ event listings with ticketing** at a 10% platform commission (PRD §7).
 
 **In scope**
 
-- `ad_campaigns` + `ad_creatives` lifecycle (draft → pending_review → approved/rejected → scheduled → running → paused → completed) with demographic-only targeting.
-- Audience estimate from 04 counts; sponsored-push dispatch via `notify.BroadcastTopic` (targeting IS topic selection); native-banner selection for **web** surfaces (P1); moderation queue APIs + checklist; audit; pseudized aggregate-only `ad_events` analytics.
-- `events` + `event_tickets`: listing, approval, free (instant) and paid (reserved → 12 seam) tickets, 10% commission, buyer cancellation, organizer revenue view.
+- `ad_campaigns` + `ad_creatives` lifecycle (draft → pending_review → approved/rejected → scheduled → running → paused → completed) with demographic-only targeting across 3 placement tiers:
+  - **Tier 1 (`OWN_INSTITUTIONS_FREE`):** 100% free campaigns targeting institutions onboarded by the partner (`onboarded_by_vendor_id`).
+  - **Tier 2 (`OTHER_INSTITUTIONS_PAID`):** Paid campaigns targeting other educational institutions across the hierarchy.
+  - **Tier 3 (`GLOBAL_APP_BANNER_PAID`):** Paid promotional banners placed on Kushol mobile app surfaces (Marketplace & Notices tabs).
+- Audience estimate from 04 counts; sponsored-push dispatch via `notify.BroadcastTopic` (targeting IS topic selection); native-banner selection for **web** and **app** surfaces; moderation queue APIs + checklist; audit; pseudized aggregate-only `ad_events` analytics.
+- `events` + `event_tickets` & in-app event registration: listing, approval, free and paid tickets, custom registration forms, QR code check-in, CSV export, buyer cancellation, organizer revenue view.
 
 **Out of scope** (explicit — prevents scope drift)
 
@@ -46,7 +49,7 @@ event listings with ticketing** at a 10% platform commission (PRD §7).
 | Module | What this module needs from it |
 | --- | --- |
 | 06 notifications | `notify.BroadcastTopic` for sponsored push (topics `city-{id}`/`school-{id}`/`section-{id}`); `type=campaign` payload; push labels rendered per its contract |
-| 07 command-center-web | `vendors.Approve` gate (only approved vendor accounts advertise); the `/admin/campaigns` moderation stub this module fills; `landing_leads` as top-of-funnel |
+| 07 command-center-web | `partners.Approve` gate (only approved partner accounts advertise); the `/admin/campaigns` moderation stub this module fills; `landing_leads` as top-of-funnel |
 | 04 organization-hierarchy · 05 communication-engine | `cities/schools/sections` targeting dimensions + aggregated verified-user counts (`hierarchy.AudienceCount`, declared in 04 `06` §2); `media_assets` (R2 presign + magic-byte confirm) for creative images |
 | 03 identity-access · 01 foundations | Role guards + buyer verification (03); `jobs.Enqueue`, `audit.Record`, RFC-7807 envelope, `default` limiter (01) |
 | 12 payments | Seam only — `event_tickets.payment_transaction_id` filled by 12 once delivered; **not a build dependency** (README) |
@@ -55,26 +58,26 @@ event listings with ticketing** at a 10% platform commission (PRD §7).
 
 ## 4. User Stories
 
-### `ADS-US-001` — Approved vendor creates a targeted campaign
+### `ADS-US-001` — Approved partner creates a targeted campaign
 
-**Priority:** P0 · **Traces:** BR-05 (`brd.md` §5) / PRD §7 · **Depends on:** 07 vendor approval
+**Priority:** P0 · **Traces:** BR-05 (`brd.md` §5) / PRD §7 · **Depends on:** 07 partner approval
 
-**Story** — As an **approved vendor**, I want **to build a campaign by picking a city, grade and sections, seeing a live audience estimate, writing the creative in Bengali + English, and setting schedule and budget**, so that **I can reach exactly the demographic I sell to**.
+**Story** — As an **approved partner**, I want **to build a campaign by picking a city, grade and sections, seeing a live audience estimate, writing the creative in Bengali + English, and setting schedule and budget**, so that **I can reach exactly the demographic I sell to**.
 
 **Acceptance criteria**
 
-- **Given** an approved vendor account, **when** the builder opens, **then** targeting offers city (required), grade and sections (optional) only — no user-level selection exists anywhere in the UI — and the estimate (aggregate count from 04) updates on each change.
-- **Given** a complete creative (bn **and** en title/body, CTA label + https URL), schedule and budget, **when** saved, **then** the campaign is stored `draft` with targeting `{city_id, grade, section_ids[]}` and the sponsored label reserved server-side (vendor cannot type or remove it).
+- **Given** an approved partner account, **when** the builder opens, **then** targeting offers city (required), grade and sections (optional) only — no user-level selection exists anywhere in the UI — and the estimate (aggregate count from 04) updates on each change.
+- **Given** a complete creative (bn **and** en title/body, CTA label + https URL), schedule and budget, **when** saved, **then** the campaign is stored `draft` with targeting `{city_id, grade, section_ids[]}` and the sponsored label reserved server-side (partner cannot type or remove it).
 
-### `ADS-US-002` — Vendor submits a campaign for review
+### `ADS-US-002` — Partner submits a campaign for review
 
 **Priority:** P0 · **Traces:** BR-05 / `prompt.txt` §9 · **Depends on:** ADS-US-001
 
-**Story** — As an **approved vendor**, I want **to submit a draft campaign for moderation**, so that **nothing is served to students before a human approves it**.
+**Story** — As an **approved partner**, I want **to submit a draft campaign for moderation**, so that **nothing is served to students before a human approves it**.
 
 **Acceptance criteria**
 
-- **Given** a complete `draft`, **when** the vendor submits, **then** status becomes `pending_review`, the campaign appears in the Super Admin queue, and further edits are refused (`CONFLICT`).
+- **Given** a complete `draft`, **when** the partner submits, **then** status becomes `pending_review`, the campaign appears in the Super Admin queue, and further edits are refused (`CONFLICT`).
 - **Given** an incomplete draft or an unmodified rejected campaign, **when** submit is attempted, **then** `VALIDATION_FAILED` with field keys, or `CAMPAIGN_REJECTED` respectively.
 
 ### `ADS-US-003` — Super Admin approves or rejects with reason
@@ -86,7 +89,7 @@ event listings with ticketing** at a 10% platform commission (PRD §7).
 **Acceptance criteria**
 
 - **Given** a `pending_review` campaign, **when** the queue card opens, **then** creative (bn/en), targeting summary ("Chattogram · Class 12 · 3 sections"), budget/schedule and the moderation checklist (banned: gambling, tobacco, age-inappropriate — `TODO: Confirm` written policy) display.
-- **Given** the checklist confirmed, **when** approve is clicked, **then** status becomes `approved` (→ `scheduled`/`running` per schedule) with `audit.Record` capturing actor, decision and checklist version; reject with a typed reason sets `rejected`, surfaces the reason banner to the vendor, and is audit-logged (reject stays disabled without a reason).
+- **Given** the checklist confirmed, **when** approve is clicked, **then** status becomes `approved` (→ `scheduled`/`running` per schedule) with `audit.Record` capturing actor, decision and checklist version; reject with a typed reason sets `rejected`, surfaces the reason banner to the partner, and is audit-logged (reject stays disabled without a reason).
 
 ### `ADS-US-004` — System dispatches an approved sponsored push at schedule time
 
@@ -107,40 +110,40 @@ event listings with ticketing** at a 10% platform commission (PRD §7).
 
 **Acceptance criteria**
 
-- **Given** a subscribed topic receives a sponsored broadcast, **when** rendered, **then** title/body show the sponsored label in bn and en (injected server-side, not vendor-supplied).
+- **Given** a subscribed topic receives a sponsored broadcast, **when** rendered, **then** title/body show the sponsored label in bn and en (injected server-side, not partner-supplied).
 - **Given** the topic already got a sponsored push in the trailing 7 days, **when** dispatch is attempted, **then** it is skipped and logged `frequency_cap_skipped` (default 1/user/week — `TODO: Confirm`); a tapped CTA records a pseudized `click` row — never a per-student profile.
 
-### `ADS-US-006` — Vendor views aggregate campaign analytics
+### `ADS-US-006` — Partner views aggregate campaign analytics
 
 **Priority:** P1 · **Traces:** PRD §7 · **Depends on:** ADS-US-004
 
-**Story** — As a **vendor**, I want **daily impressions, clicks, CTR and spend-vs-budget for my own campaign**, so that **I can judge whether the demographic reach worked**.
+**Story** — As a **partner**, I want **daily impressions, clicks, CTR and spend-vs-budget for my own campaign**, so that **I can judge whether the demographic reach worked**.
 
 **Acceptance criteria**
 
-- **Given** a campaign with activity, **when** its analytics open, **then** a daily chart plus totals, CTR and spend render from the aggregate store — only for the vendor's own campaigns (others → 404).
+- **Given** a campaign with activity, **when** its analytics open, **then** a daily chart plus totals, CTR and spend render from the aggregate store — only for the partner's own campaigns (others → 404).
 - **Given** any analytics request, **when** served, **then** no per-student row is returned or queryable (BR-008); the chart ships a data-table fallback (a11y).
 
-### `ADS-US-007` — Vendor manages campaign state: edit, pause, resume
+### `ADS-US-007` — Partner manages campaign state: edit, pause, resume
 
 **Priority:** P1 · **Traces:** BR-006, BR-011 · **Depends on:** ADS-US-002, ADS-US-004
 
-**Story** — As a **vendor**, I want **to edit my campaign while it is `draft` or after rejection, and pause/resume it while running**, so that **I control content and spend mid-flight**.
+**Story** — As a **partner**, I want **to edit my campaign while it is `draft` or after rejection, and pause/resume it while running**, so that **I control content and spend mid-flight**.
 
 **Acceptance criteria**
 
 - **Given** a `draft` or `rejected` campaign, **when** PATCH is sent with valid changes, **then** the update persists and a rejected campaign becomes resubmittable; any review-state row returns `CONFLICT` (immutable).
 - **Given** a `running` campaign, **when** pause is clicked, **then** status `paused`, the dispatch job skips it and native selection stops serving it (budget exhaustion auto-pauses too, BR-006); **when** resumed inside the window, **then** it re-enters `running` at the next dispatch tick.
 
-### `ADS-US-008` — Vendor lists an event and gets it published
+### `ADS-US-008` — Partner lists an event and gets it published
 
-**Priority:** P0 · **Traces:** BR-05 / `brd.md` §7 Event Ticketing / PRD §7 · **Depends on:** 07 vendor approval
+**Priority:** P0 · **Traces:** BR-05 / `brd.md` §7 Event Ticketing / PRD §7 · **Depends on:** 07 partner approval
 
-**Story** — As an **approved vendor**, I want **to list a city-wide event (science fair) with venue, schedule, capacity and free or priced tickets, and have it published after Super Admin approval**, so that **students and guardians can discover it**.
+**Story** — As an **approved partner**, I want **to list a city-wide event (science fair) with venue, schedule, capacity and free or priced tickets, and have it published after Super Admin approval**, so that **students and guardians can discover it**.
 
 **Acceptance criteria**
 
-- **Given** an approved vendor, **when** the event form is saved, **then** the event is `draft` (city, bn/en title + description, venue, starts/ends, capacity, `ticket_price_bdt` nullable for free events).
+- **Given** an approved partner, **when** the event form is saved, **then** the event is `draft` (city, bn/en title + description, venue, starts/ends, capacity, `ticket_price_bdt` nullable for free events).
 - **Given** a submitted event, **when** the Super Admin approves it in the same queue, **then** status `published` and it appears in public listings for its city; rejection requires a reason and is audit-logged. Platform-organized events reuse this path with `organizer_kind=platform`.
 
 ### `ADS-US-009` — Student/Guardian discovers and views a published event
@@ -174,7 +177,7 @@ event listings with ticketing** at a 10% platform commission (PRD §7).
 
 **Acceptance criteria**
 
-- **Given** the organizer's own event, **when** the ticket list opens, **then** active tickets (buyer, qty, status) and totals — gross `amount_bdt`, `commission_bdt` = 10% of paid amounts, net — render; other vendors' events → 404.
+- **Given** the organizer's own event, **when** the ticket list opens, **then** active tickets (buyer, qty, status) and totals — gross `amount_bdt`, `commission_bdt` = 10% of paid amounts, net — render; other partners' events → 404.
 - **Given** cancelled tickets, **when** totals compute, **then** they are excluded from gross/net but shown as a count.
 
 ### `ADS-US-012` — Buyer cancels a ticket before the event starts
@@ -197,7 +200,7 @@ event listings with ticketing** at a 10% platform commission (PRD §7).
 **Acceptance criteria**
 
 - **Given** `/admin/ads`, **when** opened, **then** totals render from `GET /admin/ads/overview` (campaigns by status, published events, tickets sold, gross, commission, net) — feeding module 07's `/admin/stats` revenue placeholder.
-- **Given** a campaign reaching `schedule_end`, **when** `campaign.complete` runs, **then** status `completed` and a final per-day report is available to the vendor and reflected in the overview.
+- **Given** a campaign reaching `schedule_end`, **when** `campaign.complete` runs, **then** status `completed` and a final per-day report is available to the partner and reflected in the overview.
 
 ---
 
@@ -205,11 +208,11 @@ event listings with ticketing** at a 10% platform commission (PRD §7).
 
 | ID | Rule | Enforced where |
 | --- | --- | --- |
-| `ADS-BR-001` | Only vendors with an **approved** `vendor_accounts` row (07 `vendors.Approve`) may create/submit; re-checked on every `/vendor/*` mutation | Service (07 export read), DB FK |
+| `ADS-BR-001` | Only partners with an **approved** `vendor_accounts` row (07 `partners.Approve`) may create/submit; re-checked on every `/partner/*` mutation | Service (07 export read), DB FK |
 | `ADS-BR-002` | Nothing serves/publishes without Super Admin approval; rejection **requires a reason**; every decision `audit.Record`-ed | Service + audit (01) |
 | `ADS-BR-003` | Targeting is **demographic only** — keys `{city_id, grade, section_ids[]}` and nothing else; dispatch expands topics from the hierarchy; no user-level selection | DB CHECK + service + OpenAPI |
 | `ADS-BR-004` | Frequency cap: max **1 sponsored push/user/week** (default, `TODO: Confirm`) — per-topic weekly at broadcast, per-user via `ads.CanServeToUser` | Service (dispatch pre-check) |
-| `ADS-BR-005` | Every rendering carries the sponsored label "স্পনসর্ড / Sponsored", injected server-side; vendors cannot opt out or edit it | Service (payload/serve) + FE render |
+| `ADS-BR-005` | Every rendering carries the sponsored label "স্পনসর্ড / Sponsored", injected server-side; partners cannot opt out or edit it | Service (payload/serve) + FE render |
 | `ADS-BR-006` | Budget guard: projected cost (audience × rate, `TODO: Confirm` ৳0.25/impression) must fit remaining `budget_bdt`, else auto-`pause` before anything sends | Service (pre-dispatch), job |
 | `ADS-BR-007` | Banned categories (gambling, tobacco, age-inappropriate) enforced by the moderation checklist; checklist version audited; policy `TODO: Confirm` | Moderation UI + audit |
 | `ADS-BR-008` | Ad analytics **aggregate-only**: pseudized `user_ref`; daily aggregates only; no per-student ad profile ever built or queryable | Repository + service |
@@ -239,7 +242,7 @@ event listings with ticketing** at a 10% platform commission (PRD §7).
 | # | Scenario | Expected behaviour |
 | --- | --- | --- |
 | 1 | Unauthenticated call to a protected action | `UNAUTHENTICATED`, no side effect |
-| 2 | Vendor A reads/writes vendor B's campaign, event or tickets | `TENANT_MISMATCH` / 404 (account-scoped), nothing leaked |
+| 2 | Partner A reads/writes partner B's campaign, event or tickets | `TENANT_MISMATCH` / 404 (account-scoped), nothing leaked |
 | 3 | Unverified (pending) user requests tickets | Refused `FORBIDDEN` with verify-first copy; no hold created |
 | 4 | Creative image deleted / R2 object missing | Native slot renders placeholder; text-only push still dispatches; never a crash |
 | 5 | Reduced motion enabled | Charts and queue transitions render static (04 §5) |
@@ -251,7 +254,7 @@ event listings with ticketing** at a 10% platform commission (PRD §7).
 ## 8. Reporting Needs
 
 - `GET /admin/ads/overview`: campaigns by status, spend, published events, tickets sold, gross/commission/net — consumed by module 07's platform dashboard (`/admin/stats` placeholder).
-- `ads_daily` aggregate (campaign × day: impressions, clicks, spend) powering vendor analytics charts (ADS-US-006); ticket totals per event for the organizer view and platform roll-up.
+- `ads_daily` aggregate (campaign × day: impressions, clicks, spend) powering partner analytics charts (ADS-US-006); ticket totals per event for the organizer view and platform roll-up.
 - Dispatch log (campaign × topic × result: sent / skipped-frequency-cap / paused-budget) for ops debugging — served alongside the overview.
 
 ## 9. Open Questions

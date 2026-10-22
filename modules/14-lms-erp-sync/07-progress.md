@@ -60,7 +60,7 @@ Module: lms-erp-sync · Surfaces: **api + web** (app = N/A by design, `05` empty
 | Repo | Check | Result |
 | --- | --- | --- |
 | api | build/vet repo-wide · fmt-check | clean |
-| api | `make lint` (golangci-lint) | **0 issues** (incl. pre-existing findings in 04/07/leads/vendors files fixed) |
+| api | `make lint` (golangci-lint) | **0 issues** (incl. pre-existing findings in 04/07/leads/partners files fixed) |
 | api | `make contracts-check` | `contracts: no drift` |
 | api | `go test -race ./internal/sync/...` | LMS-UT-001 (row taxonomy), UT-002 (fixed headers), UT-003 (HMAC versions + overlap), UT-004 (±5-min window), UT-005 (schedule presets + secret seal), UT-006 (per-type payloads) — green |
 | api | wiring | jobs `roster.import.process`, `roster.import.commit`, `erp.test.dispatch`, `lms.pull.sync`, `lms.pull.tick` registered; adapters `rosterUserAdapter` (direct), `rosterHierarchyAdapter`, `rosterMediaAdapter` (05 `PutObject`/R2 `GetObject`); `Sync` embedded in httpapi |
@@ -88,12 +88,12 @@ with show-once secret modal + ack, test/rotate/revoke, event log + redrive; LMS 
 form + test + Sync now + run history) → `/institution/roster/reconciliation` (baseline vs platform,
 drift flags). Desktop 1280 + 768; bn default, en toggle.
 
-## Web admin LMS pages — 2026-10-09 (owner request; implements the vendor pull contract client-side)
+## Web admin LMS pages — 2026-10-09 (owner request; implements the partner pull contract client-side)
 
-`/admin/lms` + `/admin/lms/[id]` now follow **vendor-lms-api-spec.md** / **vendor-lms-api-response-examples.md**
+`/admin/lms` + `/admin/lms/[id]` now follow **partner-lms-api-spec.md** / **partner-lms-api-response-examples.md**
 exactly (fixture seam `fixtures/lms.ts` admin section; swap point = `internal/sync` endpoints):
 
-- **Vendor surface simulated per contract**: `GET /teachers` · `/students` · `/sections` (classes with
+- **Partner surface simulated per contract**: `GET /teachers` · `/students` · `/sections` (classes with
   nested `sections[]`) · `/sections/{external_id}` (`teacher_ids`/`student_ids`/`class_teacher_id`) ·
   `/notices` — cursor pagination (`next_cursor`, limit 1–200), 401 on disabled/revoked credentials
   (the college demo connector is intentionally revoked to exercise the `sync.run.auth_failed` path),

@@ -10,7 +10,7 @@
 > tokens only from each app's `src/theme`, every user-facing string in Bengali + English, bn default.
 
 > **Visual direction (owner, 2026-09-30):** professional. Landing = modern B2B SaaS marketing site;
-> `/admin`, `/school`, `/vendor` = dense admin console on 02's `AdminShell`/`PageHeader`/`StatCard`/`DataTable`.
+> `/admin`, `/school`, `/partner` = dense admin console on 02's `AdminShell`/`PageHeader`/`StatCard`/`DataTable`.
 > Binding rules: `docs/design-reference/README.md` §7. No fabricated logos, testimonials or numbers.
 
 ---
@@ -19,14 +19,14 @@
 
 | # | Route | Screen | Rendering | Access |
 | --- | --- | --- | --- | --- |
-| 1 | `/` | Landing funnel (hero, ROI calculator, For Vendors, downloads, trust, footer) | Static + ISR (`landing:content`) | Public |
+| 1 | `/` | Landing funnel (hero, ROI calculator, For Partners, downloads, trust, footer) | Static + ISR (`landing:content`) | Public |
 | 2 | `/download` | App download (APK/TestFlight + QR placeholder) | Static + ISR | Public |
 | 3 | `/login` | Sign-in (screen delivered by module 03; 07 gates shells behind it) | Dynamic | Public |
 | 4 | `/admin` | Super Admin dashboard | Dynamic | Super Admin |
 | 5 | `/admin/tenants` | Tenants list (TanStack Table) | Dynamic | Super Admin |
 | 6 | `/admin/tenants/new` | Create-school wizard (3 steps + review) | Dynamic | Super Admin |
 | 7 | `/admin/cities` | Cities management | Dynamic | Super Admin |
-| 8 | `/admin/vendors` | Vendor approval queue (list + detail drawer) | Dynamic | Super Admin |
+| 8 | `/admin/partners` | Partner approval queue (list + detail drawer) | Dynamic | Super Admin |
 | 9 | `/admin/leads` | Leads pipeline | Dynamic | Super Admin |
 | 10 | `/admin/campaigns` | Campaign moderation stub ("ships in module 13") | Dynamic | Super Admin |
 | 11 | `/admin/audit` | Audit log viewer | Dynamic | Super Admin |
@@ -42,7 +42,7 @@
 | 20 | `/institution/migrations/[id]` | Migration status page (poll while COMMITTING) | Dynamic | School Admin |
 | 21 | `/institution/roster` | Stub → module 14 | Dynamic | School Admin |
 | 22 | `/institution/ledger` · `/institution/ai-matrix` · `/institution/tutors` · `/institution/integrations` | Stubs → modules 12/09/10/14 (route names owned by those modules) | Dynamic | School Admin (`/institution/ai-matrix` also Teacher — own sections only, 09) |
-| 23 | `/vendor` | Vendor shell (pending/approved state) | Dynamic | Vendor |
+| 23 | `/partner` | Partner shell (pending/approved state) | Dynamic | Partner |
 | 24 | `*` | Branded 404 + role-aware FORBIDDEN pages | Dynamic | All |
 
 ## 2. Screen Breakdown
@@ -53,7 +53,7 @@
 
 The landing page is an illustrated, high-density promotional funnel targeting 3 actions:
 1. **Schools/Colleges:** Join the pilot (`#pilot`)
-2. **Vendors & Education Brands:** Apply as a vendor (`#vendors`)
+2. **Partners & Education Brands:** Apply as a partner (`#partners`)
 3. **Guardians & Students:** Download the app (`/download` or `#download`)
 
 Section rhythm alternates surfaces (`Paper` `#FAFBFC` → `teal-50` `#EDF6F8` → `white` → full-bleed deep-teal `#095777` band) to eliminate dead white space.
@@ -68,12 +68,12 @@ Section rhythm alternates surfaces (`Paper` `#FAFBFC` → `teal-50` `#EDF6F8` �
 | `BeforeAfterSlider` | Client | Draggable comparison slider (WhatsApp chaos vs Kushol order) with mouse/touch/keyboard handles and 4 contrast rows |
 | `FeatureSlider` | Client | 12-feature spotlight carousel (`framer-motion`) with 5 category filters, 6s autoplay progress bar, play/pause controls, keyboard navigation (ArrowLeft/Right) |
 | `HowItWorks` | Client | 3-step structured process cards (Upload Roster → Auto-Group → Connect Safely) |
-| `RoleTabs` | Client | 4-tab role switch (Guardians, Teachers, Institutions, Vendors) with 3 verified benefits each and role-specific CTAs |
+| `RoleTabs` | Client | 4-tab role switch (Guardians, Teachers, Institutions, Partners) with 3 verified benefits each and role-specific CTAs |
 | `DeskDemo` | Client | Interactive school admin desk illustration with clickable feature hotspots (Roster, Notices, Sync) |
 | `RoiCalculator` | Client | Dual range slider + number inputs, 400ms count-up payoff, instant comparison bar against traditional SMS costs |
 | `TrustSafety` | Server | Full-bleed deep-teal band with City → Institution → Section hierarchy diagram and 4 security pillars |
 | `PilotSection` | Client | Pilot school pitch with strictly real "২–৩টি প্রতিষ্ঠান" seat limit + `PilotForm` |
-| `VendorSection` | Client | Vendor pitch with I-10 audience targeting illustration + `VendorInquiryForm` |
+| `VendorSection` | Client | Partner pitch with I-10 audience targeting illustration + `VendorInquiryForm` |
 | `AppDownloadSection` | Client | Mobile app promo with QR code, disabled store badges, and pointer 3D tilt |
 | `FaqAccordion` | Client | 6 real objection-resolving questions in clean accordion |
 | `FinalCtaBand` | Server | Full-bleed deep-teal closing banner with dual CTAs |
@@ -106,7 +106,7 @@ buttons, QR placeholder box (labelled), "how to install" collapsible, back-to-ho
 **States** — placeholders render disabled with "coming soon" (`landing.download.soon`); enabled
 links fire a `download_click` lead via `navigator.sendBeacon` (fire-and-forget, never blocks nav).
 
-### 2.3 Portal shells + dashboards — `/admin`, `/school`, `/vendor`
+### 2.3 Portal shells + dashboards — `/admin`, `/school`, `/partner`
 
 **Layout**
 
@@ -121,9 +121,9 @@ DESKTOP ≥1024                     TABLET 768–1023 (portals target ≥768)
 └────────┴─────────────────────┘
 ```
 
-Nav is role-locked (`WEB-BR-001`): admin = Dashboard, Tenants, Cities, Vendors, Leads, Campaigns
+Nav is role-locked (`WEB-BR-001`): admin = Dashboard, Tenants, Cities, Partners, Leads, Campaigns
 (stub), Audit; school = Dashboard, Users/Verification, Notices, Clubs, Sections, Migration, Roster→14,
-Ledger→12, AI Matrix→09, Tutors→10, Webhooks→14; vendor = single status screen.
+Ledger→12, AI Matrix→09, Tutors→10, Webhooks→14; partner = single status screen.
 
 | Component | Server/Client | Notes |
 | --- | --- | --- |
@@ -152,7 +152,7 @@ the tenants list. Stepper shows progress; each step validates before Next.
 **States** — `CONFLICT` maps `hierarchy.school.name_duplicate` to the name field; submit disabled
 while pending; success panel offers "create another".
 
-### 2.5 Vendor approval queue — `/admin/vendors`
+### 2.5 Partner approval queue — `/admin/partners`
 
 **Layout** — TanStack table (status tabs: pending/approved/rejected/suspended) → row opens detail
 drawer: company, contact, targeting text, submitted date → sticky decision bar: Approve (confirm
@@ -239,10 +239,10 @@ Step 1            Step 2                  Step 3           Status page
 Errors in step 2 keep commit disabled with fix guidance (US-015); step 3 posts `dryRun:false`
 (PREVIEWED) then commit on confirm; runs list (`/institution/migrations`) re-opens any run.
 
-### 2.13 Stubs — `/institution/roster|ledger|matrix|tutors|webhooks`, `/vendor`
+### 2.13 Stubs — `/institution/roster|ledger|matrix|tutors|webhooks`, `/partner`
 
-`StubRoute`: icon + "ships in module NN" (bn/en) + what will live there + back link. `/vendor`:
-shell + status card — pending → "your account is pending approval" (`vendor.state.pending`);
+`StubRoute`: icon + "ships in module NN" (bn/en) + what will live there + back link. `/partner`:
+shell + status card — pending → "your account is pending approval" (`partner.state.pending`);
 rejected → reason shown; approved → "portal opens with module 11" notice.
 
 ## 3. Forms
@@ -251,12 +251,12 @@ rejected → reason shown; approved → "portal opens with module 11" notice.
 | --- | --- | --- | --- | --- |
 | ROI: students / notices / fee cycles | number steppers + slider | int ranges (§6, module 01) | 500 / 20 / 3 | — |
 | Pilot: contact name, phone, school, city, students, message | inputs / `CitySelect` / textarea | shared lead schema | bn locale labels | — |
-| Vendor: company, contact, phone, email, targeting | inputs / textarea | shared vendor schema | — | email optional |
+| Partner: company, contact, phone, email, targeting | inputs / textarea | shared partner schema | — | email optional |
 | School create: city, nameBn, nameEn, admin name + phone | select / inputs | shared school schema | current session year context | — |
 | City create: nameBn, nameEn, launch flag | inputs / switch | shared city schema | launch=false | — |
 | Section: classLevel, name, sessionYear | select / inputs | shared section schema | current session | — |
 | Notice: title, bodyBn, bodyEn, scope, sectionId, pin, attachment | inputs / tabs / radio / switch / file | shared notice schema | scope=school, pin=false | sectionId required iff scope=section |
-| Verification reject / vendor reject/suspend: reason | dialog textarea | 10–500 required | — | — |
+| Verification reject / partner reject/suspend: reason | dialog textarea | 10–500 required | — | — |
 | Migration: fromSessionYear | select (≥ 2026) | shared migration schema | previous session | — |
 | Lead status | row dropdown | transition table client-mirrored | current status | — |
 
@@ -270,7 +270,7 @@ the composer.
 | --- | --- |
 | Public read (landing/download) | Server Component → static/ISR; no api call needed except lead POST |
 | Public write (leads) | Client form → Route Handler → generated `openapi-fetch` → api → success panel |
-| Portal reads | Server Component first paint → TanStack Query hydration for tables (queues, vendors, leads, sections) |
+| Portal reads | Server Component first paint → TanStack Query hydration for tables (queues, partners, leads, sections) |
 | Mutation | Server Action / Route Handler → generated client → api → toast + `revalidateTag`/query invalidation |
 | Migration status | Poll `GET /institution/migrations/{id}` every 3 s while COMMITTING → stop on terminal state |
 | Attachment | Client → `POST /media/upload-url` → PUT R2 → `POST /media/{id}/confirm` → attach id to notice |
@@ -310,7 +310,7 @@ the composer.
 - [ ] `<html lang>` flips bn/en; Bengali never rendered in Inter; `lang` attributes correct on mixed copy
 - [ ] Contrast WCAG 2.2 AA in light theme, both locales
 - [ ] Motion: reduced-motion variant verified per §5
-- [ ] axe (Playwright) clean on `/`, `/download`, `/admin/*`, `/institution/*`, `/vendor`
+- [ ] axe (Playwright) clean on `/`, `/download`, `/admin/*`, `/institution/*`, `/partner`
 
 ## 8. Design-System Compliance
 
@@ -318,24 +318,24 @@ the composer.
 deep-teal primary for CTAs, logo lockup 28–32 px with clear space and accessible name "Kushol
 Connect — Home", Hind Siliguri for all Bengali, Inter for Latin/numerals (tabular figures in
 tables/ledgers), swoosh-gray never used as text colour. Every string verified in bn + en via the
-CI catalog parity gate (namespaces `landing.*`, `admin.*`, `school.*`, `vendor.*`, `validation.*`
+CI catalog parity gate (namespaces `landing.*`, `admin.*`, `school.*`, `partner.*`, `validation.*`
 added to module 02's whitelist — additive, parity-gated).
 
 ## 9. Task Checklist
 
-- [x] `WEB-FE-001` — 2026-10-03 Route groups + middleware (session presence → `/login?next=`), role layouts for `/admin`, `/school`, `/vendor`
+- [x] `WEB-FE-001` — 2026-10-03 Route groups + middleware (session presence → `/login?next=`), role layouts for `/admin`, `/school`, `/partner`
 - [x] `WEB-FE-002` — 2026-10-03 Locale cookie + `LocaleProvider` wiring; `<html lang>` bn default; toggle preserves form state
-- [x] `WEB-FE-003` — 2026-10-03 Landing: header/footer/hero/trust/vendors sections (static, bn/en)
+- [x] `WEB-FE-003` — 2026-10-03 Landing: header/footer/hero/trust/partners sections (static, bn/en)
 - [x] `WEB-FE-004` — 2026-10-03 `RoiCalculator` + `ROI_ASSUMPTIONS` constant + formula/disclaimer display
 - [x] `WEB-FE-005` — 2026-10-03 `PilotForm` (Route Handler → `POST /leads`, retry-safe)
-- [x] `WEB-FE-006` — 2026-10-03 `VendorInquiryForm` (→ `POST /vendor/register`)
+- [x] `WEB-FE-006` — 2026-10-03 `VendorInquiryForm` (→ `POST /partner/register`)
 - [x] `WEB-FE-007` — 2026-10-03 `/download` + flag-gated `DownloadButtons` + `QrPlaceholder` + click lead
 - [ ] `WEB-FE-008` SEO suite: per-locale Metadata, OG image, JSON-LD Organization, `sitemap.ts`, `robots.ts`
 - [x] `WEB-FE-009` — 2026-10-03 Admin dashboard (`GET /admin/stats`) + placeholder cards (`WEB-BR-009`)
 - [x] `WEB-FE-010` — 2026-10-03 Tenants list (TanStack Table)
 - [x] `WEB-FE-011` — 2026-10-03 Create-school wizard (04 endpoints, review step, CONFLICT mapping)
 - [x] `WEB-FE-012` — 2026-10-03 Cities management (`POST /admin/cities`)
-- [x] `WEB-FE-013` — 2026-10-03 Vendor queue + drawer + `ReasonDialog` (approve/reject/suspend)
+- [x] `WEB-FE-013` — 2026-10-03 Partner queue + drawer + `ReasonDialog` (approve/reject/suspend)
 - [x] `WEB-FE-014` — 2026-10-03 Leads pipeline (filters, transition dropdown, optimistic update)
 - [x] `WEB-FE-015` — 2026-10-03 Audit viewer (`GET /admin/audit-log`, filters + pager)
 - [x] `WEB-FE-016` — 2026-10-03 Campaigns stub route
@@ -347,9 +347,9 @@ added to module 02's whitelist — additive, parity-gated).
 - [x] `WEB-FE-022` — 2026-10-03 Clubs approval queue (05 endpoints)
 - [x] `WEB-FE-023` — 2026-10-03 Sections manager (create/archive + CONFLICT copy)
 - [x] `WEB-FE-024` — 2026-10-03 Migration wizard (dry-run → results → PREVIEWED → commit) + runs list + status page poll
-- [x] `WEB-FE-025` — 2026-10-03 Stub routes (roster/ledger/matrix/tutors/webhooks) + vendor shell states
+- [x] `WEB-FE-025` — 2026-10-03 Stub routes (roster/ledger/matrix/tutors/webhooks) + partner shell states
 - [x] `WEB-FE-026` — 2026-10-03 Branded 404 + role-aware FORBIDDEN pages
 - [ ] `WEB-FE-027` `DataTable` keyboard/aria pass; focus management lib for wizards/dialogs
 - [x] `WEB-FE-028` — 2026-10-03 Motion per §5 with reduced-motion variants
-- [x] `WEB-FE-029` — 2026-10-03 bn/en catalog keys (`landing.*`, `admin.*`, `school.*`, `vendor.*`) + parity gate green
+- [x] `WEB-FE-029` — 2026-10-03 bn/en catalog keys (`landing.*`, `admin.*`, `school.*`, `partner.*`) + parity gate green
 - [ ] `WEB-FE-030` axe Playwright suite + CWV budget check (Lighthouse CI) on `/` and `/download`

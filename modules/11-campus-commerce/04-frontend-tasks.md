@@ -8,7 +8,7 @@
 
 > `docs/design-reference/README.md` (palette, Hind Siliguri + Inter, logo rules) is binding:
 > tokens only from each app's `src/theme`, every user-facing string in Bengali + English, bn default.
-> This module **fills module 07's `/vendor` shell** (nav/stubs were built in 07) and adds the
+> This module **fills module 07's `/partner` shell** (nav/stubs were built in 07) and adds the
 > `/admin/commission` stub slot.
 
 ---
@@ -17,22 +17,22 @@
 
 | # | Route | Screen | Rendering | Access |
 | --- | --- | --- | --- | --- |
-| 1 | `/vendor` | Vendor dashboard (replaces 07's approved-state stub): action counters, quick links | Dynamic | Vendor (approved) |
-| 2 | `/vendor/storefront` | Storefront create/settings (schools served, pickup address, pause/resume) | Dynamic | Vendor (approved) |
-| 3 | `/vendor/products` | Products list (TanStack Table: name, category, price ৳, stock, status) | Dynamic | Vendor |
-| 4 | `/vendor/products/new` | Product create (bn/en names, category, price, images, variants) | Dynamic | Vendor |
-| 5 | `/vendor/products/[id]` | Product edit + archive | Dynamic | Vendor |
-| 6 | `/vendor/inventory` | Inventory manager (inline stock edit, low-stock highlight, reserved column) | Dynamic | Vendor |
-| 7 | `/vendor/orders` | Fulfilment board (status columns/queue + action dialogs) | Dynamic | Vendor |
-| 8 | `/vendor/orders/[id]` | Order detail (snapshot items, buyer, fulfilment, timeline) | Dynamic | Vendor |
+| 1 | `/partner` | Partner dashboard (replaces 07's approved-state stub): action counters, quick links | Dynamic | Partner (approved) |
+| 2 | `/partner/storefront` | Storefront create/settings (schools served, pickup address, pause/resume) | Dynamic | Partner (approved) |
+| 3 | `/partner/products` | Products list (TanStack Table: name, category, price ৳, stock, status) | Dynamic | Partner |
+| 4 | `/partner/products/new` | Product create (bn/en names, category, price, images, variants) | Dynamic | Partner |
+| 5 | `/partner/products/[id]` | Product edit + archive | Dynamic | Partner |
+| 6 | `/partner/inventory` | Inventory manager (inline stock edit, low-stock highlight, reserved column) | Dynamic | Partner |
+| 7 | `/partner/orders` | Fulfilment board (status columns/queue + action dialogs) | Dynamic | Partner |
+| 8 | `/partner/orders/[id]` | Order detail (snapshot items, buyer, fulfilment, timeline) | Dynamic | Partner |
 | 9 | `/admin/commission` | Super Admin commission report **stub** (ships with 12/07 revenue) | Dynamic | Super Admin |
 
-Access rule: 07's `/vendor` shell gate stays (`GET /vendor/state`); this module renders real screens
-only for `approved` vendors — pending/rejected/suspended keep 07's state cards.
+Access rule: 07's `/partner` shell gate stays (`GET /partner/state`); this module renders real screens
+only for `approved` partners — pending/rejected/suspended keep 07's state cards.
 
 ## 2. Screen Breakdown
 
-### 2.1 Vendor dashboard — `/vendor`
+### 2.1 Partner dashboard — `/partner`
 
 **Layout**
 
@@ -62,11 +62,11 @@ only for `approved` vendors — pending/rejected/suspended keep 07's state cards
 | State | Behaviour |
 | --- | --- |
 | Loading | Skeleton counters matching card layout |
-| Empty (no storefront) | "প্রথমে একটি স্টোরফ্রন্ট তৈরি করুন / Create your storefront first" + CTA to `/vendor/storefront` |
+| Empty (no storefront) | "প্রথমে একটি স্টোরফ্রন্ট তৈরি করুন / Create your storefront first" + CTA to `/partner/storefront` |
 | Error | Boundary with retry + request id |
-| Suspended vendor | 07's state card (reason shown) — no screens |
+| Suspended partner | 07's state card (reason shown) — no screens |
 
-### 2.2 Storefront settings — `/vendor/storefront`
+### 2.2 Storefront settings — `/partner/storefront`
 
 **Layout** — create mode is a centred panel form; edit mode shows the same form + a status bar
 (active/paused toggle) + schools-served checklist + danger-free pause (never delete while orders are
@@ -83,14 +83,14 @@ open — deletion is out of scope this module).
 **States** — `VALIDATION_FAILED` maps `validation.commerce.*` to fields; pause/resume toast +
 refetch; unsaved-changes guard.
 
-### 2.3 Products list + create/edit — `/vendor/products`, `/vendor/products/new`, `/vendor/products/[id]`
+### 2.3 Products list + create/edit — `/partner/products`, `/partner/products/new`, `/partner/products/[id]`
 
 **List**: TanStack Table — image thumb, name (bn first), category chip, price ৳ (tabular figures),
 available stock (on hand − reserved), status (active/archived); row → edit; "নতুন পণ্য / New
 product" primary button. **Create/edit**: two-column ≥1024 (form + live preview card), stacked
 <1024. Fields: name bn (required)/en, description, category select, price ৳, images (≤ 5, via 05
 presign → PUT R2 → confirm; first = primary; drag to reorder), variants repeater (name, price
-delta ±৳, sku) — each variant auto-creates its stock row shown in `/vendor/inventory`.
+delta ±৳, sku) — each variant auto-creates its stock row shown in `/partner/inventory`.
 
 | Component | Server/Client | Notes |
 | --- | --- | --- |
@@ -102,7 +102,7 @@ delta ±৳, sku) — each variant auto-creates its stock row shown in `/vendor/
 **States** — archived banner on edit ("সংরক্ষণাগারে — ক্রেতা কিনতে পারবে না / Archived — not
 purchasable") + restore action; `CONFLICT` on double-save refetches.
 
-### 2.4 Inventory manager — `/vendor/inventory`
+### 2.4 Inventory manager — `/partner/inventory`
 
 **Layout** — TanStack Table grouped by product: variant, on hand (inline number input + save),
 reserved (read-only, explained "অর্ডারে সংরক্ষিত / held by orders"), available, reorder level;
@@ -119,7 +119,7 @@ no auto purchase orders at launch — "স্টক কেনার কাজ �
 **States** — stock edit below reserved → inline field error (`validation.commerce.qty_invalid`);
 offline → edits refused with offline notice (money/stock surfaces need connectivity).
 
-### 2.5 Orders fulfilment board — `/vendor/orders`, `/vendor/orders/[id]`
+### 2.5 Orders fulfilment board — `/partner/orders`, `/partner/orders/[id]`
 
 **Layout**
 
@@ -136,7 +136,7 @@ Card: order_code · buyer name+school · items n · total ৳ · fulfilment chip
 | --- | --- | --- |
 | `OrderBoard` | Client (TanStack Query, poll 30 s) | Status columns (board ≥1024) / tabs (<1024); counts per column |
 | `ShipDialog` | Client | courier name + tracking number (both required, zod); explains buyer sees the tracking number |
-| `CancelDialog` | Client | Reason required ≥ 5 chars (vendor); shows restock consequence ("স্টক ফেরত যাবে / stock returns") |
+| `CancelDialog` | Client | Reason required ≥ 5 chars (partner); shows restock consequence ("স্টক ফেরত যাবে / stock returns") |
 | `OrderDetailDrawer`/page | Client | Snapshot items (as ordered — "যে দামে অর্ডার হয়েছিল / price at order time"), buyer contact, address or pickup note, commission row, status timeline |
 
 **States** — `CONFLICT` (buyer cancelled meanwhile) → toast "অর্ডারটি ইতিমধ্যে বাতিল / Order was
@@ -161,10 +161,10 @@ entry added to the Super Admin sidebar by this module (07 owns the shell).
 | Variant `name` / `priceDelta` / `sku` | repeater inputs | `variant_name_invalid` · `price_delta_range` · `sku_invalid` | delta=0 | — |
 | Inventory `qtyOnHand` / `reorderLevel` | inline numbers | `qty_invalid` (≥ reserved, ≥ 0) | current value | — |
 | Ship `courierName` / `trackingNumber` | dialog inputs | `courier_required` · `tracking_required` | — | courier orders only |
-| Cancel `cancelReason` | dialog textarea | 5–500 (`cancel_reason_required`) | — | vendor cancel |
+| Cancel `cancelReason` | dialog textarea | 5–500 (`cancel_reason_required`) | — | partner cancel |
 
 Submission: same Zod schema on the server (Route Handler re-validation) · disable while pending ·
-map `fields` errors to inputs · never lose input · unsaved-changes guard on all vendor forms.
+map `fields` errors to inputs · never lose input · unsaved-changes guard on all partner forms.
 
 ## 4. Data Flow
 
@@ -174,7 +174,7 @@ map `fields` errors to inputs · never lose input · unsaved-changes guard on al
 | Browse-side reads (none in web this module) | N/A — buyer surfaces live in the app only |
 | Mutation | Server Action / Route Handler → generated client → api → toast + query invalidation (board, inventory, storefront) |
 | Product images | Client → `POST /media/upload-url` (05) → PUT R2 → `POST /media/{id}/confirm` → attach ids on product save |
-| Vendor identity | 07 shell gate `GET /vendor/state`; portal-user link happens at first approved login (api-side) |
+| Partner identity | 07 shell gate `GET /partner/state`; portal-user link happens at first approved login (api-side) |
 
 ## 5. Motion Spec
 
@@ -190,7 +190,7 @@ map `fields` errors to inputs · never lose input · unsaved-changes guard on al
 
 | Surface | < 640 | 640–1023 | ≥ 1024 |
 | --- | --- | --- | --- |
-| Vendor portal | degraded single column: sidebar → drawer, tables/boards → stacked cards + tabs | drawer nav, boards → tabs, tables scroll-x | fixed sidebar + board columns |
+| Partner portal | degraded single column: sidebar → drawer, tables/boards → stacked cards + tabs | drawer nav, boards → tabs, tables scroll-x | fixed sidebar + board columns |
 | Tables (products/inventory) | card-stack rows (label: value) | horizontal scroll, sticky first column | full table |
 | Forms | single column | centred panel 560 px | two-column with live preview |
 | Order detail | full-screen page | drawer | drawer |
@@ -204,20 +204,20 @@ map `fields` errors to inputs · never lose input · unsaved-changes guard on al
 - [ ] Labels, descriptions, error announcements (`aria-live` on form errors + toasts)
 - [ ] `<html lang>` flips bn/en; Bengali never rendered in Inter; ৳ figures use tabular numerals
 - [ ] Motion: reduced-motion variant verified per §5
-- [ ] axe (Playwright) clean on `/vendor/*` and `/admin/commission`
+- [ ] axe (Playwright) clean on `/partner/*` and `/admin/commission`
 
 ## 8. Design-System Compliance
 
 `docs/design-reference/README.md` usage rules hold: tokens only (no raw hex), deep-teal primary
 CTAs, Hind Siliguri for all Bengali, Inter for Latin/numerals (tabular figures for prices/stock),
 swoosh-gray never used as text colour. Every string verified in bn + en via the CI catalog parity
-gate — namespaces `vendor.*` (extended with commerce keys) and `admin.*` added to module 02's
+gate — namespaces `partner.*` (extended with commerce keys) and `admin.*` added to module 02's
 whitelist (additive, parity-gated); new namespace `commerce.*` for shared buyer/seller vocabulary.
 
 ## 9. Task Checklist
 
-- [x] `CMP-FE-001` `/vendor` role screens unlocked for approved vendors (07 shell integration, state cards kept for others) — 2026-10-03 (07 shell kept; approved-vendor screens; non-approved keep 07 state cards)
-- [x] `CMP-FE-002` Vendor dashboard (counters, quick links, storefront status chip + pause/resume) — 2026-10-03 (counters, quick links, status chip)
+- [x] `CMP-FE-001` `/partner` role screens unlocked for approved partners (07 shell integration, state cards kept for others) — 2026-10-03 (07 shell kept; approved-partner screens; non-approved keep 07 state cards)
+- [x] `CMP-FE-002` Partner dashboard (counters, quick links, storefront status chip + pause/resume) — 2026-10-03 (counters, quick links, status chip)
 - [x] `CMP-FE-003` Storefront create/settings (SchoolsPicker, pickup address, PauseDialog) — 2026-10-03 (SchoolsPicker, pickup address, PauseDialog copy)
 - [x] `CMP-FE-004` Products list (TanStack Table, filters, stock column) — 2026-10-03 (table, category filter, stock badges with text)
 - [x] `CMP-FE-005` Product create/edit (ProductForm, bn-first tabs, variants repeater, archived banner + restore) — 2026-10-03 (bn-first form, variants repeater, archive action)
@@ -231,4 +231,4 @@ whitelist (additive, parity-gated); new namespace `commerce.*` for shared buyer/
 - [x] `CMP-FE-013` Portal-user linking UX (first approved login → link confirmation state) — portal-user linking UX — deferred → `08-gaps.md` G-8 (rides 07's live portal login)
 - [x] `CMP-FE-014` Responsive pass per §6 (drawer nav, board→tabs, table→cards) — 2026-10-03 (drawer/sidebar via AdminShell, board→cards, tables scroll-x)
 - [x] `CMP-FE-015` Motion per §5 with reduced-motion variants — 2026-10-03 (toasts/dialogs per the shared motion primitives; reduced-motion = instant)
-- [x] `CMP-FE-016` bn/en catalog keys (`vendor.commerce.*`, `admin.commission.*`, `validation.commerce.*`) + parity gate green + axe suite — 2026-10-03 (`commerce.*` + `validation.commerce.*` bn/en added; parity tests green; axe rides the owner's Gate-1 pass — G-1)
+- [x] `CMP-FE-016` bn/en catalog keys (`partner.commerce.*`, `admin.commission.*`, `validation.commerce.*`) + parity gate green + axe suite — 2026-10-03 (`commerce.*` + `validation.commerce.*` bn/en added; parity tests green; axe rides the owner's Gate-1 pass — G-1)

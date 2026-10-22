@@ -7,8 +7,8 @@
 **Last updated:** 2026-10-03
 
 Single engineer-facing reference compressing this module's spec set (`01`–`06`). When this file
-drifts, the spec files win. LMS pull + Institution terminology: `vendor-lms-api-spec.md`,
-`vendor-lms-api-response-examples.md` (shareable GET samples), `lms-pull-integration-plan.md`,
+drifts, the spec files win. LMS pull + Institution terminology: `partner-lms-api-spec.md`,
+`partner-lms-api-response-examples.md` (shareable GET samples), `lms-pull-integration-plan.md`,
 `terminology-institution.md`.
 
 ---
@@ -251,7 +251,7 @@ downloads on the default class, webhook body cap 1 MB, upload cap 20 MB / 10,000
 | Concern | Rule |
 | --- | --- |
 | Auth chain | Admin routes: authenticate → role claim `SCHOOL_ADMIN` → tenant-scope (`02` §6). Webhook route is the **documented exception**: unauthenticated-but-HMAC-signed — identity = valid HMAC over `{timestamp}.{rawBody}`; no session/JWT exists for ERP systems |
-| Role matrix | School Admin: all `/institution/roster/*`, `/institution/erp/*`, `/institution/roster/reconciliation` (licence-gated, BR-014) · Student/Guardian/Teacher/Vendor: no surface · Super Admin: owns the licence flag via 07, reads audit trails · Schools' LMS/ERP: the webhook route only |
+| Role matrix | School Admin: all `/institution/roster/*`, `/institution/erp/*`, `/institution/roster/reconciliation` (licence-gated, BR-014) · Student/Guardian/Teacher/Partner: no surface · Super Admin: owns the licence flag via 07, reads audit trails · Schools' LMS/ERP: the webhook route only |
 | Tenant scope | Admin routes: school from JWT/session claim only, path ids joined to the claim; repository never accepts a caller-supplied `school_id` (INV-006). Webhook route: `{schoolId}` must resolve to an ACTIVE `erp_endpoints` row (BR-001/013); cross-references fail closed; foreign access → `TENANT_MISMATCH` |
 | Rate limits | Webhook class 60 events/min/school (`RATE_LIMITED` + `Retry-After`); 10 uploads/h, 5 commits/h, 5 rotates/h, 10 tests/h per school; default class elsewhere |
 | Audit events | Import uploaded + commit requested/completed (totals); endpoint registered/rotated/revoked; test dispatched; **every webhook rejection** (`audit.Record`, security log with `signature_valid=false` evidence) |
@@ -342,5 +342,5 @@ Unconfirmed items keep their `TODO: Confirm` marker.
 | --- | --- | --- |
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
 | 2026-09-30 | Consistency pass: webhook secrets encrypted (AES-256-GCM, `ERP_SECRET_KEY`) instead of hashed — HMAC verification needs the raw secret; migrations re-versioned `20270301…`; routes `/institution/roster/reconciliation` (was colliding with 12) and `/institution/integrations`; consumes 03 `users.UpsertRosterUser` + `guardians.*` | Claude |
-| 2026-10-03 | LMS pull plan + vendor API; binding Institution terminology (`institution_type`); FCM `school-*` rename deferred to 06 | Agent |
+| 2026-10-03 | LMS pull plan + partner API; binding Institution terminology (`institution_type`); FCM `school-*` rename deferred to 06 | Agent |
 | 2026-10-04 | Built contract-first: 22 operations + 28 `Lms*` schemas; webhook route is the documented unauthenticated-but-HMAC exception (BR-009/INV-005: constant-time HMAC, ±5-min window, versioned AES-256-GCM secrets under `ERP_SECRET_KEY`, show-once raw); imports are always dry-run-first with content-hash no-op and chunked commits (03 upsert = PENDING creates only, 04 enrollments with ROSTER source); 3 migrations consolidate §1.2's four (registry `20270301090001–090003`) + licence flag + pull tables; pull connector = `VendorClient` port, interval schedule presets, single running sync per institution, `lms_external_ids` map, additive 04 export `EnsureExternalSection`; CSV P0 (xlsx rejected at upload); reconciliation = baseline vs ACTIVE counts with drift flags, no-store reads. App surface: N/A by design. Gaps: G-1…G-9 (IT harness, licence UI, withdrawal export, notices pull, xlsx, SSRF allowlist, Redis memo, e2e runs) | Kilo |

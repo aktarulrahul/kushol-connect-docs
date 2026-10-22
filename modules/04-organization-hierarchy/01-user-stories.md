@@ -24,7 +24,7 @@ year-end migration that promotes or graduates students.
 | Teacher | Assigned to sections as TEACHER or CLASS_TEACHER; the class teacher owns the official section group (module 05) |
 | School Admin | Governs only their own school (tenant): sections, enrollment roster, teacher assignment, year-end migration |
 | Super Admin | Onboards tenant schools + first School Admin, manages the city list, archives schools |
-| Vendor / EdTech brand | No direct access — reaches hierarchy segments only through module 13 campaigns |
+| Partner / EdTech brand | No direct access — reaches hierarchy segments only through module 13 campaigns |
 | System (jobs, webhooks) | Runs migration commits via module 01 `jobs`, back-fills group joins/topic bindings, receives `OnUserVerified` calls from module 03 |
 
 ## 3. Scope

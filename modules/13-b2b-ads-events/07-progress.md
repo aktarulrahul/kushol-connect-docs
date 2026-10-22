@@ -28,7 +28,7 @@ Module: b2b-ads-events · Surfaces: **api + web** (README scope; app = recorded 
    server-side into the payload title/body (BR-005); budget guard auto-pauses BEFORE any send
    (BR-006); per-topic 7-day frequency cap skips (BR-004); idempotent via from-status transitions.
 3. **ADR-3 (aggregate-only analytics — BR-008/INV-5):** `ad_events` is a bigint fact table with
-   daily-rotating HMAC `user_ref` (UT-006); vendor analytics read `ads_daily` only.
+   daily-rotating HMAC `user_ref` (UT-006); partner analytics read `ads_daily` only.
 4. **ADR-4 (ticket lifecycle — INV-7/8):** row-locked capacity in the INSERT..WHERE CTE; free →
    `paid` instantly, priced → `reserved` with the 12 seam (`payment_transaction_id`); 10%
    commission server-computed on paid amounts only.
@@ -59,5 +59,5 @@ Run in order against Neon; each has a `.down` reverse.
 ## Gate 1 review hand-off
 
 Web (`pnpm dev`, fixtures): `/admin/moderation` (queue: approve / reject-with-reason dialog,
-checklist panel), `/vendor/ads` (campaign table w/ status + spend/budget), `/events` (public
+checklist panel), `/partner/ads` (campaign table w/ status + spend/budget), `/events` (public
 published-only listing). Desktop 1280 + 768.

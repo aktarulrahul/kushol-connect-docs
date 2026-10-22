@@ -12,9 +12,9 @@
 | Stage | Status | Date | Notes |
 | --- | --- | --- | --- |
 | 1 Read & plan | ✅ | 2026-10-03 | Owner approved ("1" / go ahead) |
-| 2 UI (`04`+`05`) | ✅ Gate 1 | 2026-10-03 | Fixture-driven landing/admin/institution/vendor; app N/A. Owner said go ahead on concept |
+| 2 UI (`04`+`05`) | ✅ Gate 1 | 2026-10-03 | Fixture-driven landing/admin/institution/partner; app N/A. Owner said go ahead on concept |
 | 3 Docs sync | ✅ | 2026-10-03 | Checklists ticked; README 🚧; gaps listed |
-| 4 Backend (`03`) | ✅ code · ⏳ Gate 2 | 2026-10-03 | Migrations + leads/vendors/webconsole + handlers; unit tests green |
+| 4 Backend (`03`) | ✅ code · ⏳ Gate 2 | 2026-10-03 | Migrations + leads/partners/webconsole + handlers; unit tests green |
 | 5 Integration (`06`) | ⬜ | — | Swap fixtures → generated client after Gate 2 |
 | 6 Gaps & verification | ⬜ | — | |
 
@@ -41,14 +41,14 @@
 | --- | --- |
 | ADR-1 | Stage 2 UI remains fixture-driven until Gate 2 + Stage 5 client swap |
 | ADR-2 | `leads` rate class: 10/h/IP wired; 3/min burst deferred (G-7) |
-| ADR-3 | Vendor re-approve from suspended/rejected allowed (OQ-5) |
+| ADR-3 | Partner re-approve from suspended/rejected allowed (OQ-5) |
 
 ## Evidence
 
 | Check | Result |
 | --- | --- |
 | web `pnpm test` | 163 passed (Stage 2) |
-| api `go test -race ./internal/leads ./internal/vendors ./internal/webconsole` | ok |
+| api `go test -race ./internal/leads ./internal/partners ./internal/webconsole` | ok |
 | api `go vet` on those + httpapi | clean |
 | Dev server | **Not started by agent** — owner stack already running |
 
@@ -66,6 +66,36 @@ Migrations to apply:
 | --- | --- | --- |
 | `20261015090000` | `web_landing_leads` | `landing_leads` + CHECKs + indexes |
 | `20261015091000` | `web_vendor_accounts` | `vendor_accounts` + trgm search + portal_user unique |
+| `20270312092000` | `partner_module_refinement` | `partner_leads`, `partner_kyc_documents`, `partner_verification_logs`, `partner_members`, `partner_audit_logs`, `users.role` partner constraint, `users.xp_balance` |
+
+---
+
+## Partner Module Global Refinement (2026-10-21)
+
+- **Terminology Migration**: Global rename of Partner → Partner across docs, OpenAPI 3.1 contracts, DB migrations, SQLC, Go backend, Web Command Center, and Expo App.
+- **Partner Self-Registration & KYC**: Landing page public registration (`/register/partner`), 100% free (`registration_fee = 0`), R2 presigned direct KYC uploads (Trade License, NID, TIN/BIN), verification preference (`PHYSICAL_VISIT` or `VIRTUAL_MEETING`), reference ID (`KUSHOL-PARTNER-XXXX`), and application status tracker.
+- **Super Admin Partner Leads Pipeline**: Super Admin leads queue (`/admin/partner-leads`), statuses (`NEW_LEAD`, `UNDER_REVIEW`, `MEETING_SCHEDULED`, `VERIFICATION_COMPLETED`, `APPROVED`, `REJECTED`), KYC document inspection, physical/virtual visit logging, and atomic approval.
+- **Strict Pre-Approval Login Gate**: Authentication layer returns 403 Forbidden (`PARTNER_APPROVAL_PENDING` / `PARTNER_REJECTED`) until explicitly approved.
+- **Atomic Provisioning on Approval**: Marks lead approved, activates partner tenant with agreed delivery commission (15%–20%), creates applicant user with role `partner`, assigns Seat #1 (`PARTNER_ADMIN`), provisions internal chat room (`system_key = 'partner:' || partner_id`, FCM topic `partner_{partner_id}_team`), and logs audit entry.
+- **Unified Partner Dashboard**: Dynamic routing (`/dashboard`), sidebar navigation (`PARTNER_ADMIN` vs `PARTNER_EXECUTIVE`), partner-led institution onboarding (`onboarded_by_partner_id`) with 100% free campaigns on own onboarded schools, 5 free team seats quota, 15%–20% delivery commission escrow, store & orders, referrals XP, and immutable audit logs matching `/admin/audit`.
+- **Paid Add-On Campaign Suite & Student Mobile Volunteering**: Dual rosters (Participants & Volunteers), Volunteer Task Management with proof photo review, XP rewards ledger, and tamper-evident PDF E-Certificates. Students can explore active campaigns/events from mobile app, apply to volunteer, receive notifications, execute tasks, earn XP in their ledger (`users.xp_balance`), and verify e-certificates.
+
+### Evidence & Checks Completed
+- **`applications/api`**: `go vet ./...` (0 errors), `go build ./...` (0 errors), container-free unit tests in `internal/partners` and `internal/auth` passed.
+- **`applications/web`**: `pnpm typecheck` (0 errors), `pnpm test` (44 test suites, 310 tests passed).
+- **`applications/app`**: `pnpm typecheck` (0 errors), `catalog.test.ts` passed.
+
+### Pending Owner Run
+- Database migration execution:
+  ```bash
+  cd applications/api
+  go run ./cmd/api migrate up --confirm
+  ```
+- Integration test suite (requires testcontainers / live DB):
+  ```bash
+  cd applications/api
+  make test-integration
+  ```
 
 After you confirm migrate output, Stage 5 (fixture→client + IT pending) continues.
 
@@ -82,21 +112,21 @@ with this module's console-glue pass):
 
 | Area | What exists now |
 | --- | --- |
-| Personas | `/admin` serves **three admin kinds** — Kushol admin (super_admin), Institution admin (institution_admin) and Vendor admin (vendor_admin): role switcher in the shell, role-filtered nav per persona (platform / manage-institution / manage-store), role-aware landing for each. Fixture store `consoleRoleFlags` persists the choice; the api stays the authority (WEB-BR-008) |
-| Sidebar | Kushol logo (32px) + collapse toggle in the header row; Tuition entry → `/tuition`; Cities + both onboarding entries removed (onboarding CTAs live on the institutions/vendors pages); bottom user block is a **popover** (profile, role badge, Log out via the real logout seam) |
+| Personas | `/admin` serves **three admin kinds** — Kushol admin (super_admin), Institution admin (institution_admin) and Partner admin (vendor_admin): role switcher in the shell, role-filtered nav per persona (platform / manage-institution / manage-store), role-aware landing for each. Fixture store `consoleRoleFlags` persists the choice; the api stays the authority (WEB-BR-008) |
+| Sidebar | Kushol logo (32px) + collapse toggle in the header row; Tuition entry → `/tuition`; Cities + both onboarding entries removed (onboarding CTAs live on the institutions/partners pages); bottom user block is a **popover** (profile, role badge, Log out via the real logout seam) |
 | Typography | Panel-wide scale bump (`data-admin-panel` in globals.css: text-xs 14px, text-sm ~15.6px, base 17px) + card/table polish (rounded-2xl bg-card shadow-sm, roomier cells, token-only colours) |
 | Audit | `/admin/audit` on the shadcn DataTable (TanStack v9 server-mode via fixtures) with **Access-log tab** + filters for both logs (actor/entity; method/status-class). Access log is additive (no 07 schema yet — `AccessLogEntry` in the fixture) |
 | Chat | `/admin/chat` — **WhatsApp-fidelity** messenger (green header, wallpaper thread, bubble tails, ✓✓ ticks, unread pills, round composer); `wa-*` colours registered as design tokens (tokens.ts → theme:generate); fixture `console-chat.ts`. All three personas reach chat from their nav |
 | Leads | Requested **Institution** column, **Review** details popup, **Accept / Reject-with-reason** (`decideLead` → converted/archived; ≥5-char reason) |
-| Vendors | **Vendor onboarding** wizard (`/admin/vendors/new`, creates APPROVED + audit row), **Vendor store** oversight (`/admin/vendors/[id]`: storefront, order funnel, products/stock), **Review** details popup, **Item approvals** — vendor registers items as pending_review; stock updates are FORBIDDEN until a Kushol admin approves (reject needs a reason) |
+| Partners | **Partner onboarding** wizard (`/admin/partners/new`, creates APPROVED + audit row), **Partner store** oversight (`/admin/partners/[id]`: storefront, order funnel, products/stock), **Review** details popup, **Item approvals** — partner registers items as pending_review; stock updates are FORBIDDEN until a Kushol admin approves (reject needs a reason) |
 | Tenants | **School details** `/admin/tenants/[id]` (profile, stats, sections, recent audit) + per-school **LMS connector**: only the Kushol admin configures base URL/schedule; **Sync now** per resource (students / teachers / classes & sections); school admin is read-only (FORBIDDEN guard mirrors the api) |
 | Geography | Cities removed from nav; default dataset = all 8 divisions + major cities bn/en (`fixtures/bd-geo.ts`); onboarding wizard selects **Division → City** (cascading, locale-aware) |
 | Terminology | "School onboarding" renamed **Institution onboarding** (module 14 terminology) |
 
 **Additive api contracts for the glue pass (07):** `GET /admin/access-logs`; console chat
-(conversations/messages/send); `POST /admin/leads/{id}/decision`; vendor onboarding + `GET
-/admin/vendors/{id}/store`; `GET /admin/schools/{id}` details; tenant LMS connector
-(config/schedule/sync-now, kushol-admin-only); product-approval state machine (vendor registers
+(conversations/messages/send); `POST /admin/leads/{id}/decision`; partner onboarding + `GET
+/admin/partners/{id}/store`; `GET /admin/schools/{id}` details; tenant LMS connector
+(config/schedule/sync-now, kushol-admin-only); product-approval state machine (partner registers
 → kushol approves → stock unlocked); BD division/city reference data.
 
 ### Route + terminology correction (2026-10-04, owner)
@@ -107,7 +137,7 @@ with this module's console-glue pass):
 - Terminology: the panel says **institution (প্রতিষ্ঠান)** everywhere — "School dashboard" →
   "Institution dashboard", persona label "Institution admin", landing nav "For institutions";
   the tenants table labels `institution_type` values with domain terms (বিদ্যালয়/কলেজ).
-- Three admin personas now share the panel: **Kushol admin, Institution admin, Vendor admin** —
+- Three admin personas now share the panel: **Kushol admin, Institution admin, Partner admin** —
   each with their own nav (platform / manage-institution / manage-store) and dashboard; chat is
   reachable from all three. WhatsApp-style chat theme tokens (`wa-*`) registered in tokens.ts.
 
@@ -115,7 +145,7 @@ with this module's console-glue pass):
 
 ## Landing page redesign (2026-10-09, owner prompt)
 
-Redesigned `/` in `applications/web` as an interactive, illustrated, feature-focused promotional funnel for pilot schools (`#pilot`), vendors (`#vendors`), and app downloads (`#download`).
+Redesigned `/` in `applications/web` as an interactive, illustrated, feature-focused promotional funnel for pilot schools (`#pilot`), partners (`#partners`), and app downloads (`#download`).
 
 - **Architecture:** Split into 16 modular components in `src/components/landing/`:
   - `AnnouncementBar`: Thin deep-teal dismissible announcement banner with session storage memory.
@@ -125,12 +155,12 @@ Redesigned `/` in `applications/web` as an interactive, illustrated, feature-foc
   - `BeforeAfterSlider`: Draggable comparison slider (WhatsApp chaos vs Kushol order) with mouse, touch, and keyboard (ArrowLeft/Right) handles.
   - `FeatureSlider`: 12-feature spotlight carousel (`framer-motion`) with 5 category filters, 6s autoplay progress bar, play/pause controls, and keyboard navigation.
   - `HowItWorks`: 3-step structured verification & auto-grouping process.
-  - `RoleTabs`: 4 personas (Guardians, Teachers, Institutions, Vendors) with 3 verified benefits each and role CTAs.
+  - `RoleTabs`: 4 personas (Guardians, Teachers, Institutions, Partners) with 3 verified benefits each and role CTAs.
   - `DeskDemo`: Interactive school admin desk illustration with clickable feature hotspots (Roster, Notices, Sync).
   - `RoiCalculator`: Range sliders + number inputs with 400ms count-up payoff and comparative SMS cost visualization.
   - `TrustSafety`: Full-bleed deep-teal band with City → Institution → Section hierarchy diagram and 4 security pillars.
   - `PilotSection`: Pilot school pitch with strictly real "২–৩টি প্রতিষ্ঠান" seat limit + `PilotForm`.
-  - `VendorSection`: Vendor reach pitch with I-10 audience targeting illustration + `VendorInquiryForm`.
+  - `VendorSection`: Partner reach pitch with I-10 audience targeting illustration + `VendorInquiryForm`.
   - `AppDownloadSection`: Mobile app promo with QR code, disabled store badges, and pointer 3D tilt.
   - `FaqAccordion`: 6 real objection-resolving questions in clean accordion.
   - `FinalCtaBand`: Full-bleed deep-teal closing banner.

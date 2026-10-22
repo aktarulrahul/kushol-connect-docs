@@ -172,7 +172,7 @@ No product UI in this module. The two user-facing surfaces — the static mainte
 
 | | A: Neon (ap-southeast-1) | B: Compose Postgres on VPS |
 | --- | --- | --- |
-| Advantages | Managed backups/PITR path, branches fit the migration workflow, zero RAM/CPU on the 2-vCPU shared host, free tier to start | No network hop; no vendor limits; full control |
+| Advantages | Managed backups/PITR path, branches fit the migration workflow, zero RAM/CPU on the 2-vCPU shared host, free tier to start | No network hop; no partner limits; full control |
 | Disadvantages | Cold starts; free-tier compute-hour/connection limits; region latency | Eats the shared host's RAM/CPU; backup/restore becomes fully ours; one more stateful container to operate |
 | Complexity / weight | Lowest ops weight for a small team | Higher — stateful service on a contested host |
 

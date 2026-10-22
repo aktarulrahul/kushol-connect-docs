@@ -27,7 +27,7 @@ any future native-slot or events surface must be specified in an amended module 
 
 ## 3. Forms & Input
 
-N/A — no app forms. Campaign/event creation is vendor-portal web only (04 §3); ticket actions are
+N/A — no app forms. Campaign/event creation is partner-portal web only (04 §3); ticket actions are
 web-first until the amendment lands.
 
 ## 4. Data Flow

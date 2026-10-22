@@ -23,7 +23,7 @@ tenant-scope column/rule — unscoped tables are a defect (`prompt.txt` §9).
 | `school_id` | `uuid` | yes | `null` | **Tenant column.** `null` = platform-level event. Loose ref to `schools` (04-organization-hierarchy) — no FK by design (append-only decoupling) |
 | `actor_user_id` | `uuid` | yes | `null` | Loose ref to `users` (03-identity-access); `null` = system/worker action |
 | `actor_role` | `text` | yes | `null` | Role snapshot at action time |
-| `action` | `text` | no | — | Dot-namespaced verb, e.g. `vendor.approve`, `order.cancel`, `fee.refund` |
+| `action` | `text` | no | — | Dot-namespaced verb, e.g. `partner.approve`, `order.cancel`, `fee.refund` |
 | `entity_type` | `text` | no | — | e.g. `vendor_account`, `fee_invoice` |
 | `entity_id` | `text` | no | — | uuid-as-text (accepts pre-uuid owners) |
 | `before` | `jsonb` | yes | `null` | Previous state snapshot (secret-free, BR-006) |

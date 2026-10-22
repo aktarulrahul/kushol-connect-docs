@@ -20,10 +20,11 @@ Genuine remaining gaps only (reason · impact · next action).
 
 | # | Gap | Next action |
 | --- | --- | --- |
-| G-13 | Console personas/chat/access-logs/lead-decisions/vendor-store/school-details/tenant-LMS/product-approvals run on fixtures | One-file swaps when this module's glue lands; contracts listed in 07-progress "Console additions" |
+| G-13 | Console personas/chat/access-logs/lead-decisions/partner-store/school-details/tenant-LMS/product-approvals run on fixtures | One-file swaps when this module's glue lands; contracts listed in 07-progress "Console additions" |
 | G-14 | Role switcher is a fixture store (localStorage) | Replace with real claims from 03 identity once 07's session glue exists (api re-checks stay authoritative) |
 | G-15 | Access log has no writer yet (01 httpx) | 01 pass: request-log table + middleware; then the access tab reads live |
-| G-16 | Product approvals live in the commerce fixture | 11 pass: `products.status` CHECK + kushol-admin approve/reject routes; vendor stock guard server-side |
+| G-16 | Product approvals live in the commerce fixture | 11 pass: `products.status` CHECK + kushol-admin approve/reject routes; partner stock guard server-side |
+| G-17 | Migration `20270312092000_partner_module_refinement` | Pending owner run against shared DB (Owner Rule 1) | Live DB unapplied until owner runs | Owner: `cd applications/api && go run ./cmd/api migrate up --confirm` |
 
 ## BRD/PRD completeness pass (2026-10-04) — pages implemented, stubs retired
 
@@ -35,5 +36,5 @@ Genuine remaining gaps only (reason · impact · next action).
 | `/institution/webhooks` | StubRoute (14) | ERP webhook endpoints + delivery log from the lms fixture; configuration remains on Integrations |
 | `/institution/ai-matrix` | StubRoute (09) | **Intentionally left as stub — AI excluded by owner instruction** (phase 2, with module 08/09) |
 
-**Remaining BRD/PRD notes:** everything else in the admin/institution/vendor panels is implemented on
+**Remaining BRD/PRD notes:** everything else in the admin/institution/partner panels is implemented on
 fixture seams (see G-13); AI surfaces (08/09) are phase 2 per owner instruction.

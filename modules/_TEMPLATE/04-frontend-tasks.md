@@ -13,7 +13,7 @@
 
 | # | Route | Screen | Rendering | Access |
 | --- | --- | --- | --- | --- |
-| 1 | | | Server Component | Public / Super Admin / School Admin / Vendor |
+| 1 | | | Server Component | Public / Super Admin / School Admin / Partner |
 
 ## 2. Screen Breakdown
 

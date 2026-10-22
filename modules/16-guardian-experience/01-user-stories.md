@@ -33,7 +33,7 @@ planning (§9 and `technical-document.md` §14).
 | Teacher | Is reachable by the guardians of their sections (instant DM). Moderates the guardian section group (G2). Does not decide links (default, OQ-1). |
 | School Admin | Decides guardian verification and link requests for their own school only. Lists, edits, revokes and invites guardian links. Publishes guardian-audience notices (G2). |
 | Super Admin | Same rights as a School Admin on any school when passing `?schoolId=` (existing `/school/*` convention). Reads aggregate guardian counts. |
-| Vendor / EdTech brand | None. Guardians are not an ad audience until the owner decides (OQ-13). |
+| Partner / EdTech brand | None. Guardians are not an ad audience until the owner decides (OQ-13). |
 | System (jobs, webhooks) | Request SLA reminders, invite expiry and SMS, and enrollment follow-up when links change or children move class. Fans out fee-due pushes to guardians. |
 
 The roles come from module 03. Verification gates every participatory action (`prd.md` §5.1).
@@ -285,7 +285,7 @@ my phone**, so that **I do not have to wait in the verification queue**.
 
 ### `GRD-US-010` — Roster and LMS bring guardian phones and student codes
 
-**Priority:** P1 · **Phase:** G2 · **Traces:** 14 roster / vendor LMS spec §5.2 · **Depends on:** `GRD-US-008`
+**Priority:** P1 · **Phase:** G2 · **Traces:** 14 roster / partner LMS spec §5.2 · **Depends on:** `GRD-US-008`
 
 **Story** — As a **school admin**, I want **roster uploads and LMS sync to carry each student's
 code and guardian phones**, so that **guardians are invited in bulk**.

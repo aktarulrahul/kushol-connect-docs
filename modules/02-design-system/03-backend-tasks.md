@@ -43,7 +43,7 @@ No endpoints exist (`DSN-BE` items: none). The module's real contract is the **c
 | Rule | Value |
 | --- | --- |
 | Shape | flat map: `key → { bn: string, en: string }` — no nesting, no extra locale fields |
-| Keys | dot-namespaced under the registry in `02-solution-approach.md` §1.1: `common · validation · errors · auth · verification · hierarchy · chat · notices · notifications · settings · landing · admin · school · vendor · ai · analytics · tuition · marketplace · commerce · payments · ads · events · sync · ops` (source of truth in code: `src/i18n/namespaces.ts` (in each of web and app)) |
+| Keys | dot-namespaced under the registry in `02-solution-approach.md` §1.1: `common · validation · errors · auth · verification · hierarchy · chat · notices · notifications · settings · landing · admin · school · partner · ai · analytics · tuition · marketplace · commerce · payments · ads · events · sync · ops` (source of truth in code: `src/i18n/namespaces.ts` (in each of web and app)) |
 | Parity | identical key sets in both files; non-empty values; identical `{param}` placeholders |
 | Params | `{name}` placeholders, interpolated by `t(key, params)` |
 | Helper | `t(key: CatalogKey, params?: Record<string, string \| number>): string` — `CatalogKey` typed from the catalog; fallback requested locale → `bn` → key literal (dev warning); never throws |

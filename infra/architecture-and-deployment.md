@@ -44,8 +44,8 @@ Severity: **H** = would break or cause an outage/security issue · **M** = real 
 | F8 | M | Job-worker placement undefined | Same api image, second container `worker` (own restart + memory cap) | Applied (§9 — 01 `FND-BE-014`, 15 Compose) |
 | F9 | M | Per-IP OTP limits (20/h/IP) will block schools: Bangladeshi mobile carriers share IPs (CGNAT) and onboarding happens on school Wi-Fi | Per-phone limits primary; per-IP limits much higher; real IP only from trusted proxy | Applied (§9) |
 | F10 | M | Bengali PDF receipts (12) and OG images (07): many PDF/SVG renderers don't shape Bengali conjuncts | Spike before module 12 (Go text-shaping lib vs. a renderer in the api image) | Spike task `PAY-BE-000` added (12) |
-| F11 | M | App must send email (OTP codes, notifications, vendor invite, staff password reset) but no module owns email | `noreply@` via HestiaCP SMTP (§7.3); 03 adds an email OTP channel + staff forgot-password; 06 adds an `email` notification channel | Applied (§9) |
-| F12 | M | No error/crash tracking (low-end Android crashes invisible) | Sentry-class free tier for api/web/app (`TODO: Confirm` vendor) | **Decision** |
+| F11 | M | App must send email (OTP codes, notifications, partner invite, staff password reset) but no module owns email | `noreply@` via HestiaCP SMTP (§7.3); 03 adds an email OTP channel + staff forgot-password; 06 adds an `email` notification channel | Applied (§9) |
+| F12 | M | No error/crash tracking (low-end Android crashes invisible) | Sentry-class free tier for api/web/app (`TODO: Confirm` partner) | **Decision** |
 | F13 | L | Unpinned choices: "golang-migrate **or** goose", "envconfig/viper-style" | golang-migrate (all specs assume it) · one config lib chosen at 01 build | golang-migrate pinned; Go env parser picked at 01 |
 | F14 | L | App stack gaps: no persistent offline store (chat queue), image compression, audio | react-native-mmkv or expo-sqlite · expo-image-manipulator · expo-audio | Applied (§9) |
 | F15 | L | `@react-native-firebase` means EAS development builds (no Expo Go) | State in tech-stack | Applied (§9) |
@@ -366,7 +366,7 @@ for mail as well as the app.
 
 | Item | Plan |
 | --- | --- |
-| What the app sends (owner decision 2026-09-30: all from `noreply@`) | **OTP codes by email** (03 — new `email` OTP channel: staff login/verification, and a fallback when SMS is delayed) · **notifications by email** (06 — new `email` channel next to push/SMS, per-user preferences) · vendor portal invite (07 → 03 `users.CreateVendorLogin`) · staff password reset (03 — flow to be specified) · receipts later (12, optional) |
+| What the app sends (owner decision 2026-09-30: all from `noreply@`) | **OTP codes by email** (03 — new `email` OTP channel: staff login/verification, and a fallback when SMS is delayed) · **notifications by email** (06 — new `email` channel next to push/SMS, per-user preferences) · partner portal invite (07 → 03 `users.CreateVendorLogin`) · staff password reset (03 — flow to be specified) · receipts later (12, optional) |
 | How (pilot) | The Go api/worker sends over **SMTP submission to HestiaCP's Exim** — `mail.kusholconnect.com:587`, STARTTLS, authenticated as `noreply@kusholconnect.com`; **no SMTP server in Docker** |
 | Upgrade path | If deliverability or volume becomes a problem, switch the 06 email channel to a transactional provider's HTTPS API (Amazon SES, Postmark, Resend or Brevo — `TODO: Confirm`) — a config/adapter change only |
 | Sending identity | From `Kushol Connect <noreply@kusholconnect.com>`, Reply-To `hello@kusholconnect.com`; same SPF/DKIM as the team's mail (one server). Keep volume low (invites, resets) so app mail doesn't hurt the team's deliverability |
@@ -385,9 +385,9 @@ for mail as well as the app.
 | 2 | Run §5.1 host checks and share output | Before module 15 Part A |
 | 3 | Switch domain off parking + add A records (§6) | Before first deploy |
 | 4 | HestiaCP mail setup (§7.2 checklist): mail domain, 5 addresses, DNS records, PTR (coordinate with co-tenants), port-25 check | Anytime (independent of the app) |
-| 5 | Confirm pilot app mail via HestiaCP SMTP (`noreply@`) vs a transactional provider (§7.3) | Before module 07 vendor approval / 03 staff reset |
+| 5 | Confirm pilot app mail via HestiaCP SMTP (`noreply@`) vs a transactional provider (§7.3) | Before module 07 partner approval / 03 staff reset |
 | 6 | Neon plan for pilot (F6) | Before pilot |
-| 7 | Error-tracking vendor (F12) and uptime checker | Before pilot |
+| 7 | Error-tracking partner (F12) and uptime checker | Before pilot |
 | 8 | Reconnect `hostinger-dns` via `/mcp` if you want DNS changes prepared through the connector | Optional |
 | 9 | Where deploy files live now that each app is its own repo (F18) | Before module 15 Part A |
 
@@ -397,7 +397,7 @@ for mail as well as the app.
 | --- | --- | --- |
 | 15 (`01`/`02`/`03`/`06`/`technical-document`) | Deploy never migrates (read-only `migrate-status` check, owner runs SQL); auto-rollback on gate/smoke failure; `worker` container; caps api 512m / worker 256m / web 512m / redis 256m; configurable ports (8180/3100); one server stack promoted pilot → prod; host-prep runbook `OPS-BE-016`; HestiaCP mail backups; Docker Engine (no Docker Manager); apex + `api.` templates | ✅ |
 | 01 | `FND-BE-014` subcommands `serve`/`worker`/`migrate`/`migrate-status`/`healthcheck`; worker idle back-off to 30 s; RealIP trusts only the local proxy; golang-migrate pinned | ✅ |
-| 03 | Email OTP channel (`otp_codes.channel`/`email`, `reset` purpose); forgot/reset password endpoints + `IDT-US-015`; vendor first-password via reset OTP; per-IP limits raised for CGNAT (per-target caps primary) | ✅ |
+| 03 | Email OTP channel (`otp_codes.channel`/`email`, `reset` purpose); forgot/reset password endpoints + `IDT-US-015`; partner first-password via reset OTP; per-IP limits raised for CGNAT (per-target caps primary) | ✅ |
 | 06 | `notify.SendEmail` (otp/account/notification), SMTP to HestiaCP as `noreply@`, OTP never persisted, `channel`/`provider` columns (stale `expo` removed), `email_enabled` preference + `List-Unsubscribe`, `NTF-BE-023`, SMTP env | ✅ |
 | 12 | Bengali PDF spike `PAY-BE-000` before the receipt job; risk row added | ✅ |
 | `tech-stack.md` | EAS dev builds (no Expo Go); MMKV + secure-store; image-manipulator + expo-audio; golang-migrate pinned; worker; email (HestiaCP SMTP); PDF `verify`; monitoring row; Go env parser (no viper); container caps | ✅ |

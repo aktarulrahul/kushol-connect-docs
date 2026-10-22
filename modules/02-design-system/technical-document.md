@@ -90,7 +90,7 @@ code registry only; 02 scaffolds the web and app repos' tooling itself. No serve
 2. Strings       static catalog import (both locales bundled) → t(key, params) → localized string.
                  Fallback: requested locale → bn → key literal + dev warning; never throws.
 3. Fonts (web)   next/font/google downloads + self-hosts subset woff2 at build (bengali + latin);
-                 build fails loudly on fetch failure. Escape hatch: vendor the woff2.
+                 build fails loudly on fetch failure. Escape hatch: partner the woff2.
 4. Fonts (app)   @expo-google-fonts bundled in the binary; root font gate holds native splash until
                  useFonts resolves — never an unstyled first frame.
 5. Locale toggle LocaleProvider updates strings + <html lang> (web) / Intl locale; layout unchanged.
@@ -122,7 +122,7 @@ OpenAPI client (`01-foundations`).
 
 | # | Method · Path | Roles | Purpose | Key errors | Stories |
 | --- | --- | --- | --- | --- | --- |
-| None — no endpoints exist; no `DSN-BE` items. The module's real contract is the **catalog JSON schema** (`03-backend-tasks.md` §2): flat `key → {bn, en}` map, dot-namespaced under `common · validation · errors · auth · verification · hierarchy · chat · notices · notifications · settings · landing · admin · school · vendor · ai · analytics · tuition · marketplace · commerce · payments · ads · events · sync · ops`, identical key sets and `{param}` placeholders in both files — CI-gated | — | — | — | — | — |
+| None — no endpoints exist; no `DSN-BE` items. The module's real contract is the **catalog JSON schema** (`03-backend-tasks.md` §2): flat `key → {bn, en}` map, dot-namespaced under `common · validation · errors · auth · verification · hierarchy · chat · notices · notifications · settings · landing · admin · school · partner · ai · analytics · tuition · marketplace · commerce · payments · ads · events · sync · ops`, identical key sets and `{param}` placeholders in both files — CI-gated | — | — | — | — | — |
 
 ### 5.2 Realtime / jobs
 
@@ -156,7 +156,7 @@ route of 03–14 is composed from (`DSN-BR-002` consumption rule).
 | --- | --- | --- | --- |
 | N/A routes — owned surface: root layout (`app/layout.tsx`): `<html lang>` bn default, Hind Siliguri + Inter subsets, `@theme` bridge, `LocaleProvider` | Foundation wiring (not a screen) | Server (build) + client `LocaleProvider` | all consumers |
 | N/A routes — owned surface: `src/components/ui/*` (Button, Input/Textarea, Select, Checkbox/Radio/Switch, Card, Dialog/Sheet, Toast, Tabs, Badge+verified, Table shell, Skeleton, EmptyState, Avatar+verified, `Logo`) | 14 primitives, a11y-complete, bn +30% fixtures | Server-safe where possible; interactive ones Client | consumed by 03/07/11/13 |
-| Consumers: `/` + `/download`, `/login`, `/admin/*`, `/school/*`, `/vendor/*` | owned by 07/03/11/13 — composed only from these primitives | — | Public + all roles |
+| Consumers: `/` + `/download`, `/login`, `/admin/*`, `/school/*`, `/partner/*` | owned by 07/03/11/13 — composed only from these primitives | — | Public + all roles |
 
 ### 6.2 Mobile (detail in `05-app-tasks.md`)
 
@@ -171,7 +171,7 @@ route of 03–14 is composed from (`DSN-BR-002` consumption rule).
 
 | System | Purpose | Protocol | Secret | Timeout / retry | Degradation |
 | --- | --- | --- | --- | --- | --- |
-| Google Fonts (web) | Hind Siliguri `bengali` + Inter `latin` subset woff2, self-hosted at build | HTTPS, build-time only (`next/font/google`) | none (public) | build timeout; CI retry | fallback stack `"Hind Siliguri", "Noto Sans Bengali", system` / Inter → system-ui; escape hatch: vendor the woff2 |
+| Google Fonts (web) | Hind Siliguri `bengali` + Inter `latin` subset woff2, self-hosted at build | HTTPS, build-time only (`next/font/google`) | none (public) | build timeout; CI retry | fallback stack `"Hind Siliguri", "Noto Sans Bengali", system` / Inter → system-ui; escape hatch: partner the woff2 |
 | Google Fonts (app) | fonts bundled via `@expo-google-fonts` packages | npm install | none | pnpm install retry | fonts in the binary — no runtime failure path |
 | npm: radix / zeego / lucide / @expo-google-fonts | primitive heads + icons + font packages | npm, pinned | none | install-time failure — CI blocks | — |
 
@@ -200,7 +200,7 @@ FCM · R2 · DeepSeek · SMS · payment gateways: **N/A — none touched by this
 
 | Concern | Rule |
 | --- | --- |
-| Auth chain | N/A — no entry points, no auth middleware; the five roles + vendors are defined by 03; this module serves every role identically and owns no permissions |
+| Auth chain | N/A — no entry points, no auth middleware; the five roles + partners are defined by 03; this module serves every role identically and owns no permissions |
 | Role matrix | N/A — no permissions owned |
 | Tenant scope | N/A — no tables, no tenant data (`03-backend-tasks.md` §1 is all N/A) |
 | Rate limits | N/A — no routes |
@@ -235,7 +235,7 @@ catalog keys resolved by `t()` before display; all user-visible messages ship in
 | Metrics / counters | none — no data produced; 07/09 dashboards consume these primitives/tokens when they render reports (02 §8) |
 | Health contribution | none — no runtime dependency; contributes no `/readyz` probe |
 | Jobs & retries | none — catalog/token checks are CI steps; failures block merge, recovery is fix-and-push |
-| Runbook pointers | font-fetch outage: retry CI or vendor subset woff2 (`02-solution-approach.md` §8); NativeWind/Tailwind mismatch caught by pinned versions + `DSN-IT-002` smoke; catalog lifecycle (deprecate ≥ 1 release) in `02-solution-approach.md` §3 |
+| Runbook pointers | font-fetch outage: retry CI or partner subset woff2 (`02-solution-approach.md` §8); NativeWind/Tailwind mismatch caught by pinned versions + `DSN-IT-002` smoke; catalog lifecycle (deprecate ≥ 1 release) in `02-solution-approach.md` §3 |
 
 ---
 

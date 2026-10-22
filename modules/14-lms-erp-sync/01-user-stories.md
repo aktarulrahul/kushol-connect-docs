@@ -24,7 +24,7 @@ Product noun = educational institution (UI **Institution** / **প্রতি�
    (`institution_type` is set on the Kushol tenant, not pulled.)
 
 All paths are idempotent, produce reconciliation evidence, and sit behind the B2B SaaS licence gate
-(`brd.md` §7). Partner brief: [`vendor-lms-api-spec.md`](./vendor-lms-api-spec.md). Plan:
+(`brd.md` §7). Partner brief: [`partner-lms-api-spec.md`](./partner-lms-api-spec.md). Plan:
 [`lms-pull-integration-plan.md`](./lms-pull-integration-plan.md).
 
 > **Note:** Older stories below may still say “School Admin” / `/institution/…` / `schoolId` — those are
@@ -37,8 +37,8 @@ All paths are idempotent, produce reconciliation evidence, and sit behind the B2
 | Student / Guardian / Teacher | No direct surface — may be created PENDING or updated by roster rows/events; verification still flows through module 03 |
 | School Admin | Downloads the template, uploads CSV/Excel, reviews dry-run reports, commits imports, registers/tests/rotates ERP endpoints, reads event logs + reconciliation |
 | Super Admin | No routine surface — owns the per-school sync licence flag (via 07) and reads audit trails |
-| Vendor / EdTech brand | No access — nothing in this module is vendor-reachable |
-| School's LMS/ERP system | (a) Exposes the vendor pull API for Kushol to GET; and/or (b) POSTs HMAC-signed events to `POST /api/v1/webhooks/erp/{schoolId}` |
+| Partner / EdTech brand | No access — nothing in this module is partner-reachable |
+| School's LMS/ERP system | (a) Exposes the partner pull API for Kushol to GET; and/or (b) POSTs HMAC-signed events to `POST /api/v1/webhooks/erp/{schoolId}` |
 | System (jobs, webhooks) | Runs import validation/commit jobs, **LMS pull sync jobs**, records audit entries, enforces replay window + rate limits |
 
 ## 3. Scope
@@ -53,7 +53,7 @@ All paths are idempotent, produce reconciliation evidence, and sit behind the B2
 - ERP webhook endpoints: register (secret shown once, bn+en warning), test event, rotation (versioned + overlap), revoke, delivery log, redrive (P1).
 - Inbound webhook ingestion — unauthenticated-but-HMAC-signed (documented exception, module 12 pattern): HMAC-SHA256, ±5-min window, 60 events/min/school.
 - Monthly reconciliation report (last import vs platform roster, drift flagged); bn/en i18n (`sync.*`, `validation.*`).
-- **LMS pull connector** (plan 2026-10-03): encrypted connection config, test probe, scheduled + Sync-now pull against vendor API, map/upsert via 03/04, section group admin/members via 04→05 chain; stories outline `LMS-US-013`–`019` in `lms-pull-integration-plan.md` §10 (fold into this file at build).
+- **LMS pull connector** (plan 2026-10-03): encrypted connection config, test probe, scheduled + Sync-now pull against partner API, map/upsert via 03/04, section group admin/members via 04→05 chain; stories outline `LMS-US-013`–`019` in `lms-pull-integration-plan.md` §10 (fold into this file at build).
 
 **Out of scope** (explicit — prevents scope drift)
 
@@ -284,6 +284,6 @@ All paths are idempotent, produce reconciliation evidence, and sit behind the B2
 | 5 | Idempotency — `X-Kushol-Event-Id` (UUID); duplicates return the original result as 200 `duplicate` | Rahul | Open (default accepted) | Exactly the default (`LMS-BR-011`) |
 | 6 | Rate ceiling 60 events/min/school; 429 + `Retry-After` beyond | Rahul | Open (default accepted) | Exactly the default (`LMS-BR-012`) |
 | 7 | Licence-flag provisioning UX (07 tenants screen?) + pilot defaults | Rahul | Open | Flag ON for pilot schools; managed via 07 (`LMS-BR-014`) |
-| 8 | LMS partner default: pull API vs inbound webhook | Rahul | Open (default accepted 2026-10-03) | **Pull** for new LMS partners; webhook remains supported; vendor brief = `vendor-lms-api-spec.md` |
+| 8 | LMS partner default: pull API vs inbound webhook | Rahul | Open (default accepted 2026-10-03) | **Pull** for new LMS partners; webhook remains supported; partner brief = `partner-lms-api-spec.md` |
 | 9 | Kushol admin route style for LMS connections | Rahul | Open | Prefer claim-scoped `…/lms/connections*`; path prefix `/institution/` → `/institution/` when terminology migration runs |
-| 10 | Rename FCM `school-{id}` → `institution-{id}` | Rahul | Open — follow-up gap (module 06) | Defer; requires device resubscribe / backfill; do not block LMS vendor brief |
+| 10 | Rename FCM `school-{id}` → `institution-{id}` | Rahul | Open — follow-up gap (module 06) | Defer; requires device resubscribe / backfill; do not block LMS partner brief |

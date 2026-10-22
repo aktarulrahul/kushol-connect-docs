@@ -23,11 +23,11 @@
 | Guardian | |
 | Teacher | |
 | School Admin | Governs only their own school (tenant) |
-| Super Admin | Governs the whole platform (tenants, vendors, campaigns) |
-| Vendor / EdTech brand | |
+| Super Admin | Governs the whole platform (tenants, partners, campaigns) |
+| Partner / EdTech brand | |
 | System (jobs, webhooks) | |
 
-> The five roles (Super Admin / School Admin / Teacher / Student / Guardian) plus Vendors are
+> The five roles (Super Admin / School Admin / Teacher / Student / Guardian) plus Partners are
 > defined by module 03 (`03-identity-access`). Verification gates every participatory action
 > (`prd.md` §5.1).
 

@@ -18,7 +18,7 @@ Module 12 turns fee collection from cash-in-an-envelope into a trust-first digit
 | Teacher | No payments surface in this module (read-only nothing) |
 | School Admin | Issues/voids invoices (single + bulk), reads the school ledger dashboard, transaction details, reconciliation report |
 | Super Admin | Reads platform revenue (convenience fees, commissions), imports gateway settlement CSVs, initiates manual refunds |
-| Vendor / EdTech brand | Indirect — their online orders (module 11) are paid through this module's transaction + ledger path |
+| Partner / EdTech brand | Indirect — their online orders (module 11) are paid through this module's transaction + ledger path |
 | System (jobs, webhooks) | Receives signed gateway webhooks; runs receipt-generation, daily reconciliation and overdue-sweep jobs |
 
 The five roles are defined by module 03; verification gates every participatory action here (`prd.md` §5.1) — an unverified guardian can neither see nor pay an invoice.
@@ -29,7 +29,7 @@ The five roles are defined by module 03; verification gates every participatory 
 
 - `fee_invoices`, `payment_transactions`, `ledger_entries` (append-only), `payment_receipts`, `gateway_events` — defined and owned here
 - Invoice issue (single + bulk-by-section), void-before-payment, overdue sweep
-- Payment initiation for invoices and online vendor orders (11 seam) via SSLCommerz, bKash, Nagad (gateway-hosted pages)
+- Payment initiation for invoices and online partner orders (11 seam) via SSLCommerz, bKash, Nagad (gateway-hosted pages)
 - Webhook ingestion with signature verification + idempotency (`UNIQUE(gateway, gateway_txn_id)`); browser/app callback as UX-only return path
 - Ledger entries per success (fee_payment + convenience_fee split; commission for orders), manual refunds as adjustments
 - PDF receipt generation (job) → R2 → deep-linked push
@@ -216,11 +216,11 @@ The five roles are defined by module 03; verification gates every participatory 
 
 ---
 
-### `PAY-US-011` — Vendor order paid online through the same path (11 seam)
+### `PAY-US-011` — Partner order paid online through the same path (11 seam)
 
 **Priority:** P0 · **Traces:** prd.md §4B/§5.4 (campus commerce) · brd.md §7 Stream 1 (commission) · **Depends on:** 11, PAY-US-006
 
-**Story** — As a **student/guardian**, I want to pay for an online vendor order with the same gateways and get a receipt, so that marketplace checkout feels identical to fee payment.
+**Story** — As a **student/guardian**, I want to pay for an online partner order with the same gateways and get a receipt, so that marketplace checkout feels identical to fee payment.
 
 **Acceptance criteria**
 

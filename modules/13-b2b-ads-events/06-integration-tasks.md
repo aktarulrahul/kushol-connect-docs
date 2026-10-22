@@ -13,8 +13,8 @@
 | # | Counterparty | Direction | Mechanism | Failure is… |
 | --- | --- | --- | --- | --- |
 | I-1 | `06-notifications` | we call them | exported `notify.BroadcastTopic(topic, payload)` per expanded topic at dispatch (`city-{id}`/`school-{id}`/`section-{id}` — targeting IS topic selection); `notify.SendToUser` for event-cancel buyer notices | degraded — `campaign.dispatch` job retries; campaign stays `running` with pending dispatch |
-| I-2 | `07-command-center-web` | we call them | `vendors.Approve` status gate before every `/vendor/*` mutation (BR-001); `leads.Create` reuse for the ads inquiry funnel | degraded — vendor mutations blocked fail-closed with clear copy |
-| I-3 | `07-command-center-web` | they consume us | REST (§2): `/vendor/ads|events*` vendor portal screens, `/admin/moderation` queue (fills 07's stub), `/admin/ads` overview, public `/events*` | degraded — portal sections + queue show API error states; nothing else affected |
+| I-2 | `07-command-center-web` | we call them | `partners.Approve` status gate before every `/partner/*` mutation (BR-001); `leads.Create` reuse for the ads inquiry funnel | degraded — partner mutations blocked fail-closed with clear copy |
+| I-3 | `07-command-center-web` | they consume us | REST (§2): `/partner/ads|events*` partner portal screens, `/admin/moderation` queue (fills 07's stub), `/admin/ads` overview, public `/events*` | degraded — portal sections + queue show API error states; nothing else affected |
 | I-4 | `04-organization-hierarchy` | we call them | sections-by-city+grade+stream reads + aggregated `hierarchy.AudienceCount` (declared in 04 `06` §2) for estimates and dispatch expansion | degraded — estimate `unknown`; dispatch retries; never fatal |
 | I-5 | `12-payments` | they call us | seam: 12 fills `event_tickets.payment_transaction_id` then calls `events.MarkTicketPaid(ticketID, txID)` | degraded — tickets stay `reserved` ("payment pending"); sweep at event start |
 | I-6 | `05-communication-engine` | we call them | `media_assets` presign/confirm for creative images | degraded — text-only push still dispatchable; native slot placeholder |
@@ -30,9 +30,9 @@ events.ListByCity(ctx, cityID uuid) ([]EventDTO, error)                     // p
 events.MarkTicketPaid(ctx, ticketID uuid, paymentTransactionID uuid) error  // 12 seam (I-5)
 
 REST (OpenAPI, consumed by web — 07 shell + this module's screens):
-  POST/GET /api/v1/vendor/campaigns · PATCH /{id} · POST /{id}/submit · /{id}/pause · /{id}/resume
-  GET      /api/v1/vendor/campaigns/{id}/analytics · GET /api/v1/vendor/audience-estimate
-  POST/GET /api/v1/vendor/events · POST /{id}/submit
+  POST/GET /api/v1/partner/campaigns · PATCH /{id} · POST /{id}/submit · /{id}/pause · /{id}/resume
+  GET      /api/v1/partner/campaigns/{id}/analytics · GET /api/v1/partner/audience-estimate
+  POST/GET /api/v1/partner/events · POST /{id}/submit
   GET      /api/v1/admin/moderation/queue · POST /admin/campaigns/{id}/approve|reject
   POST     /admin/events/{id}/approve|reject · GET /admin/ads/overview
   GET      /api/v1/events · /events/{id} · POST /events/{id}/tickets · GET /events/{id}/tickets
@@ -55,7 +55,7 @@ HTTP; signature changes are additive first.
 | We call | Owner | On failure |
 | --- | --- | --- |
 | `notify.BroadcastTopic` / `notify.SendToUser` | 06 | `campaign.dispatch` retries w/ backoff; buyer notices re-queued; push never sent unlabeled |
-| `vendors.Approve` gate + `leads.Create` | 07 | Fail-closed: vendor mutations refused with `FORBIDDEN` copy; funnel degrades to 07's lead form |
+| `partners.Approve` gate + `leads.Create` | 07 | Fail-closed: partner mutations refused with `FORBIDDEN` copy; funnel degrades to 07's lead form |
 | Sections reads + `hierarchy.AudienceCount` (declared in 04 `06` §2) | 04 | Estimate `unknown`; dispatch expansion retries; never invent counts |
 | `media_assets` presign/confirm | 05 | Creative save blocked with retry; text-only push unaffected |
 | `jobs.Enqueue` + worker runtime, `audit.Record` | 01 | Dispatches queue in job table; audit failure aborts decision (by design) |
@@ -69,13 +69,13 @@ HTTP; signature changes are additive first.
 | Event approve → `published` | `events:city:{cityId}` |
 | Event cancel / edit while published | `events:city:{cityId}` |
 | Ticket create/cancel (capacity-left changes) | `events:city:{cityId}` (capacity display freshness) |
-| Campaign/event mutations (vendor, moderation) | none — vendor + admin surfaces are no-store |
+| Campaign/event mutations (partner, moderation) | none — partner + admin surfaces are no-store |
 
 | Read | Tagged with |
 | --- | --- |
 | `GET /events?cityId=` (listing) | `events:city:{cityId}` (ISR/60 s) |
 | `GET /events/{id}` | `events:city:{cityId}` |
-| `/vendor/*`, `/admin/moderation`, `/admin/ads`, `/ads/serve` | never cached |
+| `/partner/*`, `/admin/moderation`, `/admin/ads`, `/ads/serve` | never cached |
 
 ## 5. External Systems
 
@@ -87,9 +87,9 @@ HTTP; signature changes are additive first.
 
 | UI element | Calls | Contract |
 | --- | --- | --- |
-| Builder targeting step (`04` §2.1) | `GET /vendor/audience-estimate?cityId=&grade=&sectionIds=` | `{count: int \| null}` — `null` renders "estimate unavailable", never a fabricated number |
-| Builder submit | `POST /vendor/campaigns` → `POST …/{id}/submit` | Draft then pending_review; `CAMPAIGN_REJECTED` copy on unmodified resubmit |
-| Vendor analytics | `GET /vendor/campaigns/{id}/analytics` | Daily impressions/clicks/spend from `ads_daily` (aggregate-only) |
+| Builder targeting step (`04` §2.1) | `GET /partner/audience-estimate?cityId=&grade=&sectionIds=` | `{count: int \| null}` — `null` renders "estimate unavailable", never a fabricated number |
+| Builder submit | `POST /partner/campaigns` → `POST …/{id}/submit` | Draft then pending_review; `CAMPAIGN_REJECTED` copy on unmodified resubmit |
+| Partner analytics | `GET /partner/campaigns/{id}/analytics` | Daily impressions/clicks/spend from `ads_daily` (aggregate-only) |
 | Moderation queue | `GET /admin/moderation/queue` → `POST /admin/{campaigns\|events}/{id}/approve\|reject` | Reason required on reject; checklist version in payload; `CONFLICT` → refresh |
 | Public events | `GET /events?cityId=` · `GET /events/{id}` | Published only; tagged reads |
 | Ticket action | `POST /events/{id}/tickets` → free: `paid` instant · priced: `reserved` + "payment pending" honest state | Capacity errors map `validation.events.qty_exceeds_capacity` |
@@ -114,7 +114,7 @@ expose only `published`/`cancelled`, so the public contract is stable regardless
 | Dependency down | What still works | User sees | Recovery |
 | --- | --- | --- | --- |
 | 06 / FCM down at dispatch | All REST surfaces; campaign stays `running` | No sponsored push yet | `campaign.dispatch` retries ×3 backoff → drain on restore; dispatch idempotent (`ADS-IT-007`) |
-| 07 gate down | Public reads; moderation (Super Admin) | Vendor mutations refused fail-closed | Retry after 07 returns; no un-gated creation ever |
+| 07 gate down | Public reads; moderation (Super Admin) | Partner mutations refused fail-closed | Retry after 07 returns; no un-gated creation ever |
 | 04 down | Existing estimates (Redis TTL), reads, ticket flows | Estimate "unavailable"; dispatch queued | Expansion retries; never invents counts (`ADS-IT-009`) |
 | 12 undelivered (expected until Phase 3) | Free tickets; reservations | Priced tickets clearly "payment pending" | `tickets.sweep` cancels unpaid at start; `MarkTicketPaid` fills retroactively (`ADS-IT-011`) |
 | 05 media down | Text-only push creatives | Image upload blocked w/ retry | Presign retry; native slot placeholder |
@@ -131,10 +131,10 @@ expose only `published`/`cancelled`, so the public contract is stable regardless
 | `ADS-IT-009` | Moderation gate: `pending_review`/`rejected`/`draft` campaign never dispatches even when job runs early; unpublished event never in `ListByCity` | Integration | BR-002 / INV-3 / BR-012 |
 | `ADS-IT-010` | Budget guard: spend at budget ⇒ dispatch refused + auto-pause, zero sends | Integration | BR-006 / INV-4 |
 | `ADS-IT-011` | Ticket reservation under concurrency + 12 seam: free = instant `paid`; priced stays `reserved` until `MarkTicketPaid`; sweep cancels unpaid at start | Integration | INV-7 / I-5 |
-| `ADS-IT-012` | Vendor isolation: cross-account campaign/event/ticket reads and writes → `TENANT_MISMATCH`/404 | Integration | §2 scope rules |
-| `ADS-UT-007` | Cache tags: publish/cancel revalidate `events:city:{id}`; vendor/admin reads never cached | Unit | §4 contract |
-| `ADS-E2E-001` | Playwright: vendor creates campaign (estimate visible, bn/en creative, sponsored-label preview) → Super Admin approves in queue → dispatch job logs broadcast + impression + audit | Playwright + axe | ADS-US-001→004 golden path |
-| `ADS-E2E-002` | Playwright: vendor lists event → approve → public listing shows it → buyer takes free ticket → organizer sees totals with 10% commission | Playwright + axe | ADS-US-008→011 golden path |
+| `ADS-IT-012` | Partner isolation: cross-account campaign/event/ticket reads and writes → `TENANT_MISMATCH`/404 | Integration | §2 scope rules |
+| `ADS-UT-007` | Cache tags: publish/cancel revalidate `events:city:{id}`; partner/admin reads never cached | Unit | §4 contract |
+| `ADS-E2E-001` | Playwright: partner creates campaign (estimate visible, bn/en creative, sponsored-label preview) → Super Admin approves in queue → dispatch job logs broadcast + impression + audit | Playwright + axe | ADS-US-001→004 golden path |
+| `ADS-E2E-002` | Playwright: partner lists event → approve → public listing shows it → buyer takes free ticket → organizer sees totals with 10% commission | Playwright + axe | ADS-US-008→011 golden path |
 
 (Backend unit/integration matrix — `ADS-UT-001`–`006`, `ADS-IT-001`–`006` — lives in
 `03-backend-tasks.md` §6; rows here are the cross-module/integration set.)
@@ -144,8 +144,8 @@ expose only `published`/`cancelled`, so the public contract is stable regardless
 - [x] `ADS-INT-001` Implement + export `ads.DispatchCampaign` (status/budget/cap gates, fake-able 06 client, audit) — ____ — 2026-10-15
 - [ ] `ADS-INT-002` Implement + export `ads.CanServeToUser` (pseudized trailing-window lookup) — ____
 - [x] `ADS-INT-003` Implement + export `events.ListByCity` (published-only) + `events.MarkTicketPaid` (12 seam, idempotent) — ____ — 2026-10-15
-- [ ] `ADS-INT-004` Consume 07 gate (`vendors.Approve`) + fill `/admin/campaigns` stub route with the moderation queue — ____
+- [ ] `ADS-INT-004` Consume 07 gate (`partners.Approve`) + fill `/admin/campaigns` stub route with the moderation queue — ____
 - [x] `ADS-INT-005` Consume 04 `hierarchy.AudienceCount` (incl. `Streams`, small-count suppression); ship `count: null` fallback — ____ — 2026-10-15
 - [ ] `ADS-INT-006` Register 4 jobs with 01 worker; wire `audit.Record` on decisions/dispatch/cancels — ____
-- [ ] `ADS-INT-007` Cache tags `events:city:{id}` + no-store enforcement on vendor/admin/serve reads — ____
+- [ ] `ADS-INT-007` Cache tags `events:city:{id}` + no-store enforcement on partner/admin/serve reads — ____
 - [ ] `ADS-INT-008` Tests `ADS-UT-007`, `ADS-IT-007`–`012`, `ADS-E2E-001`–`002` green in CI (Playwright + axe) — ____

@@ -15,7 +15,7 @@ Written before any task list and any code (`docs/prompt/prompt-build.md` §4 ste
 | Design token (semantic) | Named theme value — `color.*`, `space.*`, `radius.*`, `type.*`, `motion.*`; source in each app's `src/theme`, compiled to Tailwind v4 `@theme` (web) and the NativeWind theme (app) | Yes |
 | Color scale | 10-step tints/shades generated in code from deep teal `#095777` + paper/ink neutrals — never hand-picked per component (`design-reference` §2) | Yes |
 | String catalog | `bn.json` / `en.json` in each app's `src/i18n`; flat dot-namespaced keys → `{bn, en}` values (schema: `03-backend-tasks §2`) | Yes |
-| Translation key | Logical id `namespace.name`; namespaces (registry, one owner module each): `common`, `validation`, `errors`, `auth`, `verification`, `hierarchy`, `chat`, `notices`, `notifications`, `settings`, `landing`, `admin`, `school`, `vendor`, `ai`, `analytics`, `tuition`, `marketplace`, `commerce`, `payments`, `ads`, `events`, `sync`, `ops`. A module adding a namespace updates this registry in its Stage 3 docs sync | Yes |
+| Translation key | Logical id `namespace.name`; namespaces (registry, one owner module each): `common`, `validation`, `errors`, `auth`, `verification`, `hierarchy`, `chat`, `notices`, `notifications`, `settings`, `landing`, `admin`, `school`, `partner`, `ai`, `analytics`, `tuition`, `marketplace`, `commerce`, `payments`, `ads`, `events`, `sync`, `ops`. A module adding a namespace updates this registry in its Stage 3 docs sync | Yes |
 | Web primitive | shadcn-style component hand-written in `applications/web/src/components/ui/`, token-styled, a11y-complete | Yes |
 | RN primitive | NativeWind component mirroring the web inventory, on radix-primitives/zeego where useful | Yes |
 | Brand asset | Logo lockup/monogram, app icon, splash, notification small icon — derived from `docs/design-reference/brand/` (files owner-supplied; usage owned here) | Yes (usage) |
@@ -99,7 +99,7 @@ Primitives are built on Radix (web) and radix-primitives/zeego (app) so focus ma
 
 | # | Failure | Detection | Impact | Recovery |
 | --- | --- | --- | --- | --- |
-| 1 | Font fetch fails at web build | Build error | Build blocked (loud, intentional) | Retry CI; if Google is down, vendor the subset woff2 into the repo (documented escape hatch) |
+| 1 | Font fetch fails at web build | Build error | Build blocked (loud, intentional) | Retry CI; if Google is down, partner the subset woff2 into the repo (documented escape hatch) |
 | 2 | Missing catalog key at runtime | Dev warning + `DSN-UT-001` gate | Label shows bn fallback or key literal | Add the key; the parity gate prevents recurrence |
 | 3 | Raw hex/px slips into a feature PR | `DSN-INT-002` lint in CI | PR blocked | Import the semantic token |
 | 4 | bn string overflows a control | Primitive fixtures (`DSN-UT-003`/`004`) | Clipped label caught pre-merge | Fix primitive sizing (min-height/wrap), not the screen |

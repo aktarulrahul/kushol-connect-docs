@@ -24,11 +24,11 @@
 | `type` | `text` | no | — | `pilot_registration` \| `vendor_inquiry` \| `download_click` (CHECK) |
 | `contact_name` | `text` | yes | — | 3–120 when present (download_click has none) |
 | `phone` | `text` | yes | — | E.164 `+880…` when present; UNIQUE not enforced (re-interest allowed) |
-| `email` | `text` | yes | — | optional, vendor inquiries |
+| `email` | `text` | yes | — | optional, partner inquiries |
 | `school_name` | `text` | yes | — | pilot leads |
 | `city_id` | `uuid` | yes | — | Reference → 04 cities (FK-free per 01 convention); validated ACTIVE at create |
 | `students_count` | `int` | yes | — | pilot leads, 1–20 000 |
-| `targeting` | `text` | yes | — | vendor demographics pitch, 10–1000 |
+| `targeting` | `text` | yes | — | partner demographics pitch, 10–1000 |
 | `message` | `text` | yes | — | ≤ 1000 |
 | `status` | `text` | no | `new` | `new` \| `contacted` \| `converted` \| `archived` (CHECK; service transition table) |
 | `source` | `text` | no | — | derived server-side: `landing_hero` \| `roi_calculator` \| `for_vendors` \| `download_page` \| `direct` |
@@ -55,7 +55,7 @@ design.
 | `status` | `text` | no | `pending` | `pending` \| `approved` \| `rejected` \| `suspended` (CHECK) |
 | `decision_reason` | `text` | yes | — | required (10–500) on reject/suspend; cleared on re-approve |
 | `decided_by` / `decided_at` | `uuid` / `timestamptz` | yes / yes | — | Super Admin user id (reference → 03) / decision time |
-| `portal_user_id` | `uuid` | yes | — | Reference → 03 `users` (role `vendor`); set on approval by calling 03 `users.CreateVendorLogin` with the inquiry's contact email (password set via reset link). Vendor routes (11/13) resolve `vendor_account_id` from this column via 07's `vendors.AccountForUser(userID)` gate |
+| `portal_user_id` | `uuid` | yes | — | Reference → 03 `users` (role `partner`); set on approval by calling 03 `users.CreateVendorLogin` with the inquiry's contact email (password set via reset link). Partner routes (11/13) resolve `vendor_account_id` from this column via 07's `partners.AccountForUser(userID)` gate |
 | `created_at` / `updated_at` | `timestamptz` | no | `now()` | |
 
 **Constraints:** status CHECK; reject/suspend without reason refused in service (10–500).
@@ -75,7 +75,7 @@ module 11 (campus commerce) after approval.
 | Dataset | Status | Source |
 | --- | --- | --- |
 | 3 demo leads (one per type, "Demo High School", fictional contact) | `DRAFT` (clearly fictional) | `prompt.txt` §12 |
-| 2 demo vendor accounts (pending + approved, fictional companies) | `DRAFT` (clearly fictional) | `prompt.txt` §12 |
+| 2 demo partner accounts (pending + approved, fictional companies) | `DRAFT` (clearly fictional) | `prompt.txt` §12 |
 
 ---
 
@@ -85,13 +85,13 @@ module 11 (campus commerce) after approval.
 
 | # | Endpoint | Purpose | Errors (beyond common) | Stories |
 | --- | --- | --- | --- | --- |
-| 1 | `POST /api/v1/leads` | Public lead create (pilot / vendor / download_click) | `VALIDATION_FAILED` · `RATE_LIMITED` · `NOT_FOUND` (bad city) | US-003/004/005 |
-| 2 | `POST /api/v1/vendor/register` | Vendor inquiry → lead + `pending` vendor account (one tx) | same as #1 | US-004 |
+| 1 | `POST /api/v1/leads` | Public lead create (pilot / partner / download_click) | `VALIDATION_FAILED` · `RATE_LIMITED` · `NOT_FOUND` (bad city) | US-003/004/005 |
+| 2 | `POST /api/v1/partner/register` | Partner inquiry → lead + `pending` partner account (one tx) | same as #1 | US-004 |
 | 3 | `GET /api/v1/admin/leads` | Pipeline list, filter `type`/`status`, cursor page | `FORBIDDEN` | US-010 |
 | 4 | `PATCH /api/v1/admin/leads/{id}` | Status transition (service table) | `CONFLICT` (illegal transition) | US-010 |
-| 5 | `GET /api/v1/admin/vendors` | Vendor queue, filter `status` + name search | `FORBIDDEN` | US-009 |
-| 6 | `PATCH /api/v1/admin/vendors/{id}/approve` · `…/reject` · `…/suspend` | Lifecycle decisions (reason on reject/suspend) | `CONFLICT` (already decided) · `VALIDATION_FAILED` (reason) | US-009 |
-| 7 | `GET /api/v1/admin/stats` | Tenants/cities (via 04), leads by status/type, vendors pending, revenue placeholder flags | `FORBIDDEN` | US-006 |
+| 5 | `GET /api/v1/admin/partners` | Partner queue, filter `status` + name search | `FORBIDDEN` | US-009 |
+| 6 | `PATCH /api/v1/admin/partners/{id}/approve` · `…/reject` · `…/suspend` | Lifecycle decisions (reason on reject/suspend) | `CONFLICT` (already decided) · `VALIDATION_FAILED` (reason) | US-009 |
+| 7 | `GET /api/v1/admin/stats` | Tenants/cities (via 04), leads by status/type, partners pending, revenue placeholder flags | `FORBIDDEN` | US-006 |
 | 8 | `GET /api/v1/school/stats` | School-scoped counts: students/sections (04), pending verifications (03), notices 30 d (05) | `FORBIDDEN` · `TENANT_MISMATCH` | US-012 |
 | 9 | `GET /api/v1/admin/audit-log` | Read-only viewer over 01's `audit_log` (scoped list queries) | `FORBIDDEN` · `VALIDATION_FAILED` | US-011 |
 
@@ -112,7 +112,7 @@ default class; #3/#5/#7/#8/#9 default class.
 | **Audit** | No (public create is the event itself; pipeline changes audit) |
 | **Stories** | `WEB-US-003` `WEB-US-005` |
 
-### Endpoints `PATCH /api/v1/admin/vendors/{id}/approve|reject|suspend`
+### Endpoints `PATCH /api/v1/admin/partners/{id}/approve|reject|suspend`
 
 | | |
 | --- | --- |
@@ -121,7 +121,7 @@ default class; #3/#5/#7/#8/#9 default class.
 | **Result** | `{ "data": { vendorAccount } }` with new status + `decidedBy/decidedAt` |
 | **Errors** | `CONFLICT` (double decision) · `VALIDATION_FAILED` (missing/short reason) · `NOT_FOUND` |
 | **Rate limit** | default class |
-| **Audit** | Yes — `vendor.approved` / `vendor.rejected` / `vendor.suspended` (actor, target, reason) via `audit.Record` |
+| **Audit** | Yes — `partner.approved` / `partner.rejected` / `partner.suspended` (actor, target, reason) via `audit.Record` |
 | **Stories** | `WEB-US-009` |
 
 ### Endpoints `GET /api/v1/admin/stats` · `GET /api/v1/school/stats`
@@ -152,11 +152,11 @@ layouts re-check role claims server-side per route group.
 | ID | Method | Rules / guards | Revalidates | Audit |
 | --- | --- | --- | --- | --- |
 | `WEB-BE-001` | `leads.Create` (public) | Validate vs contract; city must be ACTIVE; `status` forced `new`; source allowlisted; utm capped; rate-limit class `leads` | `admin:leads` (no-op server cache) | No |
-| `WEB-BE-002` | `vendor.Register` (public) | One tx: `landing_leads` (vendor_inquiry) + `vendor_accounts` (pending, `WEB-INV-002`); same `leads` limits | `admin:leads`, `admin:vendors` | No |
+| `WEB-BE-002` | `partner.Register` (public) | One tx: `landing_leads` (vendor_inquiry) + `vendor_accounts` (pending, `WEB-INV-002`); same `leads` limits | `admin:leads`, `admin:partners` | No |
 | `WEB-BE-003` | `leads.ListForAdmin` | Super Admin; filters `type`/`status`; cursor pagination 50 | — | No |
 | `WEB-BE-004` | `leads.UpdateStatus` | Super Admin; transition table per INV-001 (`CONFLICT` otherwise); audit `lead.status_changed` | `admin:leads` | Yes |
-| `WEB-BE-005` | `vendors.ListForAdmin` | Super Admin; status filter + trgm name search | — | No |
-| `WEB-BE-006` | `vendors.Approve` / `vendors.Reject` / `vendors.Suspend` + export `vendors.AccountForUser(userID)` / `RequireApprovedVendor()` middleware for 11/13 | Super Admin; approve creates the portal login via 03 `users.CreateVendorLogin` (idempotent: reuse existing `portal_user_id`); suspend calls 03 `sessions.InvalidateForUser`; reason 10–500 on reject/suspend; `CONFLICT` on double decision; re-approve path per OQ-5; audit each | `admin:vendors` | Yes |
+| `WEB-BE-005` | `partners.ListForAdmin` | Super Admin; status filter + trgm name search | — | No |
+| `WEB-BE-006` | `partners.Approve` / `partners.Reject` / `partners.Suspend` + export `partners.AccountForUser(userID)` / `RequireApprovedVendor()` middleware for 11/13 | Super Admin; approve creates the portal login via 03 `users.CreateVendorLogin` (idempotent: reuse existing `portal_user_id`); suspend calls 03 `sessions.InvalidateForUser`; reason 10–500 on reject/suspend; `CONFLICT` on double decision; re-approve path per OQ-5; audit each | `admin:partners` | Yes |
 | `WEB-BE-007` | `stats.AdminStats` | Super Admin; own counts + additive 04 export `hierarchy.PlatformCounts()`; revenue placeholder constant | — | No |
 | `WEB-BE-008` | `stats.SchoolStats` | School Admin, claim-scoped; additive exports: 04 `hierarchy.SchoolCounts(schoolID)`, 03 `verification.PendingCount(schoolID)`, 05 `chat.NoticeStats(schoolID)`; partial-payload flags on upstream failure | — | No |
 | `WEB-BE-009` | `auditlog.List` (read endpoint over 01) | Super Admin; filters `entityType`/`entityId`/`schoolId`; pages 50; read-only (no write path exists) | — | No |
@@ -169,7 +169,7 @@ layouts re-check role claims server-side per route group.
 | `WEB-BE-011` | `InsertLead / ListLeads(type, status, cursor) / UpdateLeadStatus` | status transition guarded in `UPDATE … WHERE status = $expected` | `(status, created_at DESC)` · `(type, created_at DESC)` |
 | `WEB-BE-012` | `InsertVendorAccount / ListVendorAccounts(status, q, cursor) / UpdateVendorStatus` | status-guarded UPDATE; trgm ILIKE search | `(status, created_at DESC)` · trgm `(company_name)` |
 | `WEB-BE-013` | `CountLeadsByStatus / CountLeadsByType / CountVendorsByStatus` | single-scan aggregates for `/admin/stats` | same composite indexes |
-| `WEB-BE-014` | Seed loader (demo leads + vendors, fictional-marked) | idempotent upsert by natural keys | — |
+| `WEB-BE-014` | Seed loader (demo leads + partners, fictional-marked) | idempotent upsert by natural keys | — |
 
 ## 5. Jobs
 
@@ -183,13 +183,13 @@ layouts re-check role claims server-side per route group.
 | --- | --- | --- | --- |
 | `WEB-UT-001` | Lead payload validation: per-field zod/OpenAPI parity, status forced `new`, source allowlist, utm capping | Unit | `WEB-BR-004`, US-003/004 |
 | `WEB-UT-002` | Lead transition table: `new→contacted→converted` ok; `contacted→new`, `archived→*` refused | Unit | INV-001, `WEB-BR-005` |
-| `WEB-UT-003` | Vendor lifecycle: reject without reason refused; double-decide → `CONFLICT`; suspend→re-approve clears reason | Unit | `WEB-BR-006`, OQ-5 default |
-| `WEB-UT-004` | `vendor.Register` creates lead + account atomically (fake repo failure → neither row) | Unit | INV-002 |
+| `WEB-UT-003` | Partner lifecycle: reject without reason refused; double-decide → `CONFLICT`; suspend→re-approve clears reason | Unit | `WEB-BR-006`, OQ-5 default |
+| `WEB-UT-004` | `partner.Register` creates lead + account atomically (fake repo failure → neither row) | Unit | INV-002 |
 | `WEB-UT-005` | `stats.SchoolStats` partial-payload flags when an upstream count export errors | Unit | §2 #8 degradation |
 | `WEB-IT-001` | Unauthenticated `POST /leads` flood → `RATE_LIMITED` after class limits; valid submit → 201 `new` | Integration (testcontainers Postgres) | `leads` rate class, BR-004 |
 | `WEB-IT-002` | Every protected endpoint (#3–#9) unauthenticated → `UNAUTHENTICATED`; School Admin on admin routes → `FORBIDDEN` | Integration | auth chain |
 | `WEB-IT-003` | School Admin `GET /institution/stats` returns only claim-scoped counts; forged query params cannot widen scope | Integration | `WEB-BR-008` |
-| `WEB-IT-004` | Vendor approve/reject writes `audit.Record` entries (actor, reason) atomically; audit failure aborts decision | Integration | `WEB-BR-007`, 01 I-3 contract |
+| `WEB-IT-004` | Partner approve/reject writes `audit.Record` entries (actor, reason) atomically; audit failure aborts decision | Integration | `WEB-BR-007`, 01 I-3 contract |
 | `WEB-IT-005` | Cross-tenant probe on `/admin/audit-log?schoolId=` as School Admin → `TENANT_MISMATCH`/404, no rows leak | Integration | scoped reads (01 pattern) |
 | `WEB-IT-006` | Seed loader idempotent; public reads never expose `DRAFT` demo rows as real partners (fictional marking intact) | Integration | content-truth `prompt.txt` §12 |
 
@@ -212,8 +212,8 @@ publish guard blocks `TODO:`; public reads never return drafts.
 - [x] `WEB-BE-010` OpenAPI paths #1–#9 + schemas; regenerate Go + TS clients — 2026-10-03
 - [x] `WEB-BE-003`/`WEB-BE-004` leads admin services + `PATCH /admin/leads/<built-in function id>` — 2026-10-03
 - [x] `WEB-BE-001` public `POST /leads` (+ `leads` rate-limit class wired to 01 limiter) — 2026-10-03
-- [x] `WEB-BE-002` `POST /vendor/register` atomic create — 2026-10-03
-- [x] `WEB-BE-005`/`WEB-BE-006` vendor list + approve/reject/suspend with audit — 2026-10-03
+- [x] `WEB-BE-002` `POST /partner/register` atomic create — 2026-10-03
+- [x] `WEB-BE-005`/`WEB-BE-006` partner list + approve/reject/suspend with audit — 2026-10-03
 - [x] `WEB-BE-007`/`WEB-BE-008` stats services + additive count exports agreed with 03/04/05 — 2026-10-03
 - [x] `WEB-BE-009` `GET /admin/audit-log` over 01's scoped list queries — 2026-10-03
 - [x] `WEB-BE-013` stats aggregates — 2026-10-03

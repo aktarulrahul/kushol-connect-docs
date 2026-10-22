@@ -160,7 +160,7 @@ invalid-OTP shake, resend countdown, step slide) has a reduced-motion static var
 
 | # | Failure | Detection | Impact | Recovery |
 | --- | --- | --- | --- | --- |
-| 1 | SMS gateway down/timeout | Send error / 5 s timeout | OTP not delivered | OTP queued in outbox, retried ×5 with backoff (jobs); user shown `auth.smsDelayed`; auto-recovers with vendor |
+| 1 | SMS gateway down/timeout | Send error / 5 s timeout | OTP not delivered | OTP queued in outbox, retried ×5 with backoff (jobs); user shown `auth.smsDelayed`; auto-recovers with partner |
 | 2 | Google/GitHub OIDC unavailable | Token-exchange error | SSO button fails | Error state suggests phone OTP; auto-recovers |
 | 3 | Neon cold start / slow DB | Elevated p95, pgx retry | Slower auth | pgx retry + health probe; no data risk |
 | 4 | Redis down | Client errors | Rate limits fall back to DB counters (stricter); session/status caches bypassed to DB lookups | Degraded latency, no auth outage |
@@ -195,8 +195,8 @@ rejected); this module is the implementation of that decision.
 
 | | A: OTP-first (chosen) | B: password-first |
 | --- | --- | --- |
-| Advantages | No password to forget on low-end phones; proves phone possession; matches BD phone-first habits; students/guardians never see a password field | No SMS cost; no vendor dependency |
-| Disadvantages | SMS vendor dependency + per-SMS cost | Password reuse/forgetting among students/guardians; weaker identity proof |
+| Advantages | No password to forget on low-end phones; proves phone possession; matches BD phone-first habits; students/guardians never see a password field | No SMS cost; no partner dependency |
+| Disadvantages | SMS partner dependency + per-SMS cost | Password reuse/forgetting among students/guardians; weaker identity proof |
 
 **Recommendation:** OTP-first for students/guardians; email+password (argon2id) for staff only —
 staff volume is tiny, so SMS cost stays bounded.
@@ -216,7 +216,7 @@ http-only server-side session for web.
 | # | Assumption / risk | Impact if wrong | Mitigation |
 | --- | --- | --- | --- |
 | 1 | web + api share one registrable domain so the session cookie scopes to both (`OQ-4`) | Cookie can't be shared → web auth redesign | Confirm domain before build; fallback: SameSite=None + strict CSRF |
-| 2 | SMS vendor delivers OTP within seconds nationwide | Delayed OTPs → onboarding churn | `auth.smsDelayed` copy, resend, SSO + staff-password alternatives; vendor SLA in contract (`OQ-2`) |
+| 2 | SMS partner delivers OTP within seconds nationwide | Delayed OTPs → onboarding churn | `auth.smsDelayed` copy, resend, SSO + staff-password alternatives; partner SLA in contract (`OQ-2`) |
 | 3 | Ambassadors could mass-approve outsiders | Trust erosion with schools | Same-school + student/guardian only, approve-only, daily cap, full audit, instant flag revocation, School Admin spot-checks |
 | 4 | argon2id on the shared 2-vCPU VPS | Login CPU spikes | Passwords are staff-only (low volume); OTP path avoids argon2id; caps on password attempts |
 | 5 | Token theft on mobile | Account takeover | 15-min access TTL, single-use refresh with reuse detection, device list (P1), logout-all |

@@ -21,7 +21,7 @@ Implements `brd.md` **BR-03** and `prd.md` **§5.3**: guardians/students post tu
 | Teacher | N/A — no marketplace surface; governance flows through the School Admin |
 | School Admin | Reviews their school's verification queue (evidence viewer, approve/reject + note); requirements oversight (read-only, close abusive) |
 | Super Admin | Platform-ops reviewer for `school_id` NULL tutor verifications — same queue endpoints, role-scoped |
-| Vendor / EdTech brand | N/A — vendors reach students only via module 13 |
+| Partner / EdTech brand | N/A — partners reach students only via module 13 |
 | System (jobs, webhooks) | Matching job (on create), expiry job (14 days), verification-SLA reminder, fee DUE fact on accept (collection = module 12) |
 
 ## 3. Scope
@@ -38,7 +38,7 @@ Implements `brd.md` **BR-03** and `prd.md` **§5.3**: guardians/students post tu
 **Out of scope** (explicit — prevents scope drift)
 
 - Payment collection/gateways/receipts — module 12 (`TODO: Confirm` final fee model with Rahul).
-- Live video classes — `brd.md` §4; AI/ML matching — rule-based only ("never call a model when a rule will do"); tutor ratings/reviews — future; vendor/ads — module 13.
+- Live video classes — `brd.md` §4; AI/ML matching — rule-based only ("never call a model when a rule will do"); tutor ratings/reviews — future; partner/ads — module 13.
 - Public logged-out pages — every surface requires auth; the web build is the admin surface only (guardians/students/tutors use the app).
 
 **Depends on**

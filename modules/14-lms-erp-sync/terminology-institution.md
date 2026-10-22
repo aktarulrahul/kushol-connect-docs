@@ -1,7 +1,7 @@
 # Terminology — Educational Institution (binding 2026-10-03)
 
 **Status:** Binding for new LMS / integration copy and APIs.  
-**Applies to:** App, API, web product language; module 14 LMS vendor + pull docs.  
+**Applies to:** App, API, web product language; module 14 LMS partner + pull docs.  
 **Owner:** Rahul
 
 ---
@@ -67,11 +67,11 @@ Full role-string migration across 03/04/07 (`SCHOOL_ADMIN`, `/institution/*` rou
 | Tenant root | Educational institution (`institutions` product noun; DB may still be `schools` until rename) |
 | LMS counterparty | “the institution’s LMS / ERP” |
 | Admin config | Institution Admin pastes LMS base URL + credential |
-| Vendor metadata | `institution_type` set on Kushol tenant; LMS pull uses `/teachers`, `/students`, `/sections`, `/sections/{id}`, `/notices` |
+| Partner metadata | `institution_type` set on Kushol tenant; LMS pull uses `/teachers`, `/students`, `/sections`, `/sections/{id}`, `/notices` |
 
 ---
 
-## 5. Deferred renames (follow-up gaps — do not block LMS vendor brief)
+## 5. Deferred renames (follow-up gaps — do not block LMS partner brief)
 
 | Area | Current | Target | Notes |
 | --- | --- | --- | --- |
@@ -84,7 +84,7 @@ Full role-string migration across 03/04/07 (`SCHOOL_ADMIN`, `/institution/*` rou
 | Web routes | `/institution/roster`, `/institution/integrations` | `/institution/…` | 07 shell |
 | CSV / webhook docs in 14 | “school”, `school_id` | Align when 04 renames land | Pull plan uses Institution wording; columns may stay `school_id` until migration |
 
-LMS vendor-facing docs (**this pack**) use Institution + `institution_type` **now**. Kushol internal path/column renames wait for a dedicated terminology migration.
+LMS partner-facing docs (**this pack**) use Institution + `institution_type` **now**. Kushol internal path/column renames wait for a dedicated terminology migration.
 
 ---
 

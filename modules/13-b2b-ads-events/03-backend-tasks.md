@@ -8,7 +8,7 @@
 
 Schema first. Nothing below is designed until the schema is settled. Every table states its
 tenant-scope column/rule — unscoped tables are a defect (`prompt.txt` §9). Scope owner here is the
-**vendor account** (B2B platform-wide resource), not a school tenant.
+**partner account** (B2B platform-wide resource), not a school tenant.
 
 ---
 
@@ -35,7 +35,7 @@ tenant-scope column/rule — unscoped tables are a defect (`prompt.txt` §9). Sc
 | `created_at` / `updated_at` | `timestamptz` | no | `now()` | |
 
 **Constraints:** CHECKs above; `CHECK (schedule_start < schedule_end)`; `CHECK (budget_bdt > 0)`.
-**Indexes:** `(vendor_account_id, status)` → vendor lists; `(status, schedule_start)` → dispatch/complete job scans; `(status)` partial on `pending_review` → moderation queue.
+**Indexes:** `(vendor_account_id, status)` → partner lists; `(status, schedule_start)` → dispatch/complete job scans; `(status)` partial on `pending_review` → moderation queue.
 
 #### `ad_creatives` (model `AdCreative`)
 
@@ -47,7 +47,7 @@ tenant-scope column/rule — unscoped tables are a defect (`prompt.txt` §9). Sc
 | `title_bn` / `title_en` | `text` | no | — | ≤ 120; bn required (school-facing), en required (bilingual rule) |
 | `body_bn` / `body_en` | `text` | no | — | ≤ 500 |
 | `image_media_id` | `uuid` | yes | `null` | FK → 05 `media_assets(id)`; required for `native_banner` (service) |
-| `cta_label` | `text` | no | — | bn/en via i18n keys at render; vendor label ≤ 40 |
+| `cta_label` | `text` | no | — | bn/en via i18n keys at render; partner label ≤ 40 |
 | `cta_url` | `text` | no | — | CHECK absolute https |
 | `created_at` / `updated_at` | `timestamptz` | no | `now()` | |
 
@@ -59,7 +59,7 @@ tenant-scope column/rule — unscoped tables are a defect (`prompt.txt` §9). Sc
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
 | `id` | `bigint` | no | identity | PK (high-volume table; uuid v7 deliberately not used) |
-| `campaign_id` | `uuid` | no | — | FK → `ad_campaigns(id)`; the only vendor-facing access path (scope via campaign ownership) |
+| `campaign_id` | `uuid` | no | — | FK → `ad_campaigns(id)`; the only partner-facing access path (scope via campaign ownership) |
 | `user_ref` | `text` | yes | `null` | **Pseudized** (HMAC-SHA256 of user id, daily-rotating salt); never joined to `users` for reads (ADS-INV-5) |
 | `kind` | `text` | no | — | CHECK `impression` \| `click` |
 | `topic` | `text` | yes | `null` | push rows: `city-{id}`/`school-{id}`/`section-{id}` (frequency-cap lookups); null for native |
@@ -68,7 +68,7 @@ tenant-scope column/rule — unscoped tables are a defect (`prompt.txt` §9). Sc
 | `day` | `date` | no | — | Asia/Dhaka bucket of `served_at`; aggregate-friendly |
 | `created_at` | `timestamptz` | no | `now()` | |
 
-**Constraints:** none beyond CHECKs. **No tenant column by design** — rows are platform metrics; vendor access only through campaign-ownership-scoped aggregate queries (BR-008).
+**Constraints:** none beyond CHECKs. **No tenant column by design** — rows are platform metrics; partner access only through campaign-ownership-scoped aggregate queries (BR-008).
 **Indexes:** `(campaign_id, day)` → analytics; `(day)` → aggregation job; `(topic, kind, served_at)` → frequency-cap pre-check.
 
 #### `events` (model `Event`)
@@ -76,7 +76,7 @@ tenant-scope column/rule — unscoped tables are a defect (`prompt.txt` §9). Sc
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | no | uuid v7 | PK |
-| `organizer_kind` | `text` | no | `vendor` | CHECK `vendor` \| `platform` |
+| `organizer_kind` | `text` | no | `partner` | CHECK `partner` \| `platform` |
 | `vendor_account_id` | `uuid` | yes | `null` | FK → 07 `vendor_accounts(id)`; null ⇒ platform-organized; **scope owner** |
 | `city_id` | `uuid` | no | — | FK → 04 `cities(id)` |
 | `title_bn` / `title_en` | `text` | no | — | ≤ 150 |
@@ -118,7 +118,7 @@ tenant-scope column/rule — unscoped tables are a defect (`prompt.txt` §9). Sc
 | `impressions` / `clicks` | `int` | no | `0` | SUM of `audience_count` / click rows |
 | `spend_bdt` | `numeric(12,2)` | no | `0` | |
 
-Rebuilt nightly; vendor analytics read only this table (BR-008).
+Rebuilt nightly; partner analytics read only this table (BR-008).
 
 ### 1.2 Migrations
 
@@ -137,16 +137,16 @@ Rebuilt nightly; vendor analytics read only this table (BR-008).
 
 ## 2. Server Contracts
 
-### Vendor campaign & event endpoints — `/api/v1/vendor/…` (Go, generated from the OpenAPI spec)
+### Partner campaign & event endpoints — `/api/v1/partner/…` (Go, generated from the OpenAPI spec)
 
-`POST /vendor/campaigns` · `GET /vendor/campaigns` (own) · `PATCH /vendor/campaigns/{id}` (draft/rejected only) · `POST /vendor/campaigns/{id}/submit` · `GET /vendor/campaigns/{id}/analytics` · `POST /vendor/campaigns/{id}/pause` · `POST /vendor/campaigns/{id}/resume` · `POST /vendor/events` · `GET /vendor/events` (own) · `POST /vendor/events/{id}/submit` · `GET /vendor/audience-estimate?cityId=&grade=&sectionIds=`
+`POST /partner/campaigns` · `GET /partner/campaigns` (own) · `PATCH /partner/campaigns/{id}` (draft/rejected only) · `POST /partner/campaigns/{id}/submit` · `GET /partner/campaigns/{id}/analytics` · `POST /partner/campaigns/{id}/pause` · `POST /partner/campaigns/{id}/resume` · `POST /partner/events` · `GET /partner/events` (own) · `POST /partner/events/{id}/submit` · `GET /partner/audience-estimate?cityId=&grade=&sectionIds=`
 
 | | |
 | --- | --- |
-| **Auth** | middleware: authenticate → load role claims (vendor) → scope to session `vendor_account_id`; 07 approved-gate re-checked per mutation (BR-001) |
+| **Auth** | middleware: authenticate → load role claims (partner) → scope to session `vendor_account_id`; 07 approved-gate re-checked per mutation (BR-001) |
 | **Input** | contract-generated validator; request structs from `oapi-codegen`; targeting schema constrained to demographic keys |
 | **Result** | `{ "data": … }` / RFC-7807 `application/problem+json` |
-| **Errors** | `UNAUTHENTICATED` · `FORBIDDEN` (vendor not approved / not verified) · `VALIDATION_FAILED` · `NOT_FOUND` (other vendors' rows) · `TENANT_MISMATCH` (audited cross-account attempt) · `CONFLICT` (immutable state) · `CAMPAIGN_REJECTED` · `RATE_LIMITED` |
+| **Errors** | `UNAUTHENTICATED` · `FORBIDDEN` (partner not approved / not verified) · `VALIDATION_FAILED` · `NOT_FOUND` (other partners' rows) · `TENANT_MISMATCH` (audited cross-account attempt) · `CONFLICT` (immutable state) · `CAMPAIGN_REJECTED` · `RATE_LIMITED` |
 | **Rate limit** | class `default` |
 | **Audit** | submit + pause/resume logged; approve/reject/dispatch audited (below) |
 | **Stories** | ADS-US-001, 002, 006–008 |
@@ -169,7 +169,7 @@ Rebuilt nightly; vendor analytics read only this table (BR-008).
 
 | | |
 | --- | --- |
-| **Auth** | reads public (repository returns `published` ∧ ¬cancelled only, BR-012); ticket write/cancel requires VERIFIED user (03); organizer list requires owning vendor or Super Admin |
+| **Auth** | reads public (repository returns `published` ∧ ¬cancelled only, BR-012); ticket write/cancel requires VERIFIED user (03); organizer list requires owning partner or Super Admin |
 | **Input / Result** | contract validators; `{ "data": … }` |
 | **Errors** | `UNAUTHENTICATED` · `FORBIDDEN` (unverified buyer) · `VALIDATION_FAILED` (capacity/qty) · `NOT_FOUND` · `TENANT_MISMATCH` (foreign ticket/event) · `CONFLICT` (cancel after start) · `RATE_LIMITED` |
 | **Rate limit** | class `default` |
@@ -212,7 +212,7 @@ Same auth + input (zod) + result rows as above.
 | `ADS-BE-020` | `events.MarkTicketPaid(ctx, ticketID, paymentTransactionID)` | **12 seam**; sets `paid_at`, finalizes commission (INV-8); idempotent | none | yes |
 | `ADS-BE-021` | `events.CancelTicket(principal, ticketID)` | buyer/Super Admin; before `starts_at` (BR-010); frees capacity | none | yes |
 | `ADS-BE-022` | `events.ListEventTickets(principal, eventID)` | organizer scope; totals gross/commission/net (BR-009) | none | no |
-| `ADS-BE-023` | `ads.AdminOverview(actor)` / `ads.AudienceEstimate(principal, params)` | Super Admin / vendor; estimate via 04 counts + Redis 5-min cache; `unknown` on 04 failure | none | no |
+| `ADS-BE-023` | `ads.AdminOverview(actor)` / `ads.AudienceEstimate(principal, params)` | Super Admin / partner; estimate via 04 counts + Redis 5-min cache; `unknown` on 04 failure | none | no |
 
 ## 4. Repository Tasks
 
@@ -250,7 +250,7 @@ Same auth + input (zod) + result rows as above.
 | `ADS-UT-005` | Commission math: 10% of paid amounts; free = 0; rounding | Unit | BR-009 / INV-8 |
 | `ADS-UT-006` | Pseudization: stable per day, never reversible in repo queries | Unit | BR-008 / INV-5 |
 | `ADS-IT-001` | Moderation gate: unapproved campaign never dispatches; unpublished event never lists (mandatory) | Integration | BR-002 / INV-3 |
-| `ADS-IT-002` | Vendor isolation: vendor B cannot read/write vendor A's campaigns, events, tickets (mandatory) | Integration | §6 scope rule |
+| `ADS-IT-002` | Partner isolation: partner B cannot read/write partner A's campaigns, events, tickets (mandatory) | Integration | §6 scope rule |
 | `ADS-IT-003` | Status machine: illegal transitions (`PATCH` on pending_review, double approve) → `CONFLICT`; rejected-resubmit → `CAMPAIGN_REJECTED` | Integration | BR-011 / INV-1 |
 | `ADS-IT-004` | Ticket reservation concurrency: N buyers, last seat — exactly one wins; free = instant `paid` (mandatory) | Integration | INV-7 |
 | `ADS-IT-005` | Dispatch end-to-end w/ fake 06: topics expanded, labelled payload, impression rows + spend, audit entry | Integration | ADS-US-004 |

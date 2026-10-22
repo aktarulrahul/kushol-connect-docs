@@ -148,12 +148,12 @@ chat bubbles or playful illustration on web).
 | Rule | Value |
 | --- | --- |
 | Reference class | Modern B2B SaaS marketing site (clean hero, product screenshots, proof, clear CTAs) |
-| Structure | Sticky header (logo, section links, language toggle, "Book a pilot" primary CTA) → hero (bn headline, one-line value prop, primary CTA + secondary "Download app", real product screenshot in a device frame) → audience sections (Schools · Brands/Vendors · Students & Guardians) → how it works (3 steps) → ROI calculator card → trust (verified-school model, data privacy, local payments) → pilot form → footer (contact, legal, social) |
+| Structure | Sticky header (logo, section links, language toggle, "Book a pilot" primary CTA) → hero (bn headline, one-line value prop, primary CTA + secondary "Download app", real product screenshot in a device frame) → audience sections (Schools · Brands/Partners · Students & Guardians) → how it works (3 steps) → ROI calculator card → trust (verified-school model, data privacy, local payments) → pilot form → footer (contact, legal, social) |
 | Visual | Paper background, generous whitespace (section padding 96px desktop / 56px mobile), 12-col grid max-width 1200px, deep-teal primary, slate-teal secondary, one subtle teal gradient in the hero only; 8px radius cards, 1px borders, soft single-layer shadows |
 | Imagery | Real app screenshots (post-module 05) and owner-supplied photos only; never stock "happy students" placeholders shipped as final; no fabricated logos, testimonials, or user counts (`prompt.txt` never-fabricate rule) |
 | Performance/SEO | Static render, LCP < 2.5s on 3G-fast, fonts via `next/font` subsets, OG images per locale (`prompt.txt` §4A) |
 
-### 7.2 Command Center (`/admin`, `/school`, `/vendor`)
+### 7.2 Command Center (`/admin`, `/school`, `/partner`)
 
 | Rule | Value |
 | --- | --- |

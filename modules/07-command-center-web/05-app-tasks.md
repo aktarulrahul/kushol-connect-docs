@@ -30,7 +30,7 @@ N/A — no app forms. Shared zod schemas in each app's `src/schemas` are reused 
 ## 4. Data Flow
 
 N/A — no app data flow. The generated OpenAPI client already covers `app`; module 07 adds the
-lead/vendor/stats paths to the same spec so `app` could consume them later without new contracts.
+lead/partner/stats paths to the same spec so `app` could consume them later without new contracts.
 
 ## 5. Motion Spec
 

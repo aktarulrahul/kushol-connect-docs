@@ -36,7 +36,7 @@ branch `module/03-identity-access`, nothing committed yet) · **Last updated:** 
    - App: password tab → Email OTP tab; `OtpVerify` accepts an email target (also fixes a latent
      double-send: login now passes `autoSend=false`).
    - Passwords survive only as provisioned credentials: bootstrap super admin, teacher
-     registration, `/auth/password/forgot` + `/reset` (07 vendor first-password set).
+     registration, `/auth/password/forgot` + `/reset` (07 partner first-password set).
 
 ## Bugfix (2026-10-02) — login email never arrived
 
@@ -81,7 +81,7 @@ Still on fixtures, or with no contract to call (08-gaps): hierarchy pickers, sch
 
 - Teacher registration keeps email+password (spec as written) — flagged in 08-gaps G-1 for the
   owner to confirm or make registration passwordless too.
-- `/auth/password/forgot` + `/reset` kept (07 vendor flow + recovery) although login no longer
+- `/auth/password/forgot` + `/reset` kept (07 partner flow + recovery) although login no longer
   uses passwords — G-2.
 
 ## Standing rule (2026-10-02) — agent never starts the stack
@@ -150,7 +150,7 @@ New migration `20270303090001_seed_demo_tenant_users` (+down) seeds the shared d
   every test world.
 - **Staff**: `rahul.aktarul@gmail.com` (school_admin, Demo HS), `aktarul.rahul@gmail.com`
   (school_admin, Demo CTG).
-- **Vendor**: `aktarul.i1708@gmail.com` (`vendor`, platform-scoped) + an approved
+- **Partner**: `aktarul.i1708@gmail.com` (`partner`, platform-scoped) + an approved
   `vendor_accounts` row portal-linked to it.
 - **Students + guardians**: 2 VERIFIED students (enrolled, HS 6A/6B) + 2 guardians
   (`guardian_links` father/mother, ROSTER source).

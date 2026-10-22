@@ -10,7 +10,7 @@
 
 ### 1.1 Purpose
 
-Revenue Stream 2 (`brd.md` §7): approved vendors run **demographic-targeted campaigns** (BR-05 —
+Revenue Stream 2 (`brd.md` §7): approved partners run **demographic-targeted campaigns** (BR-05 —
 "শুধুমাত্র চট্টগ্রামের ক্লাস ১২ এর বিজ্ঞান বিভাগ") as sponsored push over module 06's hierarchy topics
 and native banners on web surfaces — every campaign Super-Admin-moderated, demographic dimensions
 only, no exploitative targeting of minors. Also ships **city-wide event listings with ticketing**
@@ -34,11 +34,11 @@ owns; 13 only reserves + exposes the seam); email/SMS ad channels; A/B testing; 
 | Direction | Module | What is exchanged |
 | --- | --- | --- |
 | consumes | 06 notifications | `notify.BroadcastTopic` (sponsored push, topics `city-{id}`/`school-{id}`/`section-{id}`, payload `type=campaign`); `notify.SendToUser` (event-cancel buyer notices) |
-| consumes | 07 command-center-web | `vendors.Approve` gate re-checked per `/vendor/*` mutation; `/admin/campaigns` moderation stub this module fills; `leads.Create` funnel |
+| consumes | 07 command-center-web | `partners.Approve` gate re-checked per `/partner/*` mutation; `/admin/campaigns` moderation stub this module fills; `leads.Create` funnel |
 | consumes | 04 organization-hierarchy · 05 communication-engine | sections-by-city+grade+stream reads + aggregated `hierarchy.AudienceCount` (declared in 04 `06` §2); `media_assets` presign/confirm for creative images |
 | consumes | 03 identity-access · 01 foundations | auth chain + buyer VERIFIED check (03); `jobs.Enqueue`, `audit.Record`, RFC-7807 envelope, `default` limiter (01) |
 | consumed by | 12 payments | seam: 12 fills `event_tickets.payment_transaction_id`, then calls `events.MarkTicketPaid` — **not a build dependency** |
-| consumed by | 07 · web · 06 (render) | REST §5.1 for `/vendor/ads|events*`, `/admin/moderation`, `/admin/ads`, public `/events*`; 13 owns the `type=campaign` payload + labels, 06 owns FCM/Expo delivery/rendering |
+| consumed by | 07 · web · 06 (render) | REST §5.1 for `/partner/ads|events*`, `/admin/moderation`, `/admin/ads`, public `/events*`; 13 owns the `type=campaign` payload + labels, 06 owns FCM/Expo delivery/rendering |
 
 ---
 
@@ -48,7 +48,7 @@ owns; 13 only reserves + exposes the seam); email/SMS ad channels; A/B testing; 
 | --- | --- | --- | --- |
 | api | Go · chi handlers · services · tenant-scoped repos · sqlc + pgx · PostgreSQL | Campaign/event/ticket domain + scheduled topic broadcast serving | Stack per `docs/tech-stack.md` api table; testcontainers-go for IT; contracts generated from `applications/api/openapi/openapi.yaml` |
 | api (jobs) | In-DB job table + 01 Go worker | `campaign.dispatch`, `campaign.complete`, `ads.daily_aggregate`, `tickets.sweep` | No Kafka/RabbitMQ (`tech-stack.md`) |
-| web | Next.js App Router · Server Components/Actions · TanStack Table · Recharts · RHF + zod | Vendor portal + moderation queue + public events; charts reuse 07's Recharts — no new dependency | `tech-stack.md` web table; no client-side ad JS — labels/selection are server-side |
+| web | Next.js App Router · Server Components/Actions · TanStack Table · Recharts · RHF + zod | Partner portal + moderation queue + public events; charts reuse 07's Recharts — no new dependency | `tech-stack.md` web table; no client-side ad JS — labels/selection are server-side |
 | web + app (per app) | each app's `src/i18n` catalogs `ads.*`, `events.*`, `validation.ads.*`, `validation.events.*` | bn (default) + en strings from day one | Parity gate from module 02 |
 | app | None — README scopes module 13 to `api` + `web` | Sponsored push arrives via 06; no RN screens built here | Recorded gap, §6.2 |
 
@@ -59,11 +59,11 @@ owns; 13 only reserves + exposes the seam); email/SMS ad channels; A/B testing; 
 ### 3.1 Component diagram
 
 ```text
-web (/vendor/ads·events, /admin/moderation, /admin/ads, /events) ──openapi-fetch──►
+web (/partner/ads·events, /admin/moderation, /admin/ads, /events) ──openapi-fetch──►
 api (chi) ── ads/events services ── tenant-scoped repos ── sqlc ── PostgreSQL
         │        (ad_campaigns, ad_creatives, ad_events, events, event_tickets, ads_daily)
         ├─ 04: sections by city+grade, hierarchy.AudienceCount
-        ├─ 07: vendors.Approve gate (fail-closed)   ├─ 06: notify.BroadcastTopic / SendToUser
+        ├─ 07: partners.Approve gate (fail-closed)   ├─ 06: notify.BroadcastTopic / SendToUser
         ├─ 05: media_assets presign/confirm          ├─ 01: jobs · audit.Record · RFC-7807 · limiter
         └─ seam: 12 fills payment_transaction_id → events.MarkTicketPaid
 ```
@@ -71,17 +71,17 @@ api (chi) ── ads/events services ── tenant-scoped repos ── sqlc ─�
 ### 3.2 Boundary
 
 **Owns (tables / services):** `ad_campaigns`, `ad_creatives`, `ad_events`, `events`,
-`event_tickets`, `ads_daily`, dispatch log; all `/vendor/campaigns*`, `/vendor/events*`,
-`/admin/moderation/*`, `/admin/ads/*`, `/events*`, `/event-tickets*`, `/vendor/audience-estimate`, `/ads/serve|track`.
+`event_tickets`, `ads_daily`, dispatch log; all `/partner/campaigns*`, `/partner/events*`,
+`/admin/moderation/*`, `/admin/ads/*`, `/events*`, `/event-tickets*`, `/partner/audience-estimate`, `/ads/serve|track`.
 
-**Reads (via exported service functions only):** 07 `vendors.Approve` gate; 04 sections reads +
+**Reads (via exported service functions only):** 07 `partners.Approve` gate; 04 sections reads +
 `hierarchy.AudienceCount`; 06 `notify.*`; 05 `media_assets`; 03 role claims + verification; 01
-`jobs`/`audit`/limiter. Cache contract (`06` §4): `events:city:{id}` public; vendor/admin no-store.
+`jobs`/`audit`/limiter. Cache contract (`06` §4): `events:city:{id}` public; partner/admin no-store.
 
 ### 3.3 Request / data flows
 
 ```text
-1. Campaign build → approval: wizard → POST /vendor/campaigns (draft, targeting
+1. Campaign build → approval: wizard → POST /partner/campaigns (draft, targeting
    {city_id, grade, section_ids[]}) → submit → pending_review → Super Admin queue →
    approve (checklist version audited) → scheduled/running; reject(reason) → rejected.
 2. Scheduled dispatch: 01 tick → ads.DispatchCampaign → status gate (INV-3) → budget guard
@@ -91,7 +91,7 @@ api (chi) ── ads/events services ── tenant-scoped repos ── sqlc ─�
    Idempotent (status guard + dispatch-log key).
 3. Native serve (P1): GET /ads/serve → selector over running native_banner campaigns →
    impression row; tap → POST /ads/track/click → pseudized click row.
-4. Events & tickets: vendor submits event → same queue → published (revalidate
+4. Events & tickets: partner submits event → same queue → published (revalidate
    events:city:{cityId}) → /events (ISR 60 s) → POST /events/{id}/tickets → ReserveTicketTx
    (row-locked capacity) → free: paid instantly (৳0/৳0); priced: reserved → 12 fills
    payment_transaction_id + MarkTicketPaid → totals gross/10%/net; cancel before starts_at;
@@ -102,7 +102,7 @@ api (chi) ── ads/events services ── tenant-scoped repos ── sqlc ─�
 
 | Entity | States | Transitions (from → to, guard) |
 | --- | --- | --- |
-| `ad_campaigns` | draft, pending_review, approved, rejected, scheduled, running, paused, completed | draft → pending_review (submit; complete creative bn+en, future schedule, budget > 0, vendor gate) · pending_review → approved (Super Admin + checklist; → scheduled if start future, else running + immediate dispatch) · pending_review → rejected (reason required) · rejected → pending_review (edit + resubmit) · approved/scheduled → running (start reached, job; budget + cap pre-check) · running → completed (end reached, job) · running ⇄ paused (vendor or budget guard; resume within window) · review-state rows immutable (`CONFLICT`) |
+| `ad_campaigns` | draft, pending_review, approved, rejected, scheduled, running, paused, completed | draft → pending_review (submit; complete creative bn+en, future schedule, budget > 0, partner gate) · pending_review → approved (Super Admin + checklist; → scheduled if start future, else running + immediate dispatch) · pending_review → rejected (reason required) · rejected → pending_review (edit + resubmit) · approved/scheduled → running (start reached, job; budget + cap pre-check) · running → completed (end reached, job) · running ⇄ paused (partner or budget guard; resume within window) · review-state rows immutable (`CONFLICT`) |
 | `events` | draft, pending_review, published, rejected, cancelled | draft → pending_review (submit) · pending_review → published (approve) / rejected (reason) · published → cancelled (organizer/Super Admin; buyer notices via 06; tickets cancelled) |
 | `event_tickets` | reserved, paid, cancelled | reserved → paid (free instant ৳0; priced via 12 seam `MarkTicketPaid`) · reserved/paid → cancelled (buyer or Super Admin, before `starts_at`; capacity freed) · reserved unpaid at start → cancelled (`tickets.sweep`) |
 
@@ -110,17 +110,17 @@ api (chi) ── ads/events services ── tenant-scoped repos ── sqlc ─�
 
 ## 4. Data Model (summary)
 
-Mirror of `03-backend-tasks.md` §1 (column detail stays there). Scope owner = **vendor account**
+Mirror of `03-backend-tasks.md` §1 (column detail stays there). Scope owner = **partner account**
 (B2B platform-wide resource), not a school tenant.
 
 | Table | Purpose | Tenant scope | Key indexes | Notes |
 | --- | --- | --- | --- | --- |
-| `ad_campaigns` | Vendor campaign: objective (`awareness`\|`event_promo`), targeting jsonb, schedule window, budget/spend, lifecycle status | `vendor_account_id` (FK → 07; scope owner) | `(vendor_account_id, status)`, `(status, schedule_start)`, partial `(status)` on pending_review | CHECKs: targeting keys ⊆ `{city_id, grade, section_ids}` (demographic only), start < end, budget > 0 |
+| `ad_campaigns` | Partner campaign: objective (`awareness`\|`event_promo`), targeting jsonb, schedule window, budget/spend, lifecycle status | `vendor_account_id` (FK → 07; scope owner) | `(vendor_account_id, status)`, `(status, schedule_start)`, partial `(status)` on pending_review | CHECKs: targeting keys ⊆ `{city_id, grade, section_ids}` (demographic only), start < end, budget > 0 |
 | `ad_creatives` | Push or native_banner creative: bn+en title/body, optional 05 image, CTA label + https URL | via `campaign_id` | `campaign_id` | UNIQUE `(campaign_id, kind)`; bn + en both required (NOT NULL); image required for `native_banner` |
-| `ad_events` | Impression/click facts: pseudized `user_ref` (HMAC, daily-rotating salt), kind, topic, `audience_count`, Asia/Dhaka `day` | none by design — platform metrics; vendor access only via campaign-ownership aggregates | `(campaign_id, day)`, `(day)`, `(topic, kind, served_at)` | `bigint` identity PK (high volume); never joined back to `users` for reads (BR-008) |
-| `events` | City-wide event: organizer vendor/platform, 04 city, bn/en title/description, venue, schedule, nullable price (null = free), capacity | `vendor_account_id` (null ⇒ platform) | `(city_id, status, starts_at)`, `(vendor_account_id, status)`, partial `(status)` queue | status adds moderation states to the spec base set (Open Question #7) |
+| `ad_events` | Impression/click facts: pseudized `user_ref` (HMAC, daily-rotating salt), kind, topic, `audience_count`, Asia/Dhaka `day` | none by design — platform metrics; partner access only via campaign-ownership aggregates | `(campaign_id, day)`, `(day)`, `(topic, kind, served_at)` | `bigint` identity PK (high volume); never joined back to `users` for reads (BR-008) |
+| `events` | City-wide event: organizer partner/platform, 04 city, bn/en title/description, venue, schedule, nullable price (null = free), capacity | `vendor_account_id` (null ⇒ platform) | `(city_id, status, starts_at)`, `(vendor_account_id, status)`, partial `(status)` queue | status adds moderation states to the spec base set (Open Question #7) |
 | `event_tickets` | Buyer hold: qty, amount, `commission_bdt` (10% paid), status, nullable `payment_transaction_id` (12 seam) | buyer `buyer_user_id` + event organizer | `(event_id, status)`, `(buyer_user_id)`, partial reserved → sweep | active qty ≤ capacity under row lock (INV-7) |
-| `ads_daily` | Read-model aggregate (campaign × day: impressions, clicks, spend) | via campaign ownership | PK `(campaign_id, day)` | rebuilt nightly; vendor analytics read only this (BR-008) |
+| `ads_daily` | Read-model aggregate (campaign × day: impressions, clicks, spend) | via campaign ownership | PK `(campaign_id, day)` | rebuilt nightly; partner analytics read only this (BR-008) |
 
 Migrations 1–2 (both reversible). Seed: one fictional draft campaign + one fictional draft event,
 clearly marked, publish blocked until the `TODO: Confirm` seed policy lands (ADS-BR-013).
@@ -135,10 +135,10 @@ All under `/api/v1`; `{ "data": … }` / RFC-7807. Full request/response shapes:
 
 | # | Method · Path | Roles | Purpose | Key errors | Stories |
 | --- | --- | --- | --- | --- | --- |
-| 1 | `POST/GET /vendor/campaigns` · `PATCH /vendor/campaigns/{id}` · `POST …/submit` · `POST …/pause` · `POST …/resume` | Vendor (07 gate re-checked) | Campaign CRUD, submit, pause/resume (draft/rejected edits only) | `FORBIDDEN` · `VALIDATION_FAILED` · `NOT_FOUND`/`TENANT_MISMATCH` · `CONFLICT` · `CAMPAIGN_REJECTED` · `RATE_LIMITED` | ADS-US-001/002/007 |
-| 2 | `GET /vendor/campaigns/{id}/analytics` | Vendor (own) | Daily impressions/clicks/CTR/spend from `ads_daily` | `NOT_FOUND` (others') | ADS-US-006 |
-| 3 | `GET /vendor/audience-estimate` | Vendor | Aggregate count from 04 (Redis 5-min); `count: null` = unknown, never fabricated | — | ADS-US-001 |
-| 4 | `POST/GET /vendor/events` · `POST /vendor/events/{id}/submit` | Vendor | Event create/list + submission | as #1 | ADS-US-008 |
+| 1 | `POST/GET /partner/campaigns` · `PATCH /partner/campaigns/{id}` · `POST …/submit` · `POST …/pause` · `POST …/resume` | Partner (07 gate re-checked) | Campaign CRUD, submit, pause/resume (draft/rejected edits only) | `FORBIDDEN` · `VALIDATION_FAILED` · `NOT_FOUND`/`TENANT_MISMATCH` · `CONFLICT` · `CAMPAIGN_REJECTED` · `RATE_LIMITED` | ADS-US-001/002/007 |
+| 2 | `GET /partner/campaigns/{id}/analytics` | Partner (own) | Daily impressions/clicks/CTR/spend from `ads_daily` | `NOT_FOUND` (others') | ADS-US-006 |
+| 3 | `GET /partner/audience-estimate` | Partner | Aggregate count from 04 (Redis 5-min); `count: null` = unknown, never fabricated | — | ADS-US-001 |
+| 4 | `POST/GET /partner/events` · `POST /partner/events/{id}/submit` | Partner | Event create/list + submission | as #1 | ADS-US-008 |
 | 5 | `GET /admin/moderation/queue` · `POST /admin/campaigns/{id}/approve│reject` · `POST /admin/events/{id}/approve│reject` | Super Admin | Moderation queue (campaigns + events) with checklist payload; reject needs reason | `FORBIDDEN` · `CONFLICT` (already decided) · `VALIDATION_FAILED` (no reason) | ADS-US-003/008 |
 | 6 | `GET /admin/ads/overview` | Super Admin | Campaigns by status, spend, events, tickets, gross/commission/net (feeds 07 `/admin/stats`) | — | ADS-US-013 |
 | 7 | `GET /events?cityId=` · `GET /events/{id}` | Public | Published ∧ ¬cancelled upcoming only (BR-012); ISR tagged `events:city:{id}` | `NOT_FOUND` | ADS-US-009 |
@@ -150,8 +150,8 @@ All under `/api/v1`; `{ "data": … }` / RFC-7807. Full request/response shapes:
 | Channel / Job | Trigger | Payload / Work | Consumers | Failure handling |
 | --- | --- | --- | --- | --- |
 | `campaign.dispatch` (ADS-BE-035) | 01 scheduler tick; `approved`/`scheduled` with start ≤ now | Expand targeting → topics; `notify.BroadcastTopic` per topic; impression rows + spend; per-topic result log | 06 FCM; `ad_events`/`ads_daily` | Idempotent (status guard + log key); retry ×3 backoff on 06/04 failure; budget → auto-pause |
-| `campaign.complete` (ADS-BE-036) | `running` with end ≤ now | Status → completed; final per-day report from `ads_daily` | vendor + admin overview | retry |
-| `ads.daily_aggregate` (ADS-BE-037) | Nightly 00:05 Asia/Dhaka | Full per-day rebuild of `ads_daily` | vendor charts | retry; lag alarm per 01/15 runbooks |
+| `campaign.complete` (ADS-BE-036) | `running` with end ≤ now | Status → completed; final per-day report from `ads_daily` | partner + admin overview | retry |
+| `ads.daily_aggregate` (ADS-BE-037) | Nightly 00:05 Asia/Dhaka | Full per-day rebuild of `ads_daily` | partner charts | retry; lag alarm per 01/15 runbooks |
 | `tickets.sweep` (ADS-BE-038) | Hourly | Cancel `reserved` unpaid at `starts_at`; notify buyer via 06 `SendToUser` | buyers | retry |
 
 ### 5.3 Exported service functions
@@ -174,10 +174,10 @@ consumers (`06` §7).
 
 | Route | Screen | Rendering | Access |
 | --- | --- | --- | --- |
-| `/vendor/ads` | Campaign list (status chips, spend/budget bar, actions) | Server + client table, no-store | Vendor (approved gate) |
-| `/vendor/ads/new` | Builder wizard: TargetingPicker (live estimate, `unknown` state) → CreativeEditor (bn/en, locked "স্পনসর্ড · Sponsored" chip) → schedule/budget → review+submit | Client form | Vendor |
-| `/vendor/ads/[id]` | Campaign detail + daily analytics (Recharts + data-table fallback) + status timeline | Server shell + client chart | Vendor (own) |
-| `/vendor/events`, `/vendor/events/new`, `/vendor/events/[id]/edit` | Event manager + create/edit (free toggle) | Server list + client forms | Vendor |
+| `/partner/ads` | Campaign list (status chips, spend/budget bar, actions) | Server + client table, no-store | Partner (approved gate) |
+| `/partner/ads/new` | Builder wizard: TargetingPicker (live estimate, `unknown` state) → CreativeEditor (bn/en, locked "স্পনসর্ড · Sponsored" chip) → schedule/budget → review+submit | Client form | Partner |
+| `/partner/ads/[id]` | Campaign detail + daily analytics (Recharts + data-table fallback) + status timeline | Server shell + client chart | Partner (own) |
+| `/partner/events`, `/partner/events/new`, `/partner/events/[id]/edit` | Event manager + create/edit (free toggle) | Server list + client forms | Partner |
 | `/admin/moderation` | Queue — campaigns + events tabs (fills 07's `/admin/campaigns` stub; stub redirects); DecisionCard + checklist-gated approve + required-reason reject | Server shell + client cards, no-store | Super Admin |
 | `/admin/ads` | Ads overview cards (spend, statuses, events, tickets, gross/commission/net) | Server Component | Super Admin |
 | `/events` | Public listing, city filter | ISR (tag `events:city:{id}`, 60 s) | Public |
@@ -203,7 +203,7 @@ touchpoints; `ADS-AP-001`/`003` verify labelled push + the pseudized click round
 | None direct | 13 holds **no external secrets** — FCM/Expo credentials live in 06 (13 calls `notify.*` only), R2 in 05, payment gateways in 12, SMS/SSO in 03 (`06` §5) | — | — | — | — |
 
 Indirect degradation: 06/FCM down → dispatch retries, campaign stays `running`; 07 gate down →
-vendor mutations fail closed; 04 down → estimate `unknown`, dispatch retries (never invents
+partner mutations fail closed; 04 down → estimate `unknown`, dispatch retries (never invents
 counts); 12 undelivered → tickets "payment pending"; 05 down → text-only push still viable; 01
 worker down → dispatches queue and drain; Redis down → no-store surfaces unaffected. Full matrix:
 `06` §8.
@@ -235,11 +235,11 @@ worker down → dispatches queue and drain; Redis down → no-store surfaces una
 | Concern | Rule |
 | --- | --- |
 | Auth chain | authenticate → load role claims → tenant-scope (`02` §6); validation against the OpenAPI contract at every entry point |
-| Role matrix | Vendor: own campaigns/events/analytics/tickets (account scope; 07 approved-gate re-checked per mutation, BR-001) · Super Admin: moderation queue, approve/reject, `/admin/ads` overview, platform events · Buyer: VERIFIED users only reserve/buy/cancel (03) · Public: reads of published events; `/ads/serve`/`track` public/optional auth |
-| Tenant scope | Every vendor query filters `vendor_account_id` from the session claim; organizer ticket list = own events; foreign rows → `TENANT_MISMATCH`/404 (audited) |
+| Role matrix | Partner: own campaigns/events/analytics/tickets (account scope; 07 approved-gate re-checked per mutation, BR-001) · Super Admin: moderation queue, approve/reject, `/admin/ads` overview, platform events · Buyer: VERIFIED users only reserve/buy/cancel (03) · Public: reads of published events; `/ads/serve`/`track` public/optional auth |
+| Tenant scope | Every partner query filters `vendor_account_id` from the session claim; organizer ticket list = own events; foreign rows → `TENANT_MISMATCH`/404 (audited) |
 | Rate limits | Class `default` on all routes (01) |
 | Audit events | Approve/reject (actor, decision, reason, checklist version), dispatch, pause/resume, submit, ticket cancel (financial), event cancel |
-| Privacy / minors | **Safety-critical:** demographic-only targeting — keys `{city_id, grade, section_ids}` and nothing else (BR-003, DB CHECK + OpenAPI); no user-level selection exists anywhere; frequency cap 1 sponsored push/user/week as anti-harassment (BR-004); label server-injected, vendors cannot remove it (BR-005); banned categories enforced by checklist (BR-007); `ad_events.user_ref` pseudized (HMAC, daily salt), daily aggregates only, no per-student ad profile ever built or queryable (BR-008, ADS-INV-5); creative images only via 05 presign + magic-byte confirm; `cta_url` https-only; sanitised rendering of vendor text |
+| Privacy / minors | **Safety-critical:** demographic-only targeting — keys `{city_id, grade, section_ids}` and nothing else (BR-003, DB CHECK + OpenAPI); no user-level selection exists anywhere; frequency cap 1 sponsored push/user/week as anti-harassment (BR-004); label server-injected, partners cannot remove it (BR-005); banned categories enforced by checklist (BR-007); `ad_events.user_ref` pseudized (HMAC, daily salt), daily aggregates only, no per-student ad profile ever built or queryable (BR-008, ADS-INV-5); creative images only via 05 presign + magic-byte confirm; `cta_url` https-only; sanitised rendering of partner text |
 
 ---
 
@@ -247,11 +247,11 @@ worker down → dispatches queue and drain; Redis down → no-store surfaces una
 
 | Code | Meaning | When this module returns it | Client handling |
 | --- | --- | --- | --- |
-| `CAMPAIGN_REJECTED` | Resubmission without edits after rejection | `POST /vendor/campaigns/{id}/submit` on unmodified rejected campaign (BR-011) | Vendor edits the campaign; reason banner from `rejection_reason` (`ads.rejected_reason`) |
+| `CAMPAIGN_REJECTED` | Resubmission without edits after rejection | `POST /partner/campaigns/{id}/submit` on unmodified rejected campaign (BR-011) | Partner edits the campaign; reason banner from `rejection_reason` (`ads.rejected_reason`) |
 | `CONFLICT` | Immutable/already-decided state | PATCH on review-state rows, double approve, concurrent dispatch, cancel after `starts_at`, already-paid ticket | Refresh + "already decided / state changed" banner |
 | `VALIDATION_FAILED` | Bad input | Targeting/creative/schedule/budget rules; reject without reason; qty > remaining capacity (`validation.events.qty_exceeds_capacity`) | Field-level zod/OpenAPI errors mapped to `validation.ads.*`/`validation.events.*` keys |
-| `TENANT_MISMATCH` / `NOT_FOUND` | Cross-account attempt / foreign row | Vendor B reading vendor A's campaigns, events, tickets | Branded 404; attempt audited |
-| `FORBIDDEN` | Unverified buyer / unapproved vendor / non-Super-Admin | Ticket purchase without verification; vendor gate fail-closed; moderation by non-Super-Admin | Verify-first copy / licence-style gate message |
+| `TENANT_MISMATCH` / `NOT_FOUND` | Cross-account attempt / foreign row | Partner B reading partner A's campaigns, events, tickets | Branded 404; attempt audited |
+| `FORBIDDEN` | Unverified buyer / unapproved partner / non-Super-Admin | Ticket purchase without verification; partner gate fail-closed; moderation by non-Super-Admin | Verify-first copy / licence-style gate message |
 | `UNAUTHENTICATED` / `RATE_LIMITED` | No session / `default` class exceeded | All protected routes | Login redirect / retry-after |
 
 All errors surface as RFC-7807 `application/problem+json`; user-visible messages resolve via
@@ -277,7 +277,7 @@ payment pending, estimate unknown, sold out.
 | Layer | Coverage | IDs | Gate |
 | --- | --- | --- | --- |
 | Unit | Targeting validator (demographic keys only), topic expansion, frequency-cap decision, budget guard + auto-pause boundary, commission math, pseudization, cache tags | `ADS-UT-001`–`007` | `go test` green in CI |
-| Integration | **Moderation gate** (unapproved never dispatches / unpublished never lists), **frequency cap** (7-day skip + `CanServeToUser` window), **budget guard** (spend at budget ⇒ zero sends + auto-pause), vendor isolation, status machine `CONFLICT`s, ticket concurrency (last seat), dispatch e2e with fake 06, public reads never leak drafts, content-hash-free idempotency set, 12 seam + sweep | `ADS-IT-001`–`012` | testcontainers Postgres; mandatory rows marked in `03` §6 / `06` §9 |
+| Integration | **Moderation gate** (unapproved never dispatches / unpublished never lists), **frequency cap** (7-day skip + `CanServeToUser` window), **budget guard** (spend at budget ⇒ zero sends + auto-pause), partner isolation, status machine `CONFLICT`s, ticket concurrency (last seat), dispatch e2e with fake 06, public reads never leak drafts, content-hash-free idempotency set, 12 seam + sweep | `ADS-IT-001`–`012` | testcontainers Postgres; mandatory rows marked in `03` §6 / `06` §9 |
 | E2E | Golden path 1: builder (estimate, bn/en creative, sponsored-label preview) → approve in queue → dispatch logs broadcast + impression + audit · Golden path 2: event → approve → public listing → free ticket → organizer totals with 10% commission | `ADS-E2E-001`–`002` | Playwright + axe |
 | CI | Always-include set: unauthenticated calls denied per entry point; validation rejects bad input; cross-account → `TENANT_MISMATCH`/404; `TODO: Confirm` copy blocks submission (BR-013); public reads never return drafts/rejected | — | quality gate on `api` + `web` |
 
@@ -291,7 +291,7 @@ payment pending, estimate unknown, sold out.
 | Hot paths + indexes | Batched `ad_events` inserts (100 rows/statement) from dispatch/click paths; frequency-cap lookups on `(topic, kind, served_at)`; dispatch scans on `(status, schedule_start)`; analytics on `(campaign_id, day)` |
 | Latency targets | Charts read `ads_daily` (rebuilt nightly 00:05 Asia/Dhaka), never raw `ad_events`; audience estimate cached in Redis (TTL 5 min, keyed by targeting hash) |
 | Bundle / payload impact | Recharts already in the 07 stack — no new dependency; no client-side ad JS (labels and selection server-side) |
-| Caching | Public `/events` ISR 60 s tagged `events:city:{id}`; vendor/admin/analytics surfaces no-store |
+| Caching | Public `/events` ISR 60 s tagged `events:city:{id}`; partner/admin/analytics surfaces no-store |
 
 ---
 
@@ -308,7 +308,7 @@ items keep their `TODO: Confirm` marker.
 | 4 | Paid-ticket payment path (module 12 delivery date) | Priced tickets can't settle | Rahul | Open | Free + reserved flows standalone; seam fills retroactively; 13 never build-depends on 12 |
 | 5 | Ad pricing model & rate; impression/click attribution granularity | Revenue model; privacy posture | Rahul | Open | Per-impression ৳0.25 accruing `spend_bdt`; pseudized refs, aggregate-only reporting |
 | 6 | Event `status` set beyond spec base list | Public contract stability | Rahul | Open (default accepted) | Add `pending_review`/`rejected`; public reads expose only `published`/`cancelled` |
-| 7 | Vendors accepting demographic reach instead of individual targeting; weekly cap depressing revenue | Sales friction; Stream-2 income | Rahul | Risk | Lead with audience estimates + CTR reporting; cap owner-configurable, revisit once CTR data exists |
+| 7 | Partners accepting demographic reach instead of individual targeting; weekly cap depressing revenue | Sales friction; Stream-2 income | Rahul | Risk | Lead with audience estimates + CTR reporting; cap owner-configurable, revisit once CTR data exists |
 | 8 | Moderation queue bottleneck; topic reach vs live audience drift; 04 freshness for grade expansion | Campaign delays; approximate impression accounting; over/under-reach | Rahul | Risk | 30-second checklist decisions (SLA `TODO: Confirm`); `audience_count` stored at dispatch, labelled delivered-estimate; expansion reads 04 live, retries loudly |
 
 ---

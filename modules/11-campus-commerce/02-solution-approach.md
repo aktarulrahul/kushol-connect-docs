@@ -12,14 +12,14 @@
 
 | Entity | Description | Owned here? |
 | --- | --- | --- |
-| `vendor_storefronts` | A vendor's shop: name bn (+en), description, `status ∈ active\|paused`, pickup_address, delivery_note; belongs to a 07 `vendor_account` (approved) | Yes |
-| `storefront_schools` | Join table storefront × school — the vendor-selected subset of schools that can see the store (chosen over a jsonb array for queryability — §10) | Yes |
+| `vendor_storefronts` | A partner's shop: name bn (+en), description, `status ∈ active\|paused`, pickup_address, delivery_note; belongs to a 07 `vendor_account` (approved) | Yes |
+| `storefront_schools` | Join table storefront × school — the partner-selected subset of schools that can see the store (chosen over a jsonb array for queryability — §10) | Yes |
 | `products` | Catalog item: name_bn (required) + name_en, description, `category ∈ books\|uniforms\|stationery\|other`, `price_bdt numeric(10,2)`, image refs (05 `media_assets`), `status ∈ active\|archived` | Yes |
 | `product_variants` | Size/colour options: name, `price_delta`, nullable sku; unit price = product price + delta | Yes |
 | `inventory_items` | Stock per sellable unit (product-level, or per variant): `qty_on_hand`, `qty_reserved`, `reorder_level`; availability = on_hand − reserved | Yes |
 | `orders` | Buyer order: storefront, buyer, school (tenant), `fulfilment ∈ pickup\|courier`, `status ∈ placed\|confirmed\|ready_for_pickup\|shipped\|completed\|cancelled`, totals, `commission_rate numeric(4,3)`, `commission_bdt`, courier_name/tracking_number (nullable), `payment_method ∈ cod\|online`, `payment_transaction_id` (nullable — 12's seam) | Yes |
 | `order_items` | Immutable per-line snapshot jsonb (product/variant names bn/en, category, image ref, sku) + qty + `unit_price_bdt` | Yes |
-| `vendor_accounts` | Vendor company + approval lifecycle `pending → approved\|rejected`, `approved ⇄ suspended`; `portal_user_id` link | No — module 07 (read-only via its vendor service) |
+| `vendor_accounts` | Partner company + approval lifecycle `pending → approved\|rejected`, `approved ⇄ suspended`; `portal_user_id` link | No — module 07 (read-only via its partner service) |
 | `media_assets` | Product images (presigned upload, magic-byte sniffed) | No — module 05 (`media.*`) |
 | `users` + verified status / school claims | Buyer identity; verification gate; tenant context | No — modules 03/04 |
 | Push delivery | Order-status pushes with deep links | No — module 06 (`notify.SendToUser`) |
@@ -45,8 +45,8 @@ orders.payment_transaction_id ◀── module 12 (seam: commerce.OrderAmount + 
 | INV-2 | `0 ≤ qty_reserved ≤ qty_on_hand` at all times; placement reserves row-locked; confirm decrements both; placed-cancel releases the reservation; post-confirm cancel restocks | Tx with `SELECT … FOR UPDATE` + CHECKs (`CMP-IT-001/011`) |
 | INV-3 | Order transitions are only the legal edges of the §3 state machine; `ready` requires `fulfilment=pickup`, `ship` requires `fulfilment=courier` + courier_name + tracking_number; cancel only before `shipped` | Service state machine + `CONFLICT` |
 | INV-4 | `order_items` rows are immutable snapshots (no UPDATE path exists in sqlc); product/price edits after placement never mutate orders; commission rate/amount are frozen on the order row | Schema (no update query) + placement tx (`CMP-IT-013`) |
-| INV-5 | Vendor writes resolve rows via `storefronts.vendor_account_id` = the caller's vendor account; buyer writes resolve via `orders.buyer_id`; nothing vendor-vendor or buyer-buyer is reachable | Repository scoping (`CMP-IT-003/015`) |
-| INV-6 | Only `active` storefronts of `approved` vendors appear in browse or accept placements — vendor status is re-checked fail-closed on the money path (staleness on browse ≤ cache TTL) | Service gates (BR-001/011) |
+| INV-5 | Partner writes resolve rows via `storefronts.vendor_account_id` = the caller's partner account; buyer writes resolve via `orders.buyer_id`; nothing partner-partner or buyer-buyer is reachable | Repository scoping (`CMP-IT-003/015`) |
+| INV-6 | Only `active` storefronts of `approved` partners appear in browse or accept placements — partner status is re-checked fail-closed on the money path (staleness on browse ≤ cache TTL) | Service gates (BR-001/011) |
 | INV-7 | An order belongs to exactly one storefront and its lines come only from that storefront (single-store order) | Service validation + FK shape |
 
 ## 2. Module Boundary
@@ -58,8 +58,8 @@ orders.payment_transaction_id ◀── module 12 (seam: commerce.OrderAmount + 
 
 | Module | What | Why not duplicated |
 | --- | --- | --- |
-| 07 | `vendors.Approve` family + vendor account status read (`GET /vendor/state` on web; api-side vendor service read) — the approval gate and suspend checks | Vendor lifecycle is 07's; we only consume `status = approved` |
-| 03 | `auth.RequireVerified` (buying is verified-only), `users` identity/claims, portal-user model for vendor login | Verification is identity's source of truth (`prd.md` §5.1) |
+| 07 | `partners.Approve` family + partner account status read (`GET /partner/state` on web; api-side partner service read) — the approval gate and suspend checks | Partner lifecycle is 07's; we only consume `status = approved` |
+| 03 | `auth.RequireVerified` (buying is verified-only), `users` identity/claims, portal-user model for partner login | Verification is identity's source of truth (`prd.md` §5.1) |
 | 04 | School catalog (schools a storefront may serve; buyer's school context) | Hierarchy owns schools |
 | 05 | `media.PresignUpload`/`ConfirmUpload` (product images) | Upload hardening lives once |
 | 06 | `notify.SendToUser` (order-status pushes + deep links) | FCM fan-out and retry are 06's |
@@ -78,23 +78,23 @@ Order state machine (the module's core flow — guards in **bold**):
                 │      → insert order + snapshot items → qty_reserved += qty
                 │      → commission_rate/bdt frozen (BR-007)
                 ▼
-            placed ──vendor confirm──▶ confirmed ──vendor ready──▶ ready_for_pickup ──complete──▶ completed
+            placed ──partner confirm──▶ confirmed ──partner ready──▶ ready_for_pickup ──complete──▶ completed
                │                          │                                               (terminal)
-               │                          └──vendor ship (courier + tracking required)──▶ shipped ──complete──▶ completed
-               ├──buyer cancel (reason optional)──▶ cancelled ◀──vendor cancel (reason required)
+               │                          └──partner ship (courier + tracking required)──▶ shipped ──complete──▶ completed
+               ├──buyer cancel (reason optional)──▶ cancelled ◀──partner cancel (reason required)
                ├──auto-cancel job (placed > 24 h)──▶ cancelled   (releases reservation)
                └──cancel from confirmed/ready_for_pickup: restock qty_on_hand
 ```
 
 | From | Action | To | Guards | Side effects |
 | --- | --- | --- | --- | --- |
-| (none) | buyer places | placed | verified ∧ store active+serves school ∧ vendor approved ∧ stock available ∧ COD ≤ limit | stock reserved; snapshot items; commission frozen; vendor push; auto-cancel timer armed |
-| placed | vendor confirm | confirmed | own storefront order ∧ still placed (else `CONFLICT`) | `qty_reserved −= qty`, `qty_on_hand −= qty`; buyer push |
-| confirmed | vendor ready | ready_for_pickup | `fulfilment = pickup` | buyer push w/ pickup instructions |
-| confirmed | vendor ship | shipped | `fulfilment = courier` ∧ courier_name ∧ tracking_number | buyer push w/ tracking number |
-| ready_for_pickup / shipped | vendor complete | completed | own order | COD collection audited (`audit.Record`) |
-| placed | buyer/vendor cancel | cancelled | before shipped; vendor needs reason | reservation released (qty_reserved −= qty); counterpart notified; audited |
-| confirmed / ready_for_pickup | buyer/vendor cancel | cancelled | before shipped | `qty_on_hand += qty` (restock); counterpart notified; audited |
+| (none) | buyer places | placed | verified ∧ store active+serves school ∧ partner approved ∧ stock available ∧ COD ≤ limit | stock reserved; snapshot items; commission frozen; partner push; auto-cancel timer armed |
+| placed | partner confirm | confirmed | own storefront order ∧ still placed (else `CONFLICT`) | `qty_reserved −= qty`, `qty_on_hand −= qty`; buyer push |
+| confirmed | partner ready | ready_for_pickup | `fulfilment = pickup` | buyer push w/ pickup instructions |
+| confirmed | partner ship | shipped | `fulfilment = courier` ∧ courier_name ∧ tracking_number | buyer push w/ tracking number |
+| ready_for_pickup / shipped | partner complete | completed | own order | COD collection audited (`audit.Record`) |
+| placed | buyer/partner cancel | cancelled | before shipped; partner needs reason | reservation released (qty_reserved −= qty); counterpart notified; audited |
+| confirmed / ready_for_pickup | buyer/partner cancel | cancelled | before shipped | `qty_on_hand += qty` (restock); counterpart notified; audited |
 | placed (> 24 h) | auto-cancel job | cancelled | job idempotent, status-checked | reservation released; both parties notified |
 
 Storefront: `active ⇄ paused` (pause hides from browse; orders continue). Product:
@@ -107,7 +107,7 @@ Storefront: `active ⇄ paused` (pause hides from browse; orders continue). Prod
 | Store browse (stores serving my school) | TanStack Query list (app) / RSC first paint (web) | Redis, TTL 300 s — reads often, changes rarely | `commerce:stores:school:{id}` |
 | Store page + product grid | Detail query per store | Redis, TTL 120 s | `commerce:store:{id}` |
 | Product detail | Detail query | Redis, TTL 120 s | `commerce:product:{id}` |
-| Vendor board / inventory / dashboards | Fresh — money + stock surfaces are never page-cached | TanStack Query memory | none |
+| Partner board / inventory / dashboards | Fresh — money + stock surfaces are never page-cached | TanStack Query memory | none |
 | My orders / order detail | Fresh per user (status truth) | TanStack Query memory | none |
 
 Invalidation: storefront create/update/pause and school-list changes bust
@@ -127,20 +127,20 @@ schools); order mutations bust nothing (orders are never cached). Full contract 
 
 ## 6. Security
 
-Entry points: 18 REST endpoints under `/api/v1/vendor/*` and `/api/v1/commerce/*` (`03` §2); every
+Entry points: 18 REST endpoints under `/api/v1/partner/*` and `/api/v1/commerce/*` (`03` §2); every
 entry runs **authenticate → load role claims → tenant-scope**, plus `auth.RequireVerified` on buyer
-routes (`NOT_VERIFIED` otherwise) and the 07 vendor-approval gate on vendor routes.
+routes (`NOT_VERIFIED` otherwise) and the 07 partner-approval gate on partner routes.
 
 | Surface | Auth | Tenant/ownership scope rule |
 | --- | --- | --- |
-| `/vendor/storefronts*`, `/vendor/products*`, `/vendor/inventory` | Vendor portal user linked to an `approved` `vendor_account` (BR-001) | Rows resolve via `vendor_account_id` — a vendor touches only own storefronts/products/orders (INV-5) |
-| `/vendor/orders*` (fulfilment) | Same vendor identity | Order joined to own storefronts only (INV-5) |
+| `/partner/storefronts*`, `/partner/products*`, `/partner/inventory` | Partner portal user linked to an `approved` `vendor_account` (BR-001) | Rows resolve via `vendor_account_id` — a partner touches only own storefronts/products/orders (INV-5) |
+| `/partner/orders*` (fulfilment) | Same partner identity | Order joined to own storefronts only (INV-5) |
 | `/commerce/stores*`, `/commerce/products/{id}` | Any verified user | Store/product reads joined to the caller's school via `storefront_schools` (INV-1) |
 | `/commerce/orders` (place) | `auth.RequireVerified` | Buyer's school must be served; rows row-level own (INV-1/5) |
 | `/commerce/orders/{id}` (view/cancel) | Buyer of the order | Row-level `buyer_id` match |
 | `/admin/commission` | Super Admin | Stub now; data access arrives with 12/07 revenue |
 
-Sanitisation: product/vendor free text is length-capped plain text rendered as text (no HTML);
+Sanitisation: product/partner free text is length-capped plain text rendered as text (no HTML);
 prices are `numeric(10,2)` — never floats; phone/address fields validated against BD formats.
 `OUT_OF_STOCK` is added as a module problem code beside the common RFC-7807 set. Audit
 (`audit.Record`): order placement, both cancel paths, completion (COD collection), portal-user
@@ -163,20 +163,20 @@ primary action.
 | 1 | Payment seam pending (module 12 not shipped) | By design until Phase 3 payments land | All orders COD; totals > COD limit refused with clear copy | Seam is additive (`commerce.OrderAmount`, `AttachPaymentTransaction`); 12 plugs in without schema change |
 | 2 | 05 media down (product images) | Presign/confirm 5xx | New image attach fails | Product save succeeds **without** the new image + warning banner (BR/US-002); existing images unaffected; upload resumable |
 | 3 | 06 notifications down | `notify.SendToUser` error | No pushes; statuses still advance | DB-first lifecycle; 06's queue retries on restore; buyer sees truth in My Orders |
-| 4 | 01 worker down (auto-cancel/digests) | Job lag alarm | Stale `placed` orders linger; reservations held longer | Jobs idempotent — catch up on restore; vendor can always cancel manually |
+| 4 | 01 worker down (auto-cancel/digests) | Job lag alarm | Stale `placed` orders linger; reservations held longer | Jobs idempotent — catch up on restore; partner can always cancel manually |
 | 5 | Redis down | Cache/limiter errors | Browse falls through to Postgres (slower, TTL-stale tags rebuilt); limits fail safe | No wrong data — DB is source of truth; placement re-checks make cache staleness harmless |
 | 6 | Neon (Postgres) degraded | Connection errors | Nothing commerce-side works (source of truth) | 01/15 runbooks: pool alarm, failover path |
-| 7 | 07 vendor suspended between browse and placement | Fail-closed status re-check on placement (INV-6) | Placement refused `FORBIDDEN` | Buyer sees honest refusal; browse staleness ≤ TTL |
+| 7 | 07 partner suspended between browse and placement | Fail-closed status re-check on placement (INV-6) | Placement refused `FORBIDDEN` | Buyer sees honest refusal; browse staleness ≤ TTL |
 
 ## 9. Performance
 
 - Volumes (pilot, 3 schools × ~2,000 users): ~10 storefronts, ~500 products, ~50 orders/day — small
   tables; indexes designed for the BRD year-1 target (10 schools, ~20k users, 10×).
 - Hot query 1 — stores by school: `storefront_schools JOIN vendor_storefronts` on `school_id` with
-  `status='active'` (+ vendor approved) — index `(school_id)` on the join table; served from the
+  `status='active'` (+ partner approved) — index `(school_id)` on the join table; served from the
   `commerce:stores:school:{id}` cache, p95 ≤ 100 ms cached.
-- Hot query 2 — orders by buyer/vendor + status: `(buyer_id, status)` and
-  `(storefront_id, status)` indexes; vendor board reads are per-vendor and small.
+- Hot query 2 — orders by buyer/partner + status: `(buyer_id, status)` and
+  `(storefront_id, status)` indexes; partner board reads are per-partner and small.
 - Placement is the write-hot path: one tx, `SELECT … FOR UPDATE` over ≤ 10 inventory rows
   (deterministic id order to avoid deadlocks) — milliseconds at this scale; parallel-oversell
   proven by `CMP-IT-001`.
@@ -199,8 +199,8 @@ primary action.
 
 | | A (decrement at placement) | B (reserve → confirm, chosen) |
 | --- | --- | --- |
-| Advantages | Simplest cancel (always "restock") | `placed`-state stock stays visible as held (reserved counts on the vendor board); auto-cancel semantics clean (release ≠ restock) |
-| Disadvantages | Vendor can't distinguish hold vs sale; buyer abandonment shrinks visible stock silently | Two stock columns + one guard each (still one tx) |
+| Advantages | Simplest cancel (always "restock") | `placed`-state stock stays visible as held (reserved counts on the partner board); auto-cancel semantics clean (release ≠ restock) |
+| Disadvantages | Partner can't distinguish hold vs sale; buyer abandonment shrinks visible stock silently | Two stock columns + one guard each (still one tx) |
 | Complexity / weight | Low | Low-medium — worth it for honest inventory |
 
 **Recommendation:** B (as assigned; INV-2).
@@ -209,7 +209,7 @@ primary action.
 
 | | A (cart) | B (single-store order, chosen) |
 | --- | --- | --- |
-| Advantages | Familiar e-commerce pattern; multi-vendor baskets | One tx, one storefront, one courier/pickup decision per order; ships in an L-sized module; commission math trivial |
+| Advantages | Familiar e-commerce pattern; multi-partner baskets | One tx, one storefront, one courier/pickup decision per order; ships in an L-sized module; commission math trivial |
 | Disadvantages | Checkout/shipping/commission complexity explodes across storefronts | Buyer re-orders per store (acceptable: uniform/book runs are single-store in practice) |
 | Complexity / weight | High (cart entity, merge rules, split fulfilment) | Low |
 
@@ -219,9 +219,9 @@ primary action.
 
 | # | Assumption / risk | Impact if wrong | Mitigation |
 | --- | --- | --- | --- |
-| 1 | Vendors confirm orders promptly | Reservations pile up; buyers wait | 24 h auto-cancel (BR-010) + "orders needing action" dashboard + vendor push on placement |
+| 1 | Partners confirm orders promptly | Reservations pile up; buyers wait | 24 h auto-cancel (BR-010) + "orders needing action" dashboard + partner push on placement |
 | 2 | Manual courier (no API) stays acceptable | Tracking expectations outgrow copy-paste tracking numbers | Honest copy ("ট্র্যাকিং নম্বর / tracking number" only, no live link); courier API becomes an additive module later |
 | 3 | COD limit (৳5,000) may block bulk uniform orders | Legit large orders refused | Limit is config; message suggests splitting/pickup; OQ-2 confirms with Rahul before launch |
 | 4 | Commission default (5%) unconfirmed | Rate rework at launch | Rate is per-order data + config — changing the default never rewrites history (INV-4) |
 | 5 | Offline order queues hit `OUT_OF_STOCK` on replay | Buyer frustration | Failed items stay reviewable with input preserved; honest error naming the item |
-| 6 | Vendor portal-user linking abused (wrong phone claims a vendor) | Account takeover of a store | One-time bind: portal phone must equal `vendor_accounts.phone` + approved status + audit; mismatch → `FORBIDDEN` |
+| 6 | Partner portal-user linking abused (wrong phone claims a partner) | Account takeover of a store | One-time bind: portal phone must equal `vendor_accounts.phone` + approved status + audit; mismatch → `FORBIDDEN` |

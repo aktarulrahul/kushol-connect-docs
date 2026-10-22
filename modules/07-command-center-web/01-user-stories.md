@@ -10,10 +10,10 @@
 ## 1. Purpose
 
 Module 07 ships the web surface of Kushol Connect: the public B2B funnel (bilingual landing page —
-bn default — ROI calculator, pilot registration, vendor campaign inquiry, download links) and the
-Command Center portals: Super Admin (`/admin` — tenants, cities, vendor approvals, leads, audit
+bn default — ROI calculator, pilot registration, partner campaign inquiry, download links) and the
+Command Center portals: Super Admin (`/admin` — tenants, cities, partner approvals, leads, audit
 log), School Admin (`/institution` — dashboard, verification queue, notice composer, clubs, sections,
-migration wizard) and the gated Vendor shell (`/vendor`). It converts the zero-CAC funnel of
+migration wizard) and the gated Partner shell (`/partner`). It converts the zero-CAC funnel of
 `brd.md` §2 Goal 1 and the dashboard duties of `prd.md` §4A into working screens on top of modules
 01–05 contracts.
 
@@ -21,33 +21,33 @@ migration wizard) and the gated Vendor shell (`/vendor`). It converts the zero-C
 
 | Actor | What they do in this module |
 | --- | --- |
-| Visitor (principal, vendor, parent) | Reads the landing page in bn/en, plays with the ROI calculator, follows download links |
+| Visitor (principal, partner, parent) | Reads the landing page in bn/en, plays with the ROI calculator, follows download links |
 | School Principal | Books a pilot (lead) after seeing the ROI estimate and trust explainer |
-| Vendor / EdTech brand | Submits a campaign inquiry (lead + pending vendor account) |
-| Super Admin | Runs the platform: tenants, cities, vendor approvals, leads pipeline, audit log, dashboard |
+| Partner / EdTech brand | Submits a campaign inquiry (lead + pending partner account) |
+| Super Admin | Runs the platform: tenants, cities, partner approvals, leads pipeline, audit log, dashboard |
 | School Admin | Governs only their school: dashboard, verification queue, notices, clubs, sections, migration |
-| Vendor (approved) | Sees the gated `/vendor` shell ("pending approval" state until module 11 builds the portal) |
+| Partner (approved) | Sees the gated `/partner` shell ("pending approval" state until module 11 builds the portal) |
 | System (audit, jobs) | Receives audit entries for destructive actions; `audit_log` read back by the viewer |
 
-The five platform roles (Super Admin / School Admin / Teacher / Student / Guardian) plus Vendor are
+The five platform roles (Super Admin / School Admin / Teacher / Student / Guardian) plus Partner are
 defined by module 03; verification gates every participatory action (`prd.md` §5.1).
 
 ## 3. Scope
 
 **In scope**
 
-- Landing `/` (hero, For Schools + ROI calculator, For Vendors + inquiry, downloads, trust, footer)
+- Landing `/` (hero, For Schools + ROI calculator, For Partners + inquiry, downloads, trust, footer)
   with bn/en toggle (bn default); `/download` (APK/TestFlight placeholders + QR placeholder); SEO
   suite (per-locale Metadata, OG, JSON-LD Organization, sitemap, robots) + CWV budgets (LCP < 2.5 s,
   CLS < 0.1, INP < 200 ms on 3G-fast)
 - `/admin`: dashboard, tenants + create-school wizard (04; creates first School Admin), cities,
-  vendor approvals (approve/reject with reason, audit-logged), leads pipeline, campaign moderation
+  partner approvals (approve/reject with reason, audit-logged), leads pipeline, campaign moderation
   stub (13), audit viewer (01)
 - `/school`: dashboard cards, verification queue (approve/reject + reason, SLA badge — 03
   endpoints), notice composer + board (bn+en body, scope, pin, attachment, one-way — 05), clubs
   approval (05), sections manager (04), migration wizard (04)
-- `/vendor`: login-gated shell with pending/approved states
-- `api` side: `landing_leads` + `vendor_accounts` tables, lead/vendor/stats/audit-read endpoints,
+- `/partner`: login-gated shell with pending/approved states
+- `api` side: `landing_leads` + `vendor_accounts` tables, lead/partner/stats/audit-read endpoints,
   route-guard middleware + per-role layouts
 
 **Out of scope** (explicit — prevents scope drift)
@@ -55,7 +55,7 @@ defined by module 03; verification gates every participatory action (`prd.md` §
 - `/login` screen — module 03 delivers it; 07 only gates shells behind it
 - Roster CSV upload screen — module 14 (07 ships the `/institution/roster` stub + nav entry only)
 - Ledger / AI Matrix / tutor verification / webhooks screens — modules 12/09/10/14 (stubs)
-- Vendor portal inventory/orders/campaign screens — module 11; campaign moderation logic — 13;
+- Partner portal inventory/orders/campaign screens — module 11; campaign moderation logic — 13;
   revenue/fee data — modules 11/12 (placeholder empty states); chat/notice fan-out — 05/06
 
 **Depends on**
@@ -63,7 +63,7 @@ defined by module 03; verification gates every participatory action (`prd.md` §
 | Module | What this module needs from it |
 | --- | --- |
 | 01 foundations | Generated client, `/healthz`, `audit.Record`, `audit_log` scoped reads, error envelope + `X-Request-Id` |
-| 02 design-system | Tokens, primitives, `LocaleProvider`/`t()`; adds `landing`/`school`/`vendor` namespaces |
+| 02 design-system | Tokens, primitives, `LocaleProvider`/`t()`; adds `landing`/`school`/`partner` namespaces |
 | 03 identity-access | Session auth chain, `/login`, verification queue + school users endpoints |
 | 04 organization-hierarchy | `POST/PATCH /admin/schools`, `POST /admin/cities`, picker reads, sections CRUD, migration endpoints |
 | 05 communication-engine | Notices CRUD/pin, media presign/confirm, custom-group approval endpoints |
@@ -119,16 +119,16 @@ defined by module 03; verification gates every participatory action (`prd.md` §
 
 ---
 
-### `WEB-US-004` — Vendor submits a campaign inquiry
+### `WEB-US-004` — Partner submits a campaign inquiry
 
 **Priority:** P0 · **Traces:** BR-05 (`brd.md` §5), §7 Stream 2 · **Depends on:** 02
 
-**Story** — As a **vendor / EdTech brand**, I want **to request hyper-targeted campaign access (demographics such as "Class 12 Science, Chattogram")**, so that **the team can qualify me for a vendor account**.
+**Story** — As a **partner / EdTech brand**, I want **to request hyper-targeted campaign access (demographics such as "Class 12 Science, Chattogram")**, so that **the team can qualify me for a partner account**.
 
 **Acceptance criteria**
 
-- **Given** the For Vendors section, **when** I submit company, contact, BD phone, optional email and targeting description, **then** a `vendor_inquiry` lead **and** a `vendor_accounts` row (status `pending`) are created in one transaction.
-- **Given** a Super Admin later decides the account, **when** the vendor logs in, **then** approved opens the `/vendor` shell (module 11 builds the portal), pending shows "your account is pending approval", rejected shows the reason with no access.
+- **Given** the For Partners section, **when** I submit company, contact, BD phone, optional email and targeting description, **then** a `vendor_inquiry` lead **and** a `vendor_accounts` row (status `pending`) are created in one transaction.
+- **Given** a Super Admin later decides the account, **when** the partner logs in, **then** approved opens the `/partner` shell (module 11 builds the portal), pending shows "your account is pending approval", rejected shows the reason with no access.
 
 ---
 
@@ -153,7 +153,7 @@ defined by module 03; verification gates every participatory action (`prd.md` §
 
 **Acceptance criteria**
 
-- **Given** a Super Admin session, **when** `/admin` loads, **then** tenants, active cities, leads by status/type and pending vendors render from `GET /admin/stats`.
+- **Given** a Super Admin session, **when** `/admin` loads, **then** tenants, active cities, leads by status/type and pending partners render from `GET /admin/stats`.
 - **Given** revenue/analytics cards, **when** modules 11/12 have not shipped, **then** they show explicit "connects in modules 11/12" empty states — no fabricated figures.
 - **Given** the campaign nav entry, **when** clicked, **then** `/admin/campaigns` shows a branded empty state ("ships in module 13").
 
@@ -186,17 +186,17 @@ defined by module 03; verification gates every participatory action (`prd.md` §
 
 ---
 
-### `WEB-US-009` — Super Admin approves or rejects a vendor
+### `WEB-US-009` — Super Admin approves or rejects a partner
 
 **Priority:** P0 · **Traces:** PRD §4A, `brd.md` BR-04 · **Depends on:** 03
 
-**Story** — As a **Super Admin**, I want **a vendor queue with detail review and approve/reject decisions (reason required on reject/suspend)**, so that **only legitimate vendors get platform access**.
+**Story** — As a **Super Admin**, I want **a partner queue with detail review and approve/reject decisions (reason required on reject/suspend)**, so that **only legitimate partners get platform access**.
 
 **Acceptance criteria**
 
-- **Given** `/admin/vendors`, **when** it loads, **then** `GET /admin/vendors` lists accounts filtered by status (pending first) with company, contact and submitted date.
+- **Given** `/admin/partners`, **when** it loads, **then** `GET /admin/partners` lists accounts filtered by status (pending first) with company, contact and submitted date.
 - **Given** a pending detail, **when** I approve, **then** a confirm dialog commits `PATCH …/approve`, status becomes `approved`, and an audit entry is written.
-- **Given** reject or suspend, **when** I confirm, **then** a reason (10–500 chars) is mandatory; the decision is stored, audited, and shown to the vendor at `/vendor`.
+- **Given** reject or suspend, **when** I confirm, **then** a reason (10–500 chars) is mandatory; the decision is stored, audited, and shown to the partner at `/partner`.
 
 ---
 
@@ -306,8 +306,8 @@ defined by module 03; verification gates every participatory action (`prd.md` §
 | `WEB-BR-003` | Web never touches the database — every read/write goes through the generated `openapi-fetch` client; RFC-7807 errors map to catalog copy | ESLint boundary + CI |
 | `WEB-BR-004` | Public lead endpoints are create-only: `landing_leads` always start `new`; status/source are server-derived (utm captured, never trusted from client) | api lead service |
 | `WEB-BR-005` | Lead status moves are Super-Admin-only and restricted to `new → contacted → converted\|archived`; `new` is never re-entered | api transition table |
-| `WEB-BR-006` | A vendor inquiry creates `vendor_accounts(status=pending)` atomically with its lead; only Super Admin moves pending → approved/rejected/suspended; reject/suspend require a reason (10–500) | api vendor service |
-| `WEB-BR-007` | Every destructive action (school/city create, vendor decision, lead status, migration preview/commit) is confirmed in the UI naming the object, and audit-logged api-side | Confirm dialogs + `audit.Record` |
+| `WEB-BR-006` | A partner inquiry creates `vendor_accounts(status=pending)` atomically with its lead; only Super Admin moves pending → approved/rejected/suspended; reject/suspend require a reason (10–500) | api partner service |
+| `WEB-BR-007` | Every destructive action (school/city create, partner decision, lead status, migration preview/commit) is confirmed in the UI naming the object, and audit-logged api-side | Confirm dialogs + `audit.Record` |
 | `WEB-BR-008` | School Admin surfaces are tenant-scoped by claim; the web never sends a `schoolId` it was not issued | api tenant scope |
 | `WEB-BR-009` | Revenue/active-user/campaign figures are never invented — cards render explicit "connects in modules 11/12/13" empty states | Placeholder components |
 | `WEB-BR-010` | Notices are one-way broadcasts: composer explains it, no reply affordance; pinned-first ordering | 05 semantics + composer copy |
@@ -324,14 +324,14 @@ defined by module 03; verification gates every participatory action (`prd.md` §
 | Lead: city | ACTIVE city id (04) | `validation.hierarchy.invalid` |
 | Lead: students count / message | int 1–20 000 / ≤ 1000 optional | `validation.count.range` · `validation.text.too_long` |
 | ROI: students / notices / fee cycles | 1–20 000 / 1–200 / 1–12 | `validation.count.range` |
-| Vendor: company / targeting | 3–150 / 10–1000 chars | `validation.company_name.length` · `validation.text.length` |
+| Partner: company / targeting | 3–150 / 10–1000 chars | `validation.company_name.length` · `validation.text.length` |
 | School create: nameBn + nameEn | 3–150 each; unique per city (server) | `validation.required` · `hierarchy.school.name_duplicate` |
 | School create: admin phone | BD mobile; becomes first School Admin | `validation.phone.bd_mobile` |
 | Section: classLevel / name / sessionYear | 1–12 / 1–20 / ≥ 2026 | `validation.range` · `hierarchy.section.name_duplicate` |
 | Notice: title | 3–120 chars | `validation.title.length` |
 | Notice: body bn part / en part | bn required 1–2400; en optional ≤ 2400; assembled ≤ 5000 | `validation.text.length` |
 | Notice: sectionId | required iff scope=`section`, must be in my school | `validation.scope.section_required` |
-| Reject reason (verification / vendor) | 10–500 chars, required | `validation.reason.length` |
+| Reject reason (verification / partner) | 10–500 chars, required | `validation.reason.length` |
 | Migration: fromSessionYear | int ≥ 2026; open-run guard server-side | `validation.range` · `hierarchy.migration.open_run` |
 
 Mirrored exactly by the OpenAPI contract (server validation) and the zod form schemas in
@@ -341,13 +341,13 @@ Mirrored exactly by the OpenAPI contract (server validation) and the zod form sc
 
 | # | Scenario | Expected behaviour |
 | --- | --- | --- |
-| 1 | Unauthenticated visit to `/admin`, `/school`, `/vendor` | Redirect to `/login?next=…`; return path honoured; no portal chrome flashes |
+| 1 | Unauthenticated visit to `/admin`, `/school`, `/partner` | Redirect to `/login?next=…`; return path honoured; no portal chrome flashes |
 | 2 | Wrong-role visit (School Admin → `/admin/tenants`) | FORBIDDEN page + limited nav; api independently returns FORBIDDEN |
 | 3 | Cross-tenant attempt (forged sectionId/schoolId) | Web sends only claim-derived scope; api answers `TENANT_MISMATCH`/404 with request id |
 | 4 | api down on the landing | Static/ISR page still serves; lead forms show retry-safe notice, input kept |
 | 5 | api down inside a portal | Error boundary with retry + `X-Request-Id`; tables keep stale data marked |
 | 6 | Double-submit (wizard/composer double-click) | Submit disabled while pending + api idempotency/conflict guard; no duplicates |
-| 7 | Stale row (vendor decided / run committed / request decided elsewhere) | `CONFLICT` → "refresh this row" copy; list auto-revalidates |
+| 7 | Stale row (partner decided / run committed / request decided elsewhere) | `CONFLICT` → "refresh this row" copy; list auto-revalidates |
 | 8 | Attachment upload fails (R2 presign/confirm) | Publish blocked with retry copy; text-only notice still possible |
 | 9 | Reduced-motion preference | Count-up, panel transitions and shimmer render static/instant |
 | 10 | Locale toggled mid-form | Values preserved; labels/messages switch; `<html lang>` + font stack update |
@@ -356,7 +356,7 @@ Mirrored exactly by the OpenAPI contract (server validation) and the zod form sc
 
 ## 8. Reporting Needs
 
-- `GET /admin/stats` (this module): tenants, active cities, leads by status/type, pending vendors — `/admin` dashboard; revenue intentionally placeholder until modules 11/12 exports exist.
+- `GET /admin/stats` (this module): tenants, active cities, leads by status/type, pending partners — `/admin` dashboard; revenue intentionally placeholder until modules 11/12 exports exist.
 - `GET /institution/stats` (this module): students, active sections, pending verifications (03), notices last 30 days (05) — `/school` dashboard.
 - `audit_log` reads (01's table, exposed here read-only) — `/admin/audit`.
 - Lead-conversion figures feed future marketing dashboards (module 13+); none defined yet.
@@ -369,5 +369,5 @@ Mirrored exactly by the OpenAPI contract (server validation) and the zod form sc
 | 2 | Roster CSV format (template/headers) for the `/institution/roster` stub tooltip | Rahul | Open | Template generated by the portal (module 14); strict header validation with row-level error report |
 | 3 | Final APK / TestFlight URLs | Rahul | Open | Disabled placeholders; `TODO: Confirm` store URLs at module 15 (EAS) |
 | 4 | Notices are single-body in 05 — is the assembled bn-first `bn\n\n—\nen` body acceptable for the composer? | Rahul + 05 owner | Open | Assembled bilingual body, bn first, fixed separator, per-part caps |
-| 5 | Vendor reinstate path after suspension/rejection? | Rahul | Open | `PATCH …/approve` allowed again from `suspended`/`rejected` (additive, audit-logged) |
+| 5 | Partner reinstate path after suspension/rejection? | Rahul | Open | `PATCH …/approve` allowed again from `suspended`/`rejected` (additive, audit-logged) |
 | 6 | Lead follow-up SLA / reminder jobs in Phase 1? | Rahul | Open | None — leads worked manually in the pipeline; no reminder jobs this module |

@@ -21,7 +21,7 @@ Provides the real-time communication core of Kushol Connect: hierarchy-driven gr
 | Teacher | Everything a Student does; is **moderator** of their section's official group; publishes **section notices** |
 | School Admin | Governs only their own school (tenant); publishes **school notices** (one-way board); approves custom club groups; moderates any tenant group |
 | Super Admin | No direct chat surface in this module; platform-level oversight only (module 07/13 tooling) |
-| Vendor / EdTech brand | N/A — vendors never participate in chat or notices; they reach students only via module 13 campaigns |
+| Partner / EdTech brand | N/A — partners never participate in chat or notices; they reach students only via module 13 campaigns |
 | System (jobs, webhooks) | Media archival job (90 days), message-request expiry job, WS presence TTLs, Redis pub/sub fan-out |
 
 ## 3. Scope

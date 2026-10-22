@@ -154,7 +154,7 @@ config reads is missing from the template or the template has a key the config d
 | `SHUTDOWN_TIMEOUT`, `WORKER_CONCURRENCY` | — | 01 | defaults `20s`, `2` |
 | `AUTH_ACCESS_TTL`, `AUTH_REFRESH_TTL`, `AUTH_SESSION_TTL`, `VERIFICATION_SLA_HOURS`, `OTP_RESEND_COOLDOWN`, `OTP_HOURLY_CAP_PER_TARGET`, `OTP_HOURLY_CAP_PER_IP`, `OTP_MAX_ATTEMPTS` | — | 03 | defaults in the template |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` | — | 03/06 | `mail.kusholconnect.com`, `587`, `noreply@kusholconnect.com`, password from the credentials file |
-| `SMS_GATEWAY_URL`, `SMS_GATEWAY_API_KEY`, `SMS_GATEWAY_SENDER` | — | 03 | vendor `TODO: Confirm` |
+| `SMS_GATEWAY_URL`, `SMS_GATEWAY_API_KEY`, `SMS_GATEWAY_SENDER` | — | 03 | partner `TODO: Confirm` |
 | `GOOGLE_CLIENT_ID/SECRET`, `GITHUB_CLIENT_ID/SECRET` | — | 03 | SSO per provider |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_KEY`, `R2_BUCKET` | — | 05 | media; unset = media endpoints 501 |
 | `FCM_PROJECT_ID`, `FCM_SERVICE_ACCOUNT_JSON` | — | 06 | push; the JSON on one line |

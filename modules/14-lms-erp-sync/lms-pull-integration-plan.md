@@ -3,10 +3,10 @@
 **Module:** `14-lms-erp-sync`  
 **Status:** Plan drafted 2026-10-03 (not yet in build queue)  
 **Owner:** Rahul (product owner)  
-**Vendor contract:** [`vendor-lms-api-spec.md`](./vendor-lms-api-spec.md) · [`docs/contracts/lms-vendor-api.yaml`](../../contracts/lms-vendor-api.yaml)  
+**Partner contract:** [`partner-lms-api-spec.md`](./partner-lms-api-spec.md) · [`docs/contracts/lms-partner-api.yaml`](../../contracts/lms-partner-api.yaml)  
 **Terminology:** [`terminology-institution.md`](./terminology-institution.md) (**binding**)
 
-How Kushol **consumes** an educational institution’s LMS that implements the vendor API. Complements
+How Kushol **consumes** an educational institution’s LMS that implements the partner API. Complements
 CSV upload and inbound HMAC webhooks. Pull sync is in-scope for Phase 3.
 
 ---
@@ -40,7 +40,7 @@ Licence-gated (same sync licence as CSV/webhooks). Fields:
 | Auth type | `bearer` \| `api_key` |
 | Credential | Write-only; never returned on GET (mask `••••`) |
 | API key header name | Default `X-Api-Key` |
-| Mode | `rest_lists` (only mode for simplified vendor API v1) |
+| Mode | `rest_lists` (only mode for simplified partner API v1) |
 | Resource overrides | Optional per-resource path (`teachers`, `students`, `sections`, `notices`) |
 | Sync schedule | Off · Hourly · Daily 02:00 Asia/Dhaka · Weekly Sunday 02:00 |
 | Sync now | Enqueues immediate job |
@@ -98,7 +98,7 @@ jobs.Enqueue(lms.pull.sync)
 
 ## 4. Mapping to Kushol concepts
 
-| LMS vendor field | Kushol target | Module | Gap / note |
+| LMS partner field | Kushol target | Module | Gap / note |
 | --- | --- | --- | --- |
 | `institution_type` (Kushol tenant) | Tenant institution | 04 | Not on LMS pull API in simplified v1 — set in Kushol |
 | Class (`GET /sections` outer) + nested section | Section row (class on section) | 04 | External id via `lms_external_ids` map |
@@ -192,7 +192,7 @@ Jobs: `lms.pull.sync`, `lms.pull.test`, schedule tick.
 
 ---
 
-## 7. Deferred renames (owner follow-up — not part of vendor brief)
+## 7. Deferred renames (owner follow-up — not part of partner brief)
 
 | Current | Target | Owner module |
 | --- | --- | --- |
@@ -203,8 +203,8 @@ Jobs: `lms.pull.sync`, `lms.pull.test`, schedule tick.
 | Cache `school:{id}:*` | `institution:{id}:*` | 01 / 14 |
 | Web `/institution/integrations` | `/institution/integrations` | 07 |
 
-Vendor-facing docs already use Institution + `institution_type`. Internal renames must not block
-sending the vendor brief.
+Partner-facing docs already use Institution + `institution_type`. Internal renames must not block
+sending the partner brief.
 
 ---
 
@@ -234,7 +234,7 @@ sending the vendor brief.
 
 **Approve now**
 
-1. Vendor API + terminology (`institution_type` + Bangla labels).
+1. Partner API + terminology (`institution_type` + Bangla labels).
 2. Pull as default for new LMS partners.
 3. Module placement = 14 (not a new 07 folder).
 

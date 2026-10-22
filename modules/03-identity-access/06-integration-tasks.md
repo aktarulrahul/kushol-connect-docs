@@ -21,7 +21,7 @@ auth.Authenticate(r *http.Request) (Principal, error)
 auth.RequireRole(roles ...Role) func(http.Handler) http.Handler
 auth.RequireVerified() func(http.Handler) http.Handler
 auth.CurrentUser(ctx context.Context) (Principal, error)
-type Principal struct { UserID, Role, SchoolID, Status, Locale, Plan }   // Role incl. vendor; SchoolID nil for super_admin/vendor
+type Principal struct { UserID, Role, SchoolID, Status, Locale, Plan }   // Role incl. partner; SchoolID nil for super_admin/partner
 sessions.InvalidateForUser(userID uuid.UUID) error
 verification.EnqueueProvisioning(userID uuid.UUID)   // 01 job → hierarchy.OnUserVerified (owned by 04)
 verification.PendingCount(ctx, schoolID uuid.UUID) (int, error)
@@ -47,7 +47,7 @@ guardians.IsGuardianOf(ctx, guardianID, studentID uuid.UUID) (bool, error)
 | `users.GetWithSelection` | 04 `OnUserVerified` | status + registration-time `requested_section_id` | `NOT_FOUND` | read-only; 04 never guesses placement |
 | `users.UpsertRosterUser` | 14 roster ingestion | user id + created flag | `VALIDATION_FAILED`, `CONFLICT` (phone owned by another school) | match on `phone_e164` within the school; creates PENDING users only — never auto-verifies (BR-001); audited `user.roster_upserted` |
 | `users.PlanOf` / `users.SetPlan` | 08 quotas (read) · 07 Super Admin + 12 billing (write) | Kushol Pro tier | `FORBIDDEN` (SetPlan: super_admin or 12's system actor only) | expired `plan_expires_at` ⇒ free; audited `user.plan_changed` |
-| `users.CreateVendorLogin` | 07 vendor approval | new `vendor` user id (email+password invite; password set via reset link) | `CONFLICT` (email exists), `FORBIDDEN` (non super_admin) | the only way a `vendor` user is created; 07 stores the id in `vendor_accounts.portal_user_id` |
+| `users.CreateVendorLogin` | 07 partner approval | new `partner` user id (email+password invite; password set via reset link) | `CONFLICT` (email exists), `FORBIDDEN` (non super_admin) | the only way a `partner` user is created; 07 stores the id in `vendor_accounts.portal_user_id` |
 | `guardians.LinkedStudents` / `GuardiansOf` / `IsGuardianOf` | 12 fee entitlement · 05 guardian reach · 04 guardian enrollment · 14 roster | ACTIVE `guardian_links` only | — | tenant-scoped; never exposes other schools' links |
 
 Rules: exports return DTOs (never sqlc row structs); admin-only exports require role claims in the
@@ -116,7 +116,7 @@ endpoint) are additive; the `Principal` shape and middleware signatures are froz
 
 | Dependency down | What still works | User sees | Recovery |
 | --- | --- | --- | --- |
-| SMS gateway | password login, SSO, verification decisions | `auth.smsDelayed` + queued OTP | outbox job drains when vendor recovers |
+| SMS gateway | password login, SSO, verification decisions | `auth.smsDelayed` + queued OTP | outbox job drains when partner recovers |
 | Google/GitHub OIDC | phone OTP + password paths | SSO button error hint | auto |
 | Redis | full auth via DB fallback (slower, stricter limits) | slight latency | auto |
 | Neon cold start / slow DB | retries mask brief unavailability | slower first hit | pgx retry + health probe |

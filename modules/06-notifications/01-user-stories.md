@@ -26,10 +26,10 @@ scale is this module's reason to exist.
 | Teacher | Same as Student; their section notice publishes fan out to `section-{id}` |
 | School Admin | Governs only their own school (tenant); sends test pushes to self/one section; views per-school delivery aggregates (counts only) |
 | Super Admin | Platform-level delivery oversight; sends test pushes; no per-school content access |
-| Vendor / EdTech brand | N/A — vendors never send pushes directly; campaigns they fund reach users only via module 13 calling this module's exports |
+| Partner / EdTech brand | N/A — partners never send pushes directly; campaigns they fund reach users only via module 13 calling this module's exports |
 | System (jobs, webhooks) | `fanout.send` batching worker, `tokens.prune` nightly cleanup, `topics.backfill` for devices registered pre-verification, client delivery acks |
 
-> The five roles (Super Admin / School Admin / Teacher / Student / Guardian) plus Vendors are
+> The five roles (Super Admin / School Admin / Teacher / Student / Guardian) plus Partners are
 > defined by module 03 (`03-identity-access`). Verification gates every participatory action
 > (`prd.md` §5.1) — here it gates topic subscription and delivery.
 

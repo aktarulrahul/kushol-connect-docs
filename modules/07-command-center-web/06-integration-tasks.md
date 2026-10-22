@@ -16,31 +16,31 @@
 | I-2 | `04-organization-hierarchy` | we call them | REST via generated client: `POST/PATCH /admin/schools`, `POST /admin/cities`, picker reads, `POST /institution/sections*`, migration create/get/commit; additive exports `hierarchy.PlatformCounts()` / `hierarchy.SchoolCounts(schoolID)` | degraded — dashboard card shows partial flag; wizard blocks with error + retry |
 | I-3 | `05-communication-engine` | we call them | REST via generated client: `GET/POST /notices`, `PATCH /notices/{id}/pin`, `DELETE /notices/{id}`, media #19/#20, custom-group approval endpoints (its §2 web-seam note: `/institution/clubs`); additive export `chat.NoticeStats(schoolID)` | degraded — composer/board/clubs show API error; nothing else affected |
 | I-4 | `01-foundations` | we call them | generated contract code, `/healthz`, `audit.Record` (called by our api services), `audit_log` scoped-list queries surfaced at `GET /admin/audit-log` | audit failure aborts the wrapped action (01 I-3); viewer shows error state |
-| I-5 | `11-campus-commerce`, `13-b2b-ads-events` | they call us | exported Go service functions `leads.Create`-shaped REST + `vendors.Approve` (see §2) + `GET /admin/stats` reads | our outage blocks vendor onboarding (11) — fatal to that path only |
-| I-6 | `02-design-system` | we consume | tokens, web primitives, `LocaleProvider`/`t()`; namespace whitelist extended with `landing`/`school`/`vendor` (additive, parity-gated) | build-time fatal if missing; runtime bn fallback |
+| I-5 | `11-campus-commerce`, `13-b2b-ads-events` | they call us | exported Go service functions `leads.Create`-shaped REST + `partners.Approve` (see §2) + `GET /admin/stats` reads | our outage blocks partner onboarding (11) — fatal to that path only |
+| I-6 | `02-design-system` | we consume | tokens, web primitives, `LocaleProvider`/`t()`; namespace whitelist extended with `landing`/`school`/`partner` (additive, parity-gated) | build-time fatal if missing; runtime bn fallback |
 
 ## 2. Exported Contract
 
 ```text
 REST (OpenAPI-generated, consumed by module 11 and future dashboards):
   POST   /api/v1/leads                          # public create (rate-limit class `leads`)
-  POST   /api/v1/vendor/register                # public inquiry → lead + pending vendor_accounts
+  POST   /api/v1/partner/register                # public inquiry → lead + pending vendor_accounts
   GET    /api/v1/admin/leads                    # Super Admin pipeline
   PATCH  /api/v1/admin/leads/{id}               # status transition
-  GET    /api/v1/admin/vendors                  # Super Admin queue
-  PATCH  /api/v1/admin/vendors/{id}/approve|reject|suspend
+  GET    /api/v1/admin/partners                  # Super Admin queue
+  PATCH  /api/v1/admin/partners/{id}/approve|reject|suspend
   GET    /api/v1/admin/stats · /api/v1/school/stats · /api/v1/admin/audit-log
 Go exports (in-process, for api-side consumers):
   leads.Create(ctx, in LeadInput) (LeadDTO, error)
-  vendors.Approve(ctx, actor Principal, vendorID uuid) (VendorAccountDTO, error)
+  partners.Approve(ctx, actor Principal, vendorID uuid) (VendorAccountDTO, error)
 ```
 
 | Export | Callers | Returns | Throws | Notes |
 | --- | --- | --- | --- | --- |
 | `leads.Create` | module 11 (storefront signup reuses lead capture), 13 (campaign inquiry funnel) | `LeadDTO{id, type, status}` | `VALIDATION_FAILED`, `RATE_LIMITED` | Status forced `new`; source allowlisted |
-| `vendors.Approve` (family: Reject/Suspend) | module 11 (admin surfaces it inside its vendor screens later) | `VendorAccountDTO` | `CONFLICT`, `VALIDATION_FAILED` (reason) | Audit-logged; only path that flips vendor status |
+| `partners.Approve` (family: Reject/Suspend) | module 11 (admin surfaces it inside its partner screens later) | `VendorAccountDTO` | `CONFLICT`, `VALIDATION_FAILED` (reason) | Audit-logged; only path that flips partner status |
 | `GET /admin/stats` | modules 11/12 dashboards later read their own exports; this endpoint stays the platform roll-up | `AdminStatsDTO` | `FORBIDDEN` | Revenue block stays a placeholder flag until 11/12 ship |
-| `GET /vendor/state` (implicit via session + vendor lookup) | module 11 portal shell | vendor status + reason | `NOT_FOUND` | Keeps `/vendor` shell honest about access |
+| `GET /partner/state` (implicit via session + partner lookup) | module 11 portal shell | partner status + reason | `NOT_FOUND` | Keeps `/partner` shell honest about access |
 
 Rules: exports return DTOs (never sqlc row structs); admin-only exports require role claims in the
 context; services return domain errors (mapped to the problem envelope at the handler), never raw
@@ -67,7 +67,7 @@ build; until they exist, `GET /institution/stats` serves partial payloads with p
 | --- | --- |
 | Landing/download content deploy or copy change | `landing:content` |
 | `POST/PATCH /admin/schools`, `POST /admin/cities` (04 mutations via our screens) | `admin:tenants`, `admin:stats`, `hierarchy:*` (04's tags) |
-| Vendor approve/reject/suspend | `admin:vendors`, `admin:stats`, `vendor:state:{id}` |
+| Partner approve/reject/suspend | `admin:partners`, `admin:stats`, `partner:state:{id}` |
 | Lead status change | `admin:leads`, `admin:stats` |
 | Notice publish/pin/delete (05 mutations via our screens) | 05's `notices:school:{id}` / `notices:section:{id}` + `school:{id}:stats` |
 | Verification approve/reject (03 mutations via our screens) | `verification:queue:{schoolId}` (03's tag) + `school:{id}:stats` |
@@ -77,7 +77,7 @@ build; until they exist, `GET /institution/stats` serves partial payloads with p
 | --- | --- |
 | `/` + `/download` (ISR) | `landing:content` |
 | `/admin/tenants`, `/admin/cities` | `admin:tenants` (no-store at the api; tag governs client routers) |
-| `/admin/leads`, `/admin/vendors` | `admin:leads` · `admin:vendors` |
+| `/admin/leads`, `/admin/partners` | `admin:leads` · `admin:partners` |
 | `/admin/audit` | none (no-store, read-only viewer) |
 | `/school` dashboard | `school:{id}:stats` |
 | `/institution/notices*` | 05's `notices:*` tags (shared, never duplicated) |
@@ -92,13 +92,13 @@ build; until they exist, `GET /institution/stats` serves partial payloads with p
 
 | UI element | Calls | Contract |
 | --- | --- | --- |
-| Pilot form / vendor inquiry | `POST /leads` · `POST /vendor/register` | §2 public create; `RATE_LIMITED` copy on flood |
+| Pilot form / partner inquiry | `POST /leads` · `POST /partner/register` | §2 public create; `RATE_LIMITED` copy on flood |
 | ROI calculator | none (client-side) | Deterministic formula; no api call, no tracking of values |
 | `/download` buttons | `POST /leads` (`download_click`, beacon) | Fire-and-forget; never blocks navigation |
 | Admin dashboard | `GET /admin/stats` | Placeholder flags for revenue (`WEB-BR-009`) |
 | Create-school wizard | `GET /hierarchy/cities` → `POST /admin/schools` | 04 contract; `CONFLICT` → `hierarchy.school.name_duplicate` |
 | Cities | `GET /hierarchy/cities` (admin variant) → `POST /admin/cities` | 04 contract |
-| Vendor queue | `GET /admin/vendors` → `PATCH /admin/vendors/{id}/approve\|reject\|suspend` | §2 lifecycle; reason required on reject/suspend |
+| Partner queue | `GET /admin/partners` → `PATCH /admin/partners/{id}/approve\|reject\|suspend` | §2 lifecycle; reason required on reject/suspend |
 | Leads pipeline | `GET /admin/leads` → `PATCH /admin/leads/{id}` | Transition table enforced both sides |
 | Audit viewer | `GET /admin/audit-log` | Read-only pages + filters |
 | School dashboard | `GET /institution/stats` | Partial-payload flags |
@@ -113,7 +113,7 @@ build; until they exist, `GET /institution/stats` serves partial payloads with p
 Schema changes expand/contract; JSON shapes versioned; the OpenAPI spec is the single source —
 regenerate Go + TS contract code on every spec change. This module's additions to the shared
 surface are additive: new paths (#1–#9), the `leads` rate-limit class, the three count exports and
-the `landing`/`school`/`vendor` catalog namespaces. The namespace whitelist extension is agreed
+the `landing`/`school`/`partner` catalog namespaces. The namespace whitelist extension is agreed
 with module 02 and keeps its parity gate (`DSN-UT-001`) green; any removal/rename later requires an
 ADR plus migration notes in consumer modules' `07-progress.md`.
 
@@ -137,9 +137,9 @@ ADR plus migration notes in consumer modules' `07-progress.md`.
 | `WEB-UT-002` | Lead-status dropdown exposes only legal transitions; optimistic rollback on error | Unit | INV-001 mirror |
 | `WEB-IT-001` | Route Handlers reject unauthenticated mutations; CSRF header required; role gate per portal route | Integration (web) | `WEB-BR-001`/`WEB-BR-008` |
 | `WEB-IT-002` | Server-side re-validation: tampered client payload (status/source spoof) refused with field errors | Integration | `WEB-BR-003`/`WEB-BR-004` |
-| `WEB-IT-003` | Middleware redirect + post-login return path for `/admin`, `/school`, `/vendor` | Integration | `WEB-BR-001` |
+| `WEB-IT-003` | Middleware redirect + post-login return path for `/admin`, `/school`, `/partner` | Integration | `WEB-BR-001` |
 | `WEB-E2E-001` | Landing funnel: bn default → switch EN → fill ROI calculator → submit pilot form → success panel; axe clean | Playwright + axe | US-001/002/003, golden path |
-| `WEB-E2E-002` | Admin: login → `/admin` dashboard → approve vendor (and reject-with-reject-reason path) → audit entry visible in viewer | Playwright | US-006/009/011, `WEB-BR-007` |
+| `WEB-E2E-002` | Admin: login → `/admin` dashboard → approve partner (and reject-with-reject-reason path) → audit entry visible in viewer | Playwright | US-006/009/011, `WEB-BR-007` |
 | `WEB-E2E-003` | School admin: login → dashboard cards → compose bn+en notice with section scope → preview → publish → pinned-first board | Playwright | US-012/014, `WEB-BR-010` |
 | `WEB-E2E-004` | Migration: dry-run with a seeded ERROR item → commit disabled → clean run (fixture swap) → commit → status page COMMITTED | Playwright | US-015, `WEB-BR-011` |
 | `WEB-E2E-005` | Verification queue: approve one request, reject another with reason, SLA badge renders from fixture dates | Playwright | US-013, `WEB-BR-013` |
@@ -150,10 +150,10 @@ ADR plus migration notes in consumer modules' `07-progress.md`.
 - [ ] `WEB-INT-001` OpenAPI paths #1–#9 + schemas merged; Go + TS clients regenerated (CI drift green)
 - [ ] `WEB-INT-002` `leads` rate-limit class registered on 01's limiter (Redis + DB fallback)
 - [ ] `WEB-INT-003` Additive count exports agreed + merged with 03/04/05; `GET /institution/stats` partial-flag fallback in place until merged
-- [ ] `WEB-INT-004` Catalog namespaces `landing`/`school`/`vendor` added with 02; parity gate green
+- [ ] `WEB-INT-004` Catalog namespaces `landing`/`school`/`partner` added with 02; parity gate green
 - [ ] `WEB-INT-005` Middleware + role layouts + CSRF wiring against 03 sessions
 - [ ] `WEB-INT-006` Cache tags (`landing:content`, `admin:*`, `school:{id}:stats`) + revalidation wired per §4
 - [ ] `WEB-INT-007` `/admin/audit-log` endpoint over 01's scoped list queries (read-only)
-- [ ] `WEB-INT-008` `leads.Create`/`vendors.Approve` exports compiled against module 11's consumer stubs
+- [ ] `WEB-INT-008` `leads.Create`/`partners.Approve` exports compiled against module 11's consumer stubs
 - [ ] `WEB-INT-009` Failure-matrix drill (api 503 stub) scripted in CI
 - [ ] `WEB-INT-010` Tests `WEB-UT-001`–`002`, `WEB-IT-001`–`003`, `WEB-E2E-001`–`006` green in CI (Playwright + axe)

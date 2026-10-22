@@ -13,11 +13,11 @@ trust of principals, teachers, guardians and students, or it earns nothing.
 - **What:** Kushol Connect — isolated applications, each its own repository (no shared package):
   `applications/app` (React Native / Expo mobile app for Students, Teachers, Guardians),
   `applications/web` (Next.js public landing page + Command Center: Super Admin, School Admin and
-  Vendor portals), and `applications/api` (Go backend: REST + WebSocket messaging, multi-tenant
+  Partner portals), and `applications/api` (Go backend: REST + WebSocket messaging, multi-tenant
   PostgreSQL, Redis, FCM, DeepSeek — AI later extracted to a Python FastAPI service). DeepSeek
   powers the Smart Study Hub, Auto-CT and the teacher Pain Point Matrix.
 - **Who it serves:** Students and Guardians (B2C), School/College administration (B2B), Teachers,
-  Vendors & EdTech brands (B2B). Onboarding follows a strict hierarchy: City → Institution →
+  Partners & EdTech brands (B2B). Onboarding follows a strict hierarchy: City → Institution →
   Section, with verification by Admins or Student Ambassadors before anyone can participate.
 - **The feeling:** *"This is the safest, most organised place for my school's community — and the AI
   actually helps my child study."* Trust-first, hierarchy-driven, bilingual (Bengali + English),
@@ -56,7 +56,7 @@ trust of principals, teachers, guardians and students, or it earns nothing.
 
 **Product & visual design** — trust-first design for parents and principals, mobile-first
 information architecture (Chat / Notices & Events / AI Hub / Marketplace tabs), conversion design
-for the B2B landing funnel (school ROI calculator, vendor signup), the Kushol Connect brand system
+for the B2B landing funnel (school ROI calculator, partner signup), the Kushol Connect brand system
 (deep-teal palette, swirl monogram, Bengali wordmark — `design-reference/README.md`), bilingual
 typography (Hind Siliguri / Noto Sans Bengali + Inter).
 

@@ -16,7 +16,7 @@ Implements `brd.md` **BR-03** and `prd.md` **§5.3**: guardians/students post tu
 
 **In:** requirement posts (wizard create, my list with status chips, edit + manual close, 14-day auto-expiry with poster notice) · tutor profiles (create/update, evidence upload via 05 media, submit-for-review, status tracker, badge only after approval) · verification queue (School Admin approve/reject with note, audited; platform-ops queue for `school_id` NULL) · matching job (verified tutors, subject + class overlap, 5 km bbox → top 10 → push via 06) · match lifecycle (interest / single accept / decline / expiry; **contact reveal only on accept**; same-school DM or cross-school Message Request via 05; fee DUE fact on accept — collection = module 12) · marketplace browse of verified tutors · premium upsell screen (P2, disabled CTA).
 
-**Out:** payment collection/gateways/receipts — module 12 (`TODO: Confirm` fee model) · live video classes (`brd.md` §4) · AI/ML matching (rule-based only) · tutor ratings/reviews (future) · vendor/ads (module 13) · public logged-out pages — every surface requires auth; the web build is the admin surface only.
+**Out:** payment collection/gateways/receipts — module 12 (`TODO: Confirm` fee model) · live video classes (`brd.md` §4) · AI/ML matching (rule-based only) · tutor ratings/reviews (future) · partner/ads (module 13) · public logged-out pages — every surface requires auth; the web build is the admin surface only.
 
 ### 1.3 Dependencies
 

@@ -15,7 +15,7 @@ becomes binding from 02-design-system onward: tokens, fonts, bn/en catalogs and 
 ## 1. Screen Inventory
 
 N/A — no routes in this module. Web routes (`/`, `/download`, `/login`, `/admin/*`, `/school/*`,
-`/vendor/*`) are specified by their feature modules (03, 07+).
+`/partner/*`) are specified by their feature modules (03, 07+).
 
 ## 2. Screen Breakdown
 

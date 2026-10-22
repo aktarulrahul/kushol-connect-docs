@@ -21,7 +21,7 @@ Provides the DeepSeek-powered study layer of Kushol Connect: the **Notes Scanner
 | Teacher | Generates + publishes MCQ class tests for their own sections; reads the school-shared archive (read-only); views per-test result summaries |
 | School Admin | No direct UI here; tenant-scoped cost report data feeds module 07 |
 | Super Admin | Platform-wide cost report stub (monthly cost per active user) feeding module 07 |
-| Vendor / EdTech brand | N/A — vendors never touch AI study features |
+| Partner / EdTech brand | N/A — partners never touch AI study features |
 | System (jobs, webhooks) | Scan-tagging + MCQ-generation jobs (module 01 runner), quota ledger upserts, daily cost circuit breaker, push hand-off to module 06 |
 
 ## 3. Scope

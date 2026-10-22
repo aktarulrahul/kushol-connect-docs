@@ -21,7 +21,7 @@ Provides the platform skeleton every later module builds on, **inside the `appli
 | CI (GitHub Actions) | Enforces lint / typecheck / test / build and the codegen drift check before merge |
 | System (jobs worker) | Claims, runs, retries and dead-letters rows in the `jobs` table |
 
-The five user roles and vendors (defined by 03-identity-access) have no surface here — every story is platform/developer/operator-facing (infrastructure).
+The five user roles and partners (defined by 03-identity-access) have no surface here — every story is platform/developer/operator-facing (infrastructure).
 
 ## 3. Scope
 

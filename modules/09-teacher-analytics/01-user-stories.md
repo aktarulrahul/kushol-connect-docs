@@ -24,7 +24,7 @@ content and per-student weakness rows never exist in this module.
 | Super Admin | **None** — the Matrix is a per-school licensed feature (`brd.md` §7); platform staff hold no section-level view (default OQ-1) |
 | Student | Data subject only — never sees analytics about self or peers; aggregate rows + suppression only |
 | Guardian | No access |
-| Vendor / EdTech brand | No access; ad targeting (module 13) never consumes this module |
+| Partner / EdTech brand | No access; ad targeting (module 13) never consumes this module |
 | Unverified user (pending) | No access — verified gate from module 03 |
 | System (jobs) | Weekly `analytics.weekly_matrix` job (Sunday 00:00 Asia/Dhaka) + on-demand refresh jobs; Monday push via module 06 |
 
@@ -198,7 +198,7 @@ content and per-student weakness rows never exist in this module.
 | --- | --- | --- |
 | `ANL-BR-001` | Tenant isolation: `school_id` always comes from the JWT claim, never from the request; cross-school reads return `TENANT_MISMATCH`/404 | Service + repository (both) |
 | `ANL-BR-002` | Teachers may read only sections they are assigned to (`hierarchy.ResolveUserNodes`); another teacher's section → `FORBIDDEN` | Service |
-| `ANL-BR-003` | School Admin reads the whole own school; Super Admin, Student, Guardian, Vendor: no access (per-school licensed feature) | Service (`auth.RequireRole`) |
+| `ANL-BR-003` | School Admin reads the whole own school; Super Admin, Student, Guardian, Partner: no access (per-school licensed feature) | Service (`auth.RequireRole`) |
 | `ANL-BR-004` | Rows with `sample_size < minSample` (default 5, `TODO: Confirm`) are hidden in every read and excluded from school rollups; `suppressedCount` is reported instead | Repository (read filter) + service |
 | `ANL-BR-005` | Aggregates only: raw chat message content is never persisted in `weekly_pain_points`, never returned by any endpoint, never logged; drilldowns expose counts and topic labels only | Service + review gate |
 | `ANL-BR-006` | Weekly history is immutable: recompute (job or refresh) overwrites **only the current open week**; past weeks are never mutated | Service guard + upsert scope |

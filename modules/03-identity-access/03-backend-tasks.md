@@ -17,14 +17,14 @@
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | no | uuid v7 | PK |
-| `role` | `text` | no | — | CHECK ∈ super_admin/school_admin/teacher/student/guardian/vendor (`vendor` = platform-scoped portal login for 07/11/13, created only by the 07 vendor-approval flow — never self-registered in the app) |
+| `role` | `text` | no | — | CHECK ∈ super_admin/school_admin/teacher/student/guardian/partner (`partner` = platform-scoped portal login for 07/11/13, created only by the 07 partner-approval flow — never self-registered in the app) |
 | `status` | `text` | no | `'PENDING'` | CHECK ∈ PENDING/VERIFIED/SUSPENDED |
 | `locale` | `text` | no | `'bn'` | CHECK ∈ bn/en |
 | `full_name` | `text` | no | — | 2–80 chars, service-trimmed |
 | `phone_e164` | `text` | null | — | E.164 `+880…`; required for student/guardian |
 | `email` | `citext` | null | — | required for staff; lowercased |
 | `password_hash` | `text` | null | — | argon2id encoded; staff only |
-| `school_id` | `uuid` | null | — | Loose ref → schools (04). 03 builds before 04, so the FK is added by 04's migration `20261002090007_add_identity_hierarchy_fks`. NULL = platform scope (super_admin, vendor) |
+| `school_id` | `uuid` | null | — | Loose ref → schools (04). 03 builds before 04, so the FK is added by 04's migration `20261002090007_add_identity_hierarchy_fks`. NULL = platform scope (super_admin, partner) |
 | `is_ambassador` | `boolean` | no | `false` | Student Ambassador flag; valid only for VERIFIED students |
 | `plan` | `text` | no | `'free'` | CHECK ∈ free/pro — Kushol Pro flag read by 08 quotas; set by Super Admin/ops until module 12 billing sets it |
 | `plan_expires_at` | `timestamptz` | null | — | NULL = no expiry; read-time check (expired ⇒ treated as free) |
@@ -33,7 +33,7 @@
 
 **Constraints:** CHECKs on role/status/locale; partial unique `phone_e164` WHERE NOT NULL;
 partial unique `email` WHERE NOT NULL; CHECK `is_ambassador` ⇒ role='student'; CHECK role ∈
-(super_admin, vendor) ⇔ `school_id IS NULL`; CHECK `plan` ∈ free/pro.
+(super_admin, partner) ⇔ `school_id IS NULL`; CHECK `plan` ∈ free/pro.
 **Indexes:** `phone_e164` → OTP login lookup; `email` → password/SSO lookup;
 `(school_id, role, status)` → roster + queue counts; `(status)` partial on PENDING → SLA job.
 
@@ -58,7 +58,7 @@ partial unique `email` WHERE NOT NULL; CHECK `is_ambassador` ⇒ role='student';
 | `channel` | `text` | no | `'sms'` | CHECK ∈ sms/email — email OTPs are sent by 06's email channel from `noreply@kusholconnect.com` (HestiaCP SMTP) |
 | `phone_e164` | `text` | null | — | target number (channel `sms`) |
 | `email` | `citext` | null | — | target address (channel `email`) |
-| `purpose` | `text` | no | — | CHECK ∈ login/register/link/reset (`reset` = staff/vendor password reset and first-password set) |
+| `purpose` | `text` | no | — | CHECK ∈ login/register/link/reset (`reset` = staff/partner password reset and first-password set) |
 | `code_hmac` | `text` | no | — | HMAC-SHA256(code, `OTP_PEPPER`) |
 | `attempts` | `int` | no | `0` | max 3 (service) |
 | `expires_at` | `timestamptz` | no | `now()+5 min` | |
@@ -196,7 +196,7 @@ No FK to 04 tables here: 03 is built and migrated before 04 exists. 04's migrati
 | | |
 | --- | --- |
 | **Auth** | public; class `auth` |
-| **Input** | request/resend: `{phone | email, purpose: login|register|link}` · verify: `{phone | email, otpCode, purpose}` — `phone` is the primary path for students/guardians; `email` is available to any user with a verified email on file (staff and vendors; students/guardians only as a fallback when SMS is delayed) |
+| **Input** | request/resend: `{phone | email, purpose: login|register|link}` · verify: `{phone | email, otpCode, purpose}` — `phone` is the primary path for students/guardians; `email` is available to any user with a verified email on file (staff and partners; students/guardians only as a fallback when SMS is delayed) |
 | **Result** | request/resend: `202 {data:{sentAt, cooldownSeconds, channel}}` — identical response whether or not the phone/email is registered; email codes are enqueued to 06 `notify.SendEmail` with priority (no batching) · verify: `200 {data:{accessToken, refreshToken, user}}` (or `{status:"unknown_phone"}` → register; register/link purposes mark the code verified for the follow-up call) |
 | **Errors** | `VALIDATION_FAILED` (wrong/expired/attempts-exhausted — one generic message) · `RATE_LIMITED` (60 s cooldown; 5/hour per phone or email; 200/hour/IP — high because Bangladeshi carriers share IPs (CGNAT) and whole schools register from one Wi-Fi, so per-target caps are the primary control; 3 attempts/code; 10 verifies/hour per target) · `INTERNAL` |
 | **Rate limit** | `auth` (sub-caps left) |
@@ -221,11 +221,11 @@ No FK to 04 tables here: 03 is built and migrated before 04 exists. 04's migrati
 | --- | --- |
 | **Auth** | public; class `auth` |
 | **Input** | forgot: `{email}` · reset: `{email, otpCode, newPassword}` (argon2id policy: ≥ 10 chars, not in a breached/common list) |
-| **Result** | forgot: `202` always (enumeration-safe) — if the email belongs to a staff/vendor account, a 6-digit `reset` OTP is emailed from `noreply@` (bn + en, 5-min TTL) · reset: `204`; password updated, **all sessions + refresh families revoked** (`sessions.InvalidateForUser`) |
+| **Result** | forgot: `202` always (enumeration-safe) — if the email belongs to a staff/partner account, a 6-digit `reset` OTP is emailed from `noreply@` (bn + en, 5-min TTL) · reset: `204`; password updated, **all sessions + refresh families revoked** (`sessions.InvalidateForUser`) |
 | **Errors** | `VALIDATION_FAILED` (bad/expired code, weak password — one generic code message) · `RATE_LIMITED` (5/hour/email, 100/hour/IP) |
 | **Rate limit** | `auth` |
 | **Audit** | `user.password_reset` |
-| **Stories** | `IDT-US-015` (staff forgot password) · vendor first-password set after 07 approval (`users.CreateVendorLogin` triggers a `reset` OTP email) |
+| **Stories** | `IDT-US-015` (staff forgot password) · partner first-password set after 07 approval (`users.CreateVendorLogin` triggers a `reset` OTP email) |
 
 ### Endpoint `POST /api/v1/auth/refresh`
 
@@ -346,7 +346,7 @@ middleware reads cookie **presence** for redirects only — every real decision 
 | `IDT-UT-003` | JWT issue/verify round-trip, expiry, wrong-aud rejection, claim refresh on rotation | Unit | token contract |
 | `IDT-UT-004` | Refresh rotation state machine incl. reuse ⇒ family revoke | Unit | BR-012 |
 | `IDT-UT-005` | Password login: identical error body + timing bucket for unknown user vs wrong password | Unit | enumeration safety |
-| `IDT-UT-006` | Role/verified guard matrix (6 roles incl. vendor × route classes × statuses) | Unit | BR-001/BR-002/BR-005 |
+| `IDT-UT-006` | Role/verified guard matrix (6 roles incl. partner × route classes × statuses) | Unit | BR-001/BR-002/BR-005 |
 | `IDT-UT-007` | CSRF double-submit accept/reject paths | Unit | web mutation safety |
 | `IDT-IT-001` | **OTP flow**: issue → verify → expiry → 3-attempt death → cooldown → hourly cap | Integration (testcontainers Postgres + fake gateway) | BR-003 end-to-end |
 | `IDT-IT-002` | **Refresh rotation + reuse detection** revokes the family; victim re-login works | Integration | BR-012, `INV-4` |

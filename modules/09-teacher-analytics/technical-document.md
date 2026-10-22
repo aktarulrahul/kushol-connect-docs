@@ -205,7 +205,7 @@ Read-only surface — refresh stays a web-dashboard action; no write path exists
 | Concern | Rule |
 | --- | --- |
 | Auth chain | authenticate → load role claims (`auth.RequireRole`) → tenant-scope; verified gate on every route (ANL-BR-010) — unverified/pending users refused `NOT_VERIFIED` |
-| Role matrix | Teacher: matrix + weeks for **own sections only** (04 `ResolveUserNodes`); refresh own sections. School Admin: whole own school + section filter. Super Admin, Student, Guardian, Vendor: **no access** — per-school licensed feature (OQ-1 default); unauthenticated → `UNAUTHENTICATED` |
+| Role matrix | Teacher: matrix + weeks for **own sections only** (04 `ResolveUserNodes`); refresh own sections. School Admin: whole own school + section filter. Super Admin, Student, Guardian, Partner: **no access** — per-school licensed feature (OQ-1 default); unauthenticated → `UNAUTHENTICATED` |
 | Tenant scope | `school_id` always from the JWT claim, never the request (ANL-BR-001/INV-005); no repository method accepts a caller-supplied school id; cross-school reads/refresh → `TENANT_MISMATCH`/404 — no rows, no metadata |
 | Rate limits | Reads: default class, behind 5-min Redis cache; refresh: 1/day/section (Redis limiter, fail-closed on Redis outage → `RATE_LIMITED` + `retryAfter`) |
 | Audit events | Refresh requested; `analytics.week_computed` / `analytics.week_degraded_mcq_only` per section; weekly-run summaries; recompute targeting a closed week is a no-op + audit warning; compute-run outcomes are ops-only, no teacher exposure |

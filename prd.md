@@ -24,8 +24,9 @@ commerce, peer-to-peer tuition matchmaking, and DeepSeek-powered AI study tools.
 - **Guardians (B2C):** Need direct school updates, easy fee payment, and verified tutors.
 - **Schools/Colleges (B2B):** Need streamlined communication, automated fee collection, and LMS
   integration.
-- **Vendors/Brands (B2B):** Need hyper-targeted access to student demographics for commerce and
+- **Partners/Brands (B2B):** Need hyper-targeted access to student demographics for commerce and
   ads.
+- **Campaign Volunteers (Students/Ambassadors):** Need access to volunteer opportunities, mobile task tracking, XP earnings, and verified e-certificates.
 
 ## 3. Product Phasing Strategy
 
@@ -45,7 +46,7 @@ commerce, peer-to-peer tuition matchmaking, and DeepSeek-powered AI study tools.
 ### Phase 2: The Marketplace & FinTech Expansion
 
 - **Features:** bKash/Nagad/SSLCommerz integration for fee payments with automated reconciliation.
-- **Campus Commerce:** Local vendors and schools setting up storefronts for books and uniforms.
+- **Campus Commerce:** Local partners and schools setting up storefronts for books and uniforms.
 - **Basic Migration:** CSV/Excel upload for year-end student migration.
 
 ### Phase 3: The AI & Ecosystem Scale
@@ -61,14 +62,12 @@ commerce, peer-to-peer tuition matchmaking, and DeepSeek-powered AI study tools.
 The web portal serves two distinct purposes:
 
 - **Public Landing Page:** A B2B marketing funnel designed to convert School Principals and
-  Vendors. Features ROI calculators for schools (time saved on fee collection) and registration
-  forms.
+  Partners. Features ROI calculators for schools (time saved on fee collection), public partner self-registration, and KYC document submission.
 - **Command Center (Dashboard):**
-  - **Super Admin:** Manages tenant schools, approves vendors, and monitors platform revenue.
+  - **Super Admin:** Manages tenant schools, reviews and verifies partner leads (document inspection, physical/virtual meetings), approves partners, and monitors platform revenue.
   - **School Admin:** Uploads CSV rosters, triggers fee payment links, sends global notices, and
     views the AI Teacher Assistant Pain Point Matrix.
-  - **Vendor Portal:** Inventory management, order fulfillment tracking, and targeted ad campaign
-    creation.
+  - **Partner Command Center (Unified `/dashboard` Entry Point):** Free onboarding & KYB/KYC verification, dynamic role-based rendering (`PARTNER_ADMIN` vs `PARTNER_EXECUTIVE`), storefront management, inventory tracking, order fulfillment with escrow protection, partner-led institution onboarding, 3-tier campaign creation (`OWN_INSTITUTIONS_FREE`, `OTHER_INSTITUTIONS_PAID`, `GLOBAL_APP_BANNER_PAID`), in-app event registration management, team seats (5 free, billable beyond), partner finance ledger with payout requests, immutable audit logs, and XP referral rewards. Pre-approval login is strictly blocked until Super Admin approval.
 
 ### B. Mobile App (Student, Teacher, Guardian)
 
@@ -149,15 +148,22 @@ Kushol utilizes a highly scalable B2B2C monetization matrix:
 
 - **Tuition Matchmaking:** 50% cut of the tutor's first month salary as a successful
   matchmaking/lead fee, or a BDT 300/month premium tutor subscription.
-- **Campus Commerce:** 5% to 10% commission on vendor sales (books, uniforms, stationeries)
-  processed through the Kushol marketplace.
+- **Campus Commerce & Protected Delivery:** Free partner registration. Buyer payments are held in Kushol Escrow (`ESCROW_HELD`). Upon verified delivery confirmation (`DELIVERED`), a **15% to 20% platform charge** (`commission_rate_bps` between 1500 and 2000, configurable per partner/category by Super Admin, default 1500 bps / 15%) is deducted, and the net 80% to 85% is released to the partner's withdrawable balance.
 
-### 3. Hyper-Targeted B2B Ads & Lead Gen
+### 3. Hyper-Targeted B2B Ads, 3-Tier Campaigns & Events
 
-- **Mechanism:** EdTech brands (e.g., admission coachings) pay for sponsored push notifications or
-  native ads targeting specific demographics (e.g., "Class 12 Science students in Dhaka").
-- **Event Ticketing:** 10% commission on tickets sold for city-wide educational campaigns hosted
-  on the platform.
+- **Partner Self-Registration, KYC & Super Admin Verification Pipeline:** Public multi-step registration on web landing and mobile app. Free registration, presigned Cloudflare R2 uploads for KYC docs (Trade License, Owner NID, TIN/BIN), and verification preference (`PHYSICAL_VISIT` or `VIRTUAL_MEETING`). Leads queue in Super Admin Command Center (`NEW_LEAD`, `UNDER_REVIEW`, `MEETING_SCHEDULED`, `VERIFICATION_COMPLETED`, `APPROVED`, `REJECTED`/`CHANGES_REQUESTED`). Strict pre-approval login block. On approval, atomic provisioning of partner tenant, Seat #1 (`PARTNER_ADMIN`), internal chat group (`partner_{partner_id}_team`), and audit trail.
+- **3-Tier Campaign Engine (Free Basic Creation vs. Paid Tiers):**
+  - **Tier 1 (Own Onboarded Institutions - Free):** Basic campaigns and events targeting institutions onboarded by the partner (`onboarded_by_partner_id == partner_id`) run for 100% free (`OWN_INSTITUTIONS_FREE`).
+  - **Tier 2 (Other Institutions - Paid):** Campaigns targeting other institutions across the hierarchy run with a paid budget (`OTHER_INSTITUTIONS_PAID`).
+  - **Tier 3 (Global App Banner - Paid):** Promoted banners on the main Kushol app surfaces run as paid placements (`GLOBAL_APP_BANNER_PAID`).
+- **Paid Extended Event Operations Suite (Paid Add-On Gate):** Basic campaign and event creation/management is free. The advanced event suite requires an unlocked add-on per campaign (`extended_suite_unlocked = true`) or a Partner Pro plan subscription (`plan_tier = 'PRO'`):
+  - **Dual Roster (Participants & Volunteers - PAID):** Partners manage separate rosters for event Participants (`CAMPAIGN_PARTICIPANT`: `REGISTERED`, `PAID`, `CHECKED_IN`, `ATTENDED`, `NO_SHOW`, `CANCELLED`) and Volunteers (`CAMPAIGN_VOLUNTEER`: `PENDING`, `APPROVED`, `CHECKED_IN`, `COMPLETED`, `REVOKED`) with QR check-in, status filtering, and CSV export. Students can view available campaigns/events in mobile app and apply to volunteer.
+  - **Volunteer Task Management (PAID):** Partners create and assign tasks (direct or pool tasks) with Bengali/English descriptions, priority, deadlines, and XP rewards. Volunteers update tasks in-app (`ASSIGNED` -> `IN_PROGRESS` -> `SUBMITTED_FOR_REVIEW` with R2 photo proof) and partners approve or request revisions.
+  - **Rewards & Tamper-Evident E-Certificates (PAID):** Milestone-based XP ledger (`campaign_rewards_ledger`) with idempotency keys. Partners issue PDF e-certificates (Participation, Achievement, Volunteer Appreciation) stored in Cloudflare R2 with unique verification codes and public verification links. Students earn XP for completed tasks and events.
+- **Targeted Promotions & Lead Gen:** EdTech brands and coaching institutions pay for demographic-targeted sponsored push notifications and banners.
+- **Partner Team Seats:** 5 active team members are included for free (`free_seat_quota = 5`); seats beyond 5 require a paid seat subscription (`PARTNER_ADMIN`, `PARTNER_EXECUTIVE`).
+- **XP Referral System:** Partners earn XP rewards for referring verified institutions, other partners, or campaign users, redeemable for banner impressions or member seat credits.
 
 ### 4. B2B SaaS & Premium Consumer AI (Recurring)
 

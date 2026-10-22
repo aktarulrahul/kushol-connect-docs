@@ -1,4 +1,4 @@
-# Kushol Connect — Vendor LMS / Institution ERP API Specification
+# Kushol Connect — Partner LMS / Institution ERP API Specification
 
 | | |
 | --- | --- |
@@ -6,8 +6,8 @@
 | **Purpose** | Define the read API that Kushol Connect pulls to sync teachers, students, classes/sections, section membership, and notices for an **educational institution** |
 | **Version** | `2026-10-03` · API version header `Kushol-LMS-API: 1` |
 | **Status** | Draft for partner review — sendable as an integration brief |
-| **Companion OpenAPI** | [`docs/contracts/lms-vendor-api.yaml`](../../contracts/lms-vendor-api.yaml) |
-| **Response examples** | [`vendor-lms-api-response-examples.md`](./vendor-lms-api-response-examples.md) — shareable GET + full JSON samples for LMS partners |
+| **Companion OpenAPI** | [`docs/contracts/lms-partner-api.yaml`](../../contracts/lms-partner-api.yaml) |
+| **Response examples** | [`partner-lms-api-response-examples.md`](./partner-lms-api-response-examples.md) — shareable GET + full JSON samples for LMS partners |
 | **Terminology** | [`terminology-institution.md`](./terminology-institution.md) (**binding**) |
 | **Kushol module** | `14-lms-erp-sync` |
 
@@ -100,7 +100,7 @@ Token is a long-lived integration credential. Scope SHOULD be read-only roster +
 X-Api-Key: <key>
 ```
 
-Alternate header name MAY be agreed per vendor (e.g. `X-LMS-Key`); Kushol stores the header name
+Alternate header name MAY be agreed per partner (e.g. `X-LMS-Key`); Kushol stores the header name
 in the connection config. Default assumption: `X-Api-Key`.
 
 ### 4.3 Auth failures
@@ -121,7 +121,7 @@ client-credentials MAY be added later as Full compliance.
 
 All timestamps MUST be ISO-8601 UTC (`2026-10-02T18:30:00Z`). Booleans JSON `true`/`false`.
 
-**Response examples →** full curl + 200 JSON samples: [`vendor-lms-api-response-examples.md`](./vendor-lms-api-response-examples.md).
+**Response examples →** full curl + 200 JSON samples: [`partner-lms-api-response-examples.md`](./partner-lms-api-response-examples.md).
 
 | # | Method | Path | Purpose |
 | --- | --- | --- | --- |
@@ -338,7 +338,7 @@ Example: `GET /sections/sec-10-a`
 | `404` | Unknown `{sectionId}` |
 
 If `class_teacher_id` is omitted and `teacher_ids` is non-empty, Kushol picks the
-lexicographically smallest id as primary admin and SHOULD log a warning (vendor SHOULD set
+lexicographically smallest id as primary admin and SHOULD log a warning (partner SHOULD set
 `class_teacher_id`).
 
 IDs listed here but missing from `/teachers` or `/students` are skipped with a sync warning.
@@ -436,7 +436,7 @@ notice board. Attachment sync is **out of scope** for v1 (text title/body only).
 
 ### 6.4 Concurrency
 
-Kushol MAY run one sync job per institution at a time. Vendors SHOULD tolerate parallel GETs across
+Kushol MAY run one sync job per institution at a time. Partners SHOULD tolerate parallel GETs across
 different resources (e.g. `/teachers` + `/students` + N × `/sections/{id}`).
 
 ---
@@ -534,7 +534,7 @@ Thin adapter / plugin:
 
 ---
 
-## 13. Security expectations for vendors
+## 13. Security expectations for partners
 
 - Issue per-institution credentials; revoke on request.
 - Prefer read-only DB roles behind the API.
@@ -549,8 +549,8 @@ Thin adapter / plugin:
 | Item | Value |
 | --- | --- |
 | Spec owner | Kushol Connect — Rahul (product) |
-| Machine contract | `docs/contracts/lms-vendor-api.yaml` |
-| GET response examples (shareable) | `vendor-lms-api-response-examples.md` |
+| Machine contract | `docs/contracts/lms-partner-api.yaml` |
+| GET response examples (shareable) | `partner-lms-api-response-examples.md` |
 | Kushol consumption plan | `lms-pull-integration-plan.md` |
 | Terminology | `terminology-institution.md` |
 
@@ -560,7 +560,7 @@ Thin adapter / plugin:
 
 | Date | Change |
 | --- | --- |
-| 2026-10-03 | Initial vendor-facing pull API spec (v1) |
+| 2026-10-03 | Initial partner-facing pull API spec (v1) |
 | 2026-10-03 | Binding terminology: Institution + required `institution_type` enum |
-| 2026-10-03 | Link to shareable GET response examples (`vendor-lms-api-response-examples.md`) |
+| 2026-10-03 | Link to shareable GET response examples (`partner-lms-api-response-examples.md`) |
 | 2026-10-03 | **Simplified MVP surface:** `GET /teachers`, `/students`, `/sections` (classes nested), `/sections/{sectionId}` (teacher/student ids), `/notices`. Dropped separate `/classes`, `/section-teachers`, `/enrollments`, `/export`, `/institution`, `/terms`, `/capabilities` |

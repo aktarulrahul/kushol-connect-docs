@@ -10,13 +10,13 @@
 
 | Entity | Description | Owned here? |
 | --- | --- | --- |
-| `ad_campaigns` | A vendor's demographic-targeted campaign: objective (`awareness`/`event_promo`), targeting jsonb `{city_id, grade?, section_ids[]}`, schedule window, budget/spend, lifecycle status | Yes |
+| `ad_campaigns` | A partner's demographic-targeted campaign: objective (`awareness`/`event_promo`), targeting jsonb `{city_id, grade?, section_ids[]}`, schedule window, budget/spend, lifecycle status | Yes |
 | `ad_creatives` | Push or native-banner creative for a campaign: title/body in bn+en, optional image (05 media ref), CTA label + https URL | Yes |
 | `ad_events` | Impression/click fact rows: pseudized user ref (nullable), kind, `served_at`, day bucket, `audience_count` (push rows = one row per topic broadcast), `topic` — aggregate-friendly, never exposed per-student | Yes |
-| `events` | City-wide educational event: organizer (vendor or platform), city (04), bn/en title/description, venue, schedule, nullable `ticket_price_bdt` (free allowed), capacity, lifecycle status | Yes |
+| `events` | City-wide educational event: organizer (partner or platform), city (04), bn/en title/description, venue, schedule, nullable `ticket_price_bdt` (free allowed), capacity, lifecycle status | Yes |
 | `event_tickets` | A buyer's ticket hold: qty, amount, `commission_bdt` (10%), status `reserved`/`paid`/`cancelled`, nullable `payment_transaction_id` (12 seam) | Yes |
-| `ads_daily` | Read-model aggregate (campaign × day: impressions, clicks, spend) rebuilt by the nightly job; serves vendor charts | Yes |
-| `vendor_accounts` / `landing_leads` | Approved-vendor gate (`vendors.Approve`); campaign-inquiry top-of-funnel | No — 07 |
+| `ads_daily` | Read-model aggregate (campaign × day: impressions, clicks, spend) rebuilt by the nightly job; serves partner charts | Yes |
+| `vendor_accounts` / `landing_leads` | Approved-partner gate (`partners.Approve`); campaign-inquiry top-of-funnel | No — 07 |
 | `cities` / `schools` / `sections` | Targeting dimensions + dispatch topic expansion + audience counts | No — 04 |
 | `media_assets` | Creative images (R2 presign, magic-byte confirm) | No — 05 |
 | `users` | Buyer identity + verification; pseudization source for `ad_events` | No — 03 |
@@ -49,13 +49,13 @@ schools/sections (04) ── referenced by targeting jsonb; dispatch expands tar
 
 ## 2. Module Boundary
 
-**Owns (writes):** `ad_campaigns`, `ad_creatives`, `ad_events`, `events`, `event_tickets`, `ads_daily`, dispatch log; all `/vendor/campaigns*`, `/vendor/events*`, `/admin/moderation/*`, `/admin/ads/*`, `/events*`, `/event-tickets*`, `/vendor/audience-estimate`, `/ads/serve|track` endpoints.
+**Owns (writes):** `ad_campaigns`, `ad_creatives`, `ad_events`, `events`, `event_tickets`, `ads_daily`, dispatch log; all `/partner/campaigns*`, `/partner/events*`, `/admin/moderation/*`, `/admin/ads/*`, `/events*`, `/event-tickets*`, `/partner/audience-estimate`, `/ads/serve|track` endpoints.
 
 **Reads from other modules (via their exported service functions only):**
 
 | Module | What | Why not duplicated |
 | --- | --- | --- |
-| 07 | `vendors.Approve` status gate; moderation shell (`/admin/campaigns` stub); `leads.Create` funnel | Vendor lifecycle and B2B acquisition belong to 07; 13 only enforces the gate and fills the stub |
+| 07 | `partners.Approve` status gate; moderation shell (`/admin/campaigns` stub); `leads.Create` funnel | Partner lifecycle and B2B acquisition belong to 07; 13 only enforces the gate and fills the stub |
 | 04 | `hierarchy.ResolveUserNodes`, sections-by-city+grade+stream reads, aggregated `hierarchy.AudienceCount` (declared in 04 `06` §2) | Hierarchy is 04's data model; 13 never stores copies of city/institution/section rows |
 | 06 | `notify.BroadcastTopic` (sponsored push — same hierarchy topics), `notify.SendToUser` (event cancel notices) | All FCM/Expo machinery is 06's; 13 never touches push credentials |
 | 05 | `media_assets` presign/confirm for creative images | R2 uploads live in 05 |
@@ -63,14 +63,14 @@ schools/sections (04) ── referenced by targeting jsonb; dispatch expands tar
 | 01 | `jobs.Enqueue` (dispatch/complete/aggregate/sweep), `audit.Record`, RFC-7807 envelope, limiter | Platform primitives |
 | 12 | Payment seam: 12 fills `event_tickets.payment_transaction_id` → calls `events.MarkTicketPaid` | Gateway ownership is 12's; **not a build dependency** |
 
-**Cache keys / tags revalidated / consumed:** see `06-integration-tasks.md` §4 (`events:city:{id}` is the public contract; vendor/admin surfaces are no-store).
+**Cache keys / tags revalidated / consumed:** see `06-integration-tasks.md` §4 (`events:city:{id}` is the public contract; partner/admin surfaces are no-store).
 
 ## 3. Lifecycle
 
 ```text
 ad_campaigns:
   draft ──submit──▶ pending_review ──approve──▶ approved ──(start reached, job)──▶ running ──(end reached, job)──▶ completed
-                        │                          │                                   │ ⇄ paused (vendor / budget guard)
+                        │                          │                                   │ ⇄ paused (partner / budget guard)
                         └──reject(reason)──▶ rejected ──edit+resubmit──▶ pending_review
 events:
   draft ──submit──▶ pending_review ──approve──▶ published ──cancel──▶ cancelled
@@ -82,12 +82,12 @@ event_tickets:
 
 | From | Action | To | Guards | Side effects |
 | --- | --- | --- | --- | --- |
-| draft | submit | pending_review | complete creative (bn+en), future schedule, budget > 0, vendor gate (BR-001) | none |
+| draft | submit | pending_review | complete creative (bn+en), future schedule, budget > 0, partner gate (BR-001) | none |
 | pending_review | approve | approved (→ `scheduled` if start future, else `running` + immediate dispatch) | Super Admin role; checklist confirmed | `audit.Record` (actor, checklist version) |
-| pending_review | reject | rejected | reason required | `audit.Record`; vendor sees reason banner |
+| pending_review | reject | rejected | reason required | `audit.Record`; partner sees reason banner |
 | approved/scheduled | start reached | running | job; budget + frequency-cap pre-check (BR-004/006) | `notify.BroadcastTopic` per topic; impression rows; spend accrual; audit |
 | running | end reached | completed | job | final report available; overview refresh |
-| running | pause (vendor / budget) | paused | owner or system | native selection stops serving; dispatch skips |
+| running | pause (partner / budget) | paused | owner or system | native selection stops serving; dispatch skips |
 | paused | resume | running | within schedule window, budget available | — |
 | published event | cancel | cancelled | organizer/Super Admin | buyer notices via `notify.SendToUser`; tickets cancelled |
 | reserved ticket | pay (12 seam) | paid | `payment_transaction_id` set by 12 | `commission_bdt` finalized |
@@ -97,7 +97,7 @@ event_tickets:
 
 | Surface | Rendering | Cached read | Tags |
 | --- | --- | --- | --- |
-| `/vendor/ads*`, `/vendor/events*` (own lists, analytics) | Dynamic SSR, **no-store** (fresh money/analytics data) | none | none |
+| `/partner/ads*`, `/partner/events*` (own lists, analytics) | Dynamic SSR, **no-store** (fresh money/analytics data) | none | none |
 | `/admin/moderation` queue (fills 07 stub) | Dynamic SSR + Server Actions, **no-store** | none | none |
 | `/admin/ads` overview | Dynamic SSR | none (compute from aggregates per request) | none |
 | `/events` public listing (by city) | ISR / short TTL | yes, 60 s | `events:city:{cityId}` |
@@ -118,14 +118,14 @@ event_tickets:
 
 | Entry point family | Auth chain (authenticate → role claims → tenant-scope) | Scope rule |
 | --- | --- | --- |
-| `/api/v1/vendor/campaigns*`, `/vendor/events*`, `/vendor/audience-estimate` | vendor role + **account scope**: every query filters `vendor_account_id` from the session's vendor claim (07 gate re-checked) | Vendor sees/writes only own rows; others → 404 |
+| `/api/v1/partner/campaigns*`, `/partner/events*`, `/partner/audience-estimate` | partner role + **account scope**: every query filters `vendor_account_id` from the session's partner claim (07 gate re-checked) | Partner sees/writes only own rows; others → 404 |
 | `/api/v1/admin/moderation/queue`, `/admin/campaigns/{id}/approve│reject`, `/admin/events/{id}/approve│reject`, `/admin/ads/overview` | Super Admin role | Platform-wide by definition; every decision `audit.Record`-ed |
 | `GET /api/v1/events`, `/events/{id}` | public (no auth) | Repository returns `published` ∧ ¬cancelled only (BR-012) |
 | `POST /events/{id}/tickets`, `POST /event-tickets/{id}/cancel` | authenticated + VERIFIED (03) | Buyer scope on own tickets; organizer list = own events only |
-| `GET /events/{id}/tickets` | vendor (organizer) or Super Admin | Account scope per event |
+| `GET /events/{id}/tickets` | partner (organizer) or Super Admin | Account scope per event |
 | `GET /ads/serve`, `POST /ads/track/click` (P1) | public/optional auth | Serving limited to `running` campaigns; clicks pseudized |
 
-Validation against the OpenAPI contract at every entry point; creative images only via 05 presign + magic-byte confirm; `cta_url` https-only; sanitised rendering of vendor text. Rate-limit class `default` on all routes. Privacy: demographic targeting only (BR-003), pseudized ad events (BR-008), frequency cap as an anti-harassment measure (BR-004) — the module is deliberately incapable of building per-student ad profiles.
+Validation against the OpenAPI contract at every entry point; creative images only via 05 presign + magic-byte confirm; `cta_url` https-only; sanitised rendering of partner text. Rate-limit class `default` on all routes. Privacy: demographic targeting only (BR-003), pseudized ad events (BR-008), frequency cap as an anti-harassment measure (BR-004) — the module is deliberately incapable of building per-student ad profiles.
 
 ## 7. Accessibility & Motion
 
@@ -136,17 +136,17 @@ Web surfaces follow `04-frontend-tasks.md`: moderation queue and builder are key
 | # | Failure | Detection | Impact | Recovery |
 | --- | --- | --- | --- | --- |
 | 1 | 06/FCM down at dispatch time | `BroadcastTopic` error in `campaign.dispatch` | Push delayed; campaign stays `running` with dispatch pending | Job retries with backoff (01 worker); nothing is lost — dispatch is idempotent |
-| 2 | Budget overflow attempt | Pre-dispatch check (INV-4) | Dispatch refused | Campaign auto-pauses; vendor notified in dashboard |
+| 2 | Budget overflow attempt | Pre-dispatch check (INV-4) | Dispatch refused | Campaign auto-pauses; partner notified in dashboard |
 | 3 | Duplicate dispatch (job retry/race) | Status guard + dispatch-log unique key | None — single broadcast | Idempotent no-op on second run |
 | 4 | Module 12 undelivered | Tickets stuck `reserved` | Paid tickets can't settle | Tickets remain reserved (clear "payment pending" state); `tickets.sweep` cancels unpaid at event start; seam fills retroactively for 12 |
 | 5 | 04 counts unavailable | `hierarchy.AudienceCount` error | Estimate shows `unknown`; dispatch expansion fails | Builder usable; dispatch job retries; never invents numbers |
-| 6 | Creative media missing (R2) | Serve-time lookup miss | Placeholder in native slot; text-only push still viable | Vendor re-upload path |
-| 7 | Redis down | Cache miss/fall-through | Public events slower; vendor/admin paths unaffected (no-store) | TTL cache rebuilds |
+| 6 | Creative media missing (R2) | Serve-time lookup miss | Placeholder in native slot; text-only push still viable | Partner re-upload path |
+| 7 | Redis down | Cache miss/fall-through | Public events slower; partner/admin paths unaffected (no-store) | TTL cache rebuilds |
 | 8 | Neon cold start | Slow queries | Portal reads lag; jobs queue | 01 worker drains; warm-up ping per module 15 runbook |
 
 ## 9. Performance
 
-- Volumes (pilot): ~50 campaigns/month, dispatches fan to ≤ a few hundred topics; `ad_events` is the only high-volume table → **batched inserts** (100 rows/statement) from dispatch/click paths; no per-request vendor reads on the hot path.
+- Volumes (pilot): ~50 campaigns/month, dispatches fan to ≤ a few hundred topics; `ad_events` is the only high-volume table → **batched inserts** (100 rows/statement) from dispatch/click paths; no per-request partner reads on the hot path.
 - `ads_daily` rebuilt nightly 00:05 Asia/Dhaka (`ads.daily_aggregate`); charts read the aggregate, never raw `ad_events`.
 - Audience estimate: `hierarchy.AudienceCount` result cached in Redis (TTL 5 min) keyed by targeting hash.
 - Indexes: `ad_events(campaign_id, day)`, `ad_events(day)`, `ad_events(topic, served_at)` (frequency-cap lookups); `ad_campaigns(vendor_account_id, status)`, `ad_campaigns(status, schedule_start)` (dispatch scan); `events(city_id, status, starts_at)`; `event_tickets(event_id, status)`; `event_tickets(buyer_user_id)`.
@@ -164,13 +164,13 @@ Web surfaces follow `04-frontend-tasks.md`: moderation queue and builder are key
 
 **Recommendation:** A. Sponsored push dispatches via `jobs.Enqueue` at schedule time through `notify.BroadcastTopic`; native web slots use a simple server-side selector over `running` campaigns (P1). **ADR:** record in this module's `07-progress.md`.
 
-**Also rejected:** per-user ad profiles and behavioural targeting (violates the minors-protection stance — `persona.md`, `prompt.txt` §9); third-party ad SDKs (data control, latency, trust — vendor JS never loads next to school content).
+**Also rejected:** per-user ad profiles and behavioural targeting (violates the minors-protection stance — `persona.md`, `prompt.txt` §9); third-party ad SDKs (data control, latency, trust — partner JS never loads next to school content).
 
 ## 11. Assumptions & Risks
 
 | # | Assumption / risk | Impact if wrong | Mitigation |
 | --- | --- | --- | --- |
-| 1 | Vendors accept demographic (city/grade/section) reach instead of individual targeting | Sales friction | Lead with audience estimates and CTR reporting; the platform's trust position is the differentiator |
+| 1 | Partners accept demographic (city/grade/section) reach instead of individual targeting | Sales friction | Lead with audience estimates and CTR reporting; the platform's trust position is the differentiator |
 | 2 | Weekly frequency cap depresses ad revenue | Lower Stream-2 income | Cap is owner-configurable (§5); revisit with Rahul once CTR data exists (Open Question #2) |
 | 3 | Module 12 arrives later than 13 | Paid tickets can't complete | Free + reserved flows ship standalone; reserved state is explicit, refunds manual; seam fills retroactively |
 | 4 | Topic broadcast reach ≠ exact live audience (counts drift) | Impression accounting approximate | Impression rows store `audience_count` at dispatch time; reports label them as delivered-estimate |

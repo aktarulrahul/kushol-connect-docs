@@ -13,7 +13,7 @@ Written **before** any task list and any code (`docs/prompt/prompt-build.md` §4
 | Entity | Description | Owned here? |
 | --- | --- | --- |
 | `landing_leads` | Public funnel capture: `type ∈ pilot_registration\|vendor_inquiry\|download_click`, contact, school/city, message, `status ∈ new\|contacted\|converted\|archived`, source + utm | Yes (api + web screens) |
-| `vendor_accounts` | Vendor/company record with Super-Admin approval lifecycle `pending → approved\|rejected`, `approved ⇄ suspended`; consumed by module 11 | Yes (api + web screens) |
+| `vendor_accounts` | Partner/company record with Super-Admin approval lifecycle `pending → approved\|rejected`, `approved ⇄ suspended`; consumed by module 11 | Yes (api + web screens) |
 | `AuditLog` (read model) | 01's append-only `audit_log`, read-only viewer | No — 01 owns |
 | `User` / `VerificationRequest` | 03 identities + join queue evidence | No — 03 owns |
 | `City` / `School` / `Section` / `MigrationRun(+Items)` | 04 hierarchy + migration | No — 04 owns |
@@ -36,15 +36,15 @@ admin screens ──REST──▶ 03 verification · 04 tenants/migration · 05 
 | --- | --- | --- |
 | `WEB-INV-001` | A lead's `status` only moves forward along `new → contacted → converted\|archived`; `new` is never re-entered | api service transition table |
 | `WEB-INV-002` | A `vendor_accounts` row exists iff its inquiry lead exists (same transaction) | api service tx |
-| `WEB-INV-003` | Only `approved` vendors get non-shell portal access; shell state always reflects server status | api + `/vendor` gating |
+| `WEB-INV-003` | Only `approved` partners get non-shell portal access; shell state always reflects server status | api + `/partner` gating |
 | `WEB-INV-004` | Web renders data only from the generated client; no direct DB access from any Server Component/Action | ESLint boundary + CI |
 | `WEB-INV-005` | Destructive UI actions always pass through a confirm step that names the object and the consequence | Shared `ConfirmDialog` primitive usage rule |
 
 ## 2. Module Boundary
 
 **Owns (writes):** `landing_leads`, `vendor_accounts` tables + their endpoints; the web route
-tree (`/`, `/download`, `/admin/*`, `/institution/*`, `/vendor`), per-role layouts + middleware, ROI
-config constant, SEO suite, portal shells and nav; `landing`/`school`/`vendor` catalog namespaces
+tree (`/`, `/download`, `/admin/*`, `/institution/*`, `/partner`), per-role layouts + middleware, ROI
+config constant, SEO suite, portal shells and nav; `landing`/`school`/`partner` catalog namespaces
 (additive to 02's whitelist, parity-gated).
 
 **Reads from other modules (via their exported service functions only):**
@@ -73,8 +73,8 @@ migration (04-owned, driven by this module's wizard):
 | From | Action | To | Guards | Side effects |
 | --- | --- | --- | --- | --- |
 | lead `new` | Super Admin marks contacted/converted/archived | per transition table | role + transition validity (INV-001) | audit-logged |
-| `PENDING` vendor | approve / reject(reason) | `APPROVED` / `REJECTED` | Super Admin; reason ≥ 10 chars on reject | audit; `/vendor` state changes |
-| `APPROVED` vendor | suspend(reason) | `SUSPENDED` | Super Admin; reason required | audit; portal access revoked |
+| `PENDING` partner | approve / reject(reason) | `APPROVED` / `REJECTED` | Super Admin; reason ≥ 10 chars on reject | audit; `/partner` state changes |
+| `APPROVED` partner | suspend(reason) | `SUSPENDED` | Super Admin; reason required | audit; portal access revoked |
 | run `DRAFT` | zero-ERROR preview (`dryRun:false`) | `PREVIEWED` | 04 re-validates items | none applied |
 | run `PREVIEWED` | commit | `COMMITTING → COMMITTED` | 04 worker; 5/hour/school | new-session sections live; audit (04) |
 
@@ -87,7 +87,7 @@ migration (04-owned, driven by this module's wizard):
 | `/login` | Dynamic (03 screen) | no-store | — |
 | `/admin/*` | Dynamic, Super Admin layout, server auth gate; tables hydrate via TanStack Query | no-store (admin reads never cached) | mutations revalidate `admin:*` |
 | `/institution/*` | Dynamic, School Admin layout; tables via TanStack Query; migration status via poll | no-store | mutations revalidate `school:{id}:stats`, reuse 05's `notices:*` |
-| `/vendor` | Dynamic, gated shell (pending/approved state from api) | no-store | — |
+| `/partner` | Dynamic, gated shell (pending/approved state from api) | no-store | — |
 | Locale bn/en | Cookie-stored preference; RSC reads it for first paint | — | — |
 
 ## 5. Configuration — the two lists
@@ -101,7 +101,7 @@ migration (04-owned, driven by this module's wizard):
 
 ## 6. Security
 
-- **Public surface:** `POST /api/v1/leads` and `POST /api/v1/vendor/register` are the only
+- **Public surface:** `POST /api/v1/leads` and `POST /api/v1/partner/register` are the only
   unauthenticated writes — zod-validated (shared schemas), rate-limited in the `leads` class, no
   PII beyond contact fields, store nothing else; utm/source derived server-side.
 - **Portal auth:** middleware checks session-cookie **presence only** for redirects; every real
@@ -132,7 +132,7 @@ on dialog close, the locale toggle announces the language change. Details in `04
 | --- | --- | --- | --- | --- |
 | 1 | api down / 503 | fetch errors at RSC or client | Landing static/ISR still serves; portals show error boundary with retry + request id; lead submit retries, input kept | User retries; no silent loss |
 | 2 | Neon cold start (slow first query) | api latency | Slower first portal load; skeletons show | Warm-up ping (15); TTL caches soften reads |
-| 3 | `CONFLICT` on stale rows (vendor decided elsewhere, run committed, request decided) | RFC-7807 status | Row-level refresh message; list revalidates | Self-heals on refetch |
+| 3 | `CONFLICT` on stale rows (partner decided elsewhere, run committed, request decided) | RFC-7807 status | Row-level refresh message; list revalidates | Self-heals on refetch |
 | 4 | R2 attachment failure in composer | presign/confirm 5xx | Publish blocked with retry copy; text-only notice still possible | Retry upload |
 | 5 | Migration commit job stuck `COMMITTING` | status page poll shows non-terminal run | Banner explains "applying…"; no double commit (api guards) | 04 worker resumes/alerts |
 | 6 | Rate limit hit on public forms | `RATE_LIMITED` problem | Polite copy, cooldown shown | Auto after window |
@@ -189,5 +189,5 @@ auth-gate grounds.
 | 2 | Additive count exports (04/03/05 → stats) agreed | Dashboard cards degrade to queue-derived counts | Declared in `06` §3 with owners; fallback computed from existing list endpoints |
 | 3 | ROI assumptions (OQ-1) may over/under-claim | Trust damage with principals | Formula + assumptions on-screen; estimate label; Rahul confirms values |
 | 4 |_bn-first assembled notice body (OQ-4) renders awkwardly in app | Readability complaint | Fixed separator + caps; 05/app review at Phase-1 contract review |
-| 5 | Vendor flow value depends on module 11 arriving | Approved vendors sit in a shell | Shell explains roadmap; 07 keeps leads pipeline useful independently |
+| 5 | Partner flow value depends on module 11 arriving | Approved partners sit in a shell | Shell explains roadmap; 07 keeps leads pipeline useful independently |
 | 6 | Shared VPS budget tight (2 vCPU) | Portal SSR latency spikes | Static/ISR landing, paged tables, no SSR-heavy client trees; budgets tested in module 15 |

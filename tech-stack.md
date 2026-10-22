@@ -63,7 +63,7 @@ ESLint 10 support yet. TypeScript 7.0 is out, but typescript-eslint 8.71 support
 | Components | shadcn/ui on radix-ui | latest `verify` | Hand-written into `src/components/ui/` to keep token control |
 | Icons | lucide-react | latest | |
 | Fonts | Hind Siliguri · Inter (via `next/font/google`) | bundled | `latin` + `bengali` subsets |
-| Data tables | **TanStack Table** + TanStack Query | latest `verify` | Rosters, ledgers, campaign builders (School Admin / Super Admin / Vendor portals) |
+| Data tables | **TanStack Table** + TanStack Query | latest `verify` | Rosters, ledgers, campaign builders (School Admin / Super Admin / Partner portals) |
 | Forms | react-hook-form + zod | 7.x / 4.x | Shared schemas from each app's `src/schemas` |
 | Charts | Recharts | latest `verify` | Pain Point Matrix heatmap, revenue dashboards — only where useful |
 | Markdown | Not needed at launch `verify` | — | Notices are plain text + attachments |
@@ -105,7 +105,7 @@ date-fns 4.4.0 · tw-animate-css 1.4.0 · axe-core 4.13.0. Fonts: Hind Siliguri 
 | Logging | `log/slog` (JSON stdout, redacted) | stdlib | |
 | Testing | `go test` unit (services) + integration against a real Postgres (testcontainers-go) | testcontainers-go v0.44.0 · golangci-lint v2.14.0 (`tools.mod`) | Tenant-isolation and webhook tests are mandatory |
 | Queueing | In-DB job table + Go worker (same binary, `worker` subcommand, own container) | — | Year-end migration, AI batch analytics, receipts, email — no Kafka/RabbitMQ until measured need. Evaluate **River** (Postgres job queue for Go) in 01's Stage 1 plan before hand-building |
-| Email (app) | SMTP submission to **HestiaCP Exim** as `noreply@kusholconnect.com` (Go SMTP client, 587 STARTTLS) | — | OTP codes, password reset, vendor invites, opted-in notifications (06 channel). Upgrade path: transactional provider API if deliverability suffers |
+| Email (app) | SMTP submission to **HestiaCP Exim** as `noreply@kusholconnect.com` (Go SMTP client, 587 STARTTLS) | — | OTP codes, password reset, partner invites, opted-in notifications (06 channel). Upgrade path: transactional provider API if deliverability suffers |
 | PDF (receipts) | `verify` — chosen by module 12's Bengali-shaping spike | — | Must shape Bengali conjuncts correctly |
 
 ## applications/ai — AI service (later; Phase 2+)

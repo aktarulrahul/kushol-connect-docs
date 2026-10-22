@@ -17,7 +17,7 @@
 | `gateway_events` | Webhook envelope audit: gateway, event id, `signature_valid`, sha256 payload digest, processed flag, **payload summary only — never the payload** | Yes |
 | `users` (03) | Payers (guardian/student), issuers, admins; `locale` for bn/en rendering; guardian↔student link (03 `guardians.IsGuardianOf` / `LinkedStudents`) | No — read via 03 |
 | `schools` / hierarchy (04) | Tenant root; section→student resolution for bulk invoices | No — read via 04 |
-| `orders` (11) | Vendor order paid online; 12 only reads `commerce.OrderAmount` and 11 attaches `payment_transaction_id` | No — 11's seam |
+| `orders` (11) | Partner order paid online; 12 only reads `commerce.OrderAmount` and 11 attaches `payment_transaction_id` | No — 11's seam |
 | `media_assets` (05) | Row representing the stored receipt PDF in R2 | No — written via 05's service |
 | `notification_deliveries` (06) | Push rows for fee-due / payment-result notifications | No — via `notify.SendToUser` |
 

@@ -13,7 +13,7 @@
 
 You are a senior conversion designer and motion designer. Redesign the public landing page of
 **Kushol Connect (কুশল কানেক্ট)** as a **modern, interactive, illustrated, feature-focused
-promotional page** — a funnel that turns visitors into **pilot sign-ups (schools)**, **vendor
+promotional page** — a funnel that turns visitors into **pilot sign-ups (schools)**, **partner
 applications** and **app downloads (guardians & students)**.
 
 The page must feel alive (illustrated scenes that animate, sliders, interactive demos) and
@@ -32,7 +32,7 @@ campus commerce, fee payments and targeted campaigns for education brands.
 | Priority | Audience | Their question | Primary action |
 | --- | --- | --- | --- |
 | 1 | **School/college principals and admins** | "Will this bring order to our communication without work for my staff?" | **Join the pilot** (form, `#pilot`) |
-| 2 | **Vendors and education brands** (bookshops, uniform makers, coaching centres) | "Can I reach the right students and guardians in my city?" | **Apply as a vendor** (form, `#vendors`) |
+| 2 | **Partners and education brands** (bookshops, uniform makers, coaching centres) | "Can I reach the right students and guardians in my city?" | **Apply as a partner** (form, `#partners`) |
 | 3 | **Guardians and students** | "Is it safe, and where do I get the app?" | **Download the app** (`/download`) |
 | — | Existing users | — | **Log in** (`/login`, secondary in the header) |
 
@@ -103,8 +103,8 @@ hides while a form is in view).
 | I-6 | School admin desk: laptop dashboard with roster, notices and sync status | Feature slide, Desk demo | Counters/rows populate |
 | I-7 | AI study (coming soon): a phone scanning handwritten notes into a tagged card and MCQs | Feature slide | Scan line sweeps |
 | I-8 | Tuition matching (coming soon): a requirement pin on a map matches nearby verified tutors | Feature slide | Radius ripple, matches pop in |
-| I-9 | Campus store (coming soon): books, uniform, stationery on a school-scoped storefront | Feature slide, Vendors | Items drop onto a shelf |
-| I-10 | Targeted reach: audience filter chips (City → Class → Group) narrowing a crowd to a segment | Vendors | Chips toggle, crowd narrows |
+| I-9 | Campus store (coming soon): books, uniform, stationery on a school-scoped storefront | Feature slide, Partners | Items drop onto a shelf |
+| I-10 | Targeted reach: audience filter chips (City → Class → Group) narrowing a crowd to a segment | Partners | Chips toggle, crowd narrows |
 | I-11 | Guardian at home receiving a notice on a phone | Download/app promo | Notification slides in |
 | I-12 | Teacher | Roles section | Static or subtle idle |
 | I-13 | Principal/admin | Roles section | Static or subtle idle |
@@ -118,17 +118,17 @@ Bengali (usually 20–30 % longer than English).
 | # | Section | Purpose | Content and layout | Interaction and motion |
 | --- | --- | --- | --- | --- |
 | 0 | **Announcement bar** (dismissible) | Urgency without hype | "পাইলট প্রোগ্রামে নিবন্ধন চলছে — প্রথম ২–৩টি প্রতিষ্ঠান" + link to `#pilot`. Thin, deep-teal | Slides down once; close (×) remembered for the session |
-| 1 | **Header** (sticky, 64 px) | Navigation + always-visible CTA | Logo · Features · For institutions · For vendors · Download · বাং/EN toggle · Log in (ghost) · **Join the pilot** (primary). Mobile: logo, toggle, menu button → full-height sheet | Shrinks to 56 px with a shadow after scroll; active section underline follows scroll |
+| 1 | **Header** (sticky, 64 px) | Navigation + always-visible CTA | Logo · Features · For institutions · For partners · Download · বাং/EN toggle · Log in (ghost) · **Join the pilot** (primary). Mobile: logo, toggle, menu button → full-height sheet | Shrinks to 56 px with a shadow after scroll; active section underline follows scroll |
 | 2 | **Hero** | Attention: the promise in 5 seconds | Left: eyebrow chip, H1 (≤ 2 lines bn), one-line subhead, CTAs **Join the pilot** + **Download app**, 3 fact chips ("প্রতিষ্ঠান-যাচাইকৃত সদস্য", "বাংলা ও ইংরেজি", "স্কুলের জন্য বেসিক যোগাযোগ বিনামূল্যে"). Right: illustration I-1 with the real app screen inside the phone. Mobile: text first, illustration below at ~70 % width | I-1 sequence; floating notice and "verified" chips drift ≤ 6 px. **The H1, subhead and CTAs are visible on first paint — never fade them in** (they are the LCP) |
 | 3 | **Before / After** | Interest: name the pain | Draggable comparison slider: left "আজকের WhatsApp গ্রুপ" (personal numbers exposed, notices buried, unknown members, no verification) vs right "কুশল কানেক্ট" (verified members, pinned official notices, section-scoped groups, no personal numbers shared). 4 contrast rows below | Drag handle (mouse, touch, ←/→ keys); a one-time hint nudges the handle when in view |
 | 4 | **Features slider** — the centrepiece | Desire: show everything the platform does | See §7 | Auto + manual slider (§7) |
 | 5 | **How it works** | Remove effort fear | 3 steps in a row (stacked on mobile): ① register and upload the roster (CSV/Excel or LMS sync) ② verified members land in class and section groups automatically ③ send notices and chat. Each step = small illustration + title + one line | A connecting path draws itself as you scroll; step numbers count in |
-| 6 | **Built for everyone on campus** | Self-identification | Tabs: Guardians & students · Teachers · Institutions · Vendors. Each panel: role illustration, 3 benefits with ticks, one role CTA (download / pilot / vendor) | Manual tabs only (no autoplay here); panel crossfade + slide 200 ms; swipe between tabs on mobile |
+| 6 | **Built for everyone on campus** | Self-identification | Tabs: Guardians & students · Teachers · Institutions · Partners. Each panel: role illustration, 3 benefits with ticks, one role CTA (download / pilot / partner) | Manual tabs only (no autoplay here); panel crossfade + slide 200 ms; swipe between tabs on mobile |
 | 7 | **School admin desk demo** | Proof the product is real | Browser-framed console (real `/school` screens) with 3 clickable hotspots: Roster · Notices · Sync. Clicking one plays a short scripted demo (cursor uploads a CSV → groups appear → a notice is sent) | Plays when in view, once; replay button; static screenshots under reduced motion |
 | 8 | **ROI calculator** | Personal payoff for the principal | Big card: 3 range sliders with number inputs (students, notices/month, fee cycles/year) → "hours saved per year" with a count-up, a small bar comparison (manual vs Kushol). **Formula and "an estimate, not a quote" always visible.** CTA "Get these hours back — join the pilot" | 400 ms count-up per change; instant under reduced motion |
 | 9 | **Trust and safety** | Answer the parent's and principal's fear | Hierarchy diagram (City → Institution → Section) + 4 tiles: institution verification · each institution's data kept separate · Message request for outside contacts · role-based access and audit log. Dark deep-teal band for contrast | Nodes light up in sequence when in view |
 | 10 | **Pilot programme** (replaces "testimonials" until real ones exist) | Action #1 | Left: what a pilot institution gets (onboarding, staff training, free basic communication — each `TODO: Confirm`), "২–৩টি প্রতিষ্ঠান" seat callout. Right: the pilot form (institution name, contact name, phone, city, students, message) | Inline validation, success state with illustration I-14 |
-| 11 | **For vendors and brands** | Action #2 | Illustration I-10 + pitch (school-scoped storefronts, targeted campaigns by city/class/section — "coming soon" where not live) + vendor inquiry form | Chips animate the audience narrowing |
+| 11 | **For partners and brands** | Action #2 | Illustration I-10 + pitch (school-scoped storefronts, targeted campaigns by city/class/section — "coming soon" where not live) + partner inquiry form | Chips animate the audience narrowing |
 | 12 | **Get the app** | Action #3 | Illustration I-11, Google Play / App Store badges and QR. Until store links are live the badges show "শীঘ্রই আসছে / Coming soon" (disabled, not fake links) | Phone tilts slightly on pointer move (desktop only, ≤ 4°) |
 | 13 | **FAQ** | Remove last objections | 5–7 questions in an accordion (setup needed, data safety, how groups are created, Excel import, how to join the pilot, cost, languages) | Height animation 250 ms |
 | 14 | **Final CTA band** | Last push | Full-bleed deep-teal band: one line + **Join the pilot** + **Download app** | Background swirl-curve line slowly drifts (stops under reduced motion) |
@@ -141,7 +141,7 @@ Bengali (usually 20–30 % longer than English).
 (icon, title, one-line benefit, status chip); the active tab expands and shows a **progress bar
 that fills for the autoplay duration**. Right column = large panel (24 px radius, teal-50
 surface) with the feature's animated illustration, a 3-bullet benefit list and a small CTA. A
-category filter row above: **সব · প্রতিষ্ঠান · শিক্ষক · অভিভাবক ও শিক্ষার্থী · ভেন্ডর**.
+category filter row above: **সব · প্রতিষ্ঠান · শিক্ষক · অভিভাবক ও শিক্ষার্থী · পার্টনার**.
 
 **Layout — tablet 640–1023 px:** category chips + one slide at a time with the next slide
 peeking (≈ 12 %), arrows on the sides.
@@ -177,9 +177,9 @@ category chips scroll horizontally.
 | F-7 | এআই স্টাডি হাব — নোট স্ক্যানার ও অটো-সিটি / AI Study Hub (notes scanner, auto class tests) | Guardians & students, Teachers | Coming soon | I-7 | 08 |
 | F-8 | শিক্ষকের জন্য দুর্বলতা বিশ্লেষণ / Pain Point Matrix for teachers | Teachers, Institutions | Coming soon | I-6 variant | 09 |
 | F-9 | টিউশন মার্কেটপ্লেস / Tuition marketplace (verified tutors nearby) | Guardians & students | Coming soon | I-8 | 10 |
-| F-10 | ক্যাম্পাস স্টোর / Campus store (books, uniforms, stationery) | Vendors, Guardians & students | Coming soon | I-9 | 11 |
+| F-10 | ক্যাম্পাস স্টোর / Campus store (books, uniforms, stationery) | Partners, Guardians & students | Coming soon | I-9 | 11 |
 | F-11 | অনলাইনে ফি পরিশোধ / Fee payments (bKash, Nagad, SSLCommerz) with PDF receipts | Institutions, Guardians | Coming soon | I-6 variant | 12 |
-| F-12 | টার্গেটেড ক্যাম্পেইন ও ইভেন্ট / Targeted campaigns & events | Vendors | Coming soon | I-10 | 13 |
+| F-12 | টার্গেটেড ক্যাম্পেইন ও ইভেন্ট / Targeted campaigns & events | Partners | Coming soon | I-10 | 13 |
 
 "Coming soon" slides use the same design with a muted accent chip and a "Notify me / join the
 pilot" CTA — never present them as available today.

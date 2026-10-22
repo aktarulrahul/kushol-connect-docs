@@ -16,7 +16,7 @@ route is built from:
 
 | # | Route | Screen | Rendering | Access |
 | --- | --- | --- | --- | --- |
-| 1 | N/A | No screens owned. Consumers: `/` + `/download` (`07-command-center-web §1`), `/login` (`03-identity-access §1`), `/admin/*` (`07`), `/school/*` (`07`), `/vendor/*` (`07`, `11-campus-commerce §1`, `13-b2b-ads-events §1`) | Server Components composing client primitives | Public + all roles |
+| 1 | N/A | No screens owned. Consumers: `/` + `/download` (`07-command-center-web §1`), `/login` (`03-identity-access §1`), `/admin/*` (`07`), `/school/*` (`07`), `/partner/*` (`07`, `11-campus-commerce §1`, `13-b2b-ads-events §1`) | Server Components composing client primitives | Public + all roles |
 
 Consumption rule: those routes compose only these primitives and tokens (`DSN-BR-002`); their
 screens are specified in the owning modules.
@@ -85,7 +85,7 @@ Button                              Dialog (desktop) / Sheet (mobile ≤ 640px)
 | EmptyState | Server-safe | icon/title/action; bn-first copy via `t()` |
 | Avatar (verified-badge variant) | Server-safe | image + badge overlay; initials fallback in Hind Siliguri |
 | `Logo` | Server-safe | lockup per `docs/design-reference/README.md` §5; accessible name "Kushol Connect — Home" |
-| `AdminShell` (Sidebar + Topbar) | Client | professional console shell (`design-reference` §7.2): collapsible role-filtered sidebar, breadcrumbs, school switcher slot, language toggle, user menu; used by `/admin`, `/school`, `/vendor` |
+| `AdminShell` (Sidebar + Topbar) | Client | professional console shell (`design-reference` §7.2): collapsible role-filtered sidebar, breadcrumbs, school switcher slot, language toggle, user menu; used by `/admin`, `/school`, `/partner` |
 | `PageHeader` | Server-safe | title, description, primary/secondary action slots |
 | `StatCard` | Server-safe | label, value (Inter tabular), delta, optional sparkline; "—" + tooltip when value unavailable (never placeholder numbers) |
 | `DataTable` | Client | TanStack Table on top of Table shell: sort, filter, pagination, row selection + bulk-action bar, density toggle |

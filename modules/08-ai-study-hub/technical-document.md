@@ -217,7 +217,7 @@ N/A — the student/teacher AI surfaces are mobile-only by design; the Command C
 | Concern | Rule |
 | --- | --- |
 | Auth chain | authenticate → load role claims → tenant-scope → `auth.RequireVerified` on every `/ai` route (verified-only, BR-001); no public/unauthenticated surface exists |
-| Role matrix | Student: own scans, archive own+shared, practice generation/taking. Teacher: class tests for own sections only, shared archive read-only, result aggregates of own tests. School Admin: cost report own tenant. Super Admin: platform cost report. Guardian/Vendor: none — a minor's scans are never exposed to guardians |
+| Role matrix | Student: own scans, archive own+shared, practice generation/taking. Teacher: class tests for own sections only, shared archive read-only, result aggregates of own tests. School Admin: cost report own tenant. Super Admin: platform cost report. Guardian/Partner: none — a minor's scans are never exposed to guardians |
 | Tenant scope | Every query `school_id = caller` ∧ visibility matrix (INV-1): scan iff owner or shared-same-school; class test iff creator or section member; attempt iff its student; jobs re-run the same repository guards; cross-tenant → `TENANT_MISMATCH`/404 |
 | Rate limits | Class `ai` on generation/search/answer routes (BR-012) on top of quotas (BR-002/003); plan read failure → fail-closed free limits |
 | Audit events | `audit.Record` on share/delete scan, class_test creation, publish/close test, breaker trip/reset; benign creates unaudited |

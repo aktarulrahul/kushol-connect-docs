@@ -1,6 +1,6 @@
 # 11-campus-commerce — Build Progress
 
-Module: campus-commerce · Surfaces: api + web (vendor portal + admin stub) + app (buyer) ·
+Module: campus-commerce · Surfaces: api + web (partner portal + admin stub) + app (buyer) ·
 Repos: `applications/api`, `applications/web`, `applications/app` · **Last updated:** 2026-10-15
 
 > Owner instruction (this session): "go ahead" after the Stage-1 plan — building continued through
@@ -11,7 +11,7 @@ Repos: `applications/api`, `applications/web`, `applications/app` · **Last upda
 | Stage | Status | Evidence (dated) |
 | --- | --- | --- |
 | 1 Plan | ✅ 2026-10-03 | plan delivered in-session; defaults OQ-1…6 + README manual-courier default; dep 07 🚧 accepted per owner instruction |
-| 2 UI (web + app, mock-driven) | ✅ 2026-10-03 | contract-first: 20 OpenAPI paths + 26 `Commerce*` schemas landed FIRST; both clients generated; web: 8 vendor routes + commission stub on `fixtures/commerce.ts`; app: 7 buyer routes + shared bits on `fixtures/commerce.ts` |
+| 2 UI (web + app, mock-driven) | ✅ 2026-10-03 | contract-first: 20 OpenAPI paths + 26 `Commerce*` schemas landed FIRST; both clients generated; web: 8 partner routes + commission stub on `fixtures/commerce.ts`; app: 7 buyer routes + shared bits on `fixtures/commerce.ts` |
 | Gate 1 (UI approval) | ✅ owner 2026-10-15 | owner approved in session ("complete all from Gate 1") |
 | 3 Docs sync | ✅ 2026-10-03 | this file, `08-gaps.md`, README → 🚧, checklist ticks (`03` §7, `04` §9, `05` §9, `06` §10), change log |
 | 4 Backend | ✅ code-complete 2026-10-03 | 4 migrations + 4 sqlc query files + `internal/commerce` (service, orders, lifecycle, payload, jobs, handler, dto, cache) + httpapi/cmd wiring; `go build ./...` + `go vet ./...` clean; golangci-lint 0 issues in `internal/commerce`; **SQL hand-off below — Gate 2 pending owner** |
@@ -26,12 +26,12 @@ Repos: `applications/api`, `applications/web`, `applications/app` · **Last upda
 2. **ADR-2 (storefront_schools join table — 02 §10 Option B):** the hot stores-by-school query is
    a plain indexed join with FK integrity to 04's schools; the jsonb-array alternative lost.
 3. **ADR-3 (reserve→decrement, INV-2):** `qty_reserved` held by `placed` rows (visible on the
-   vendor board), decrement on confirm; placed-cancel releases, post-confirm cancel restocks;
+   partner board), decrement on confirm; placed-cancel releases, post-confirm cancel restocks;
    single partial-UNIQUE accepted row prevents double-decrements by construction.
 4. **ADR-4 (single-store direct order — 02 §10 Option B, OQ-5):** one tx, one storefront, one
    fulfilment decision; FK shape enforces INV-7; cart is additive later.
-5. **ADR-5 (fail-closed vendor gate):** every vendor write and every placement re-checks
-   `vendors.RequireApprovedVendor` — a 07 read failure refuses with `FORBIDDEN`, never assumes
+5. **ADR-5 (fail-closed partner gate):** every partner write and every placement re-checks
+   `partners.RequireApprovedVendor` — a 07 read failure refuses with `FORBIDDEN`, never assumes
    approved (11 §6 §3).
 6. **ADR-6 (payment seam dormant):** `orders.payment_method='cod'` until 12; `online` + txn attach
    guard live in the schema/service now (12 plugs in without schema change).
@@ -72,9 +72,9 @@ the highest version — do not run lower-versioned files afterwards.
 
 ## Gate 1 review hand-off
 
-- **Web** (`pnpm dev`, vendor fixture): `/vendor` (dashboard counters) → `/vendor/storefront`
-  (create/pause dialogs) → `/vendor/products` (+ new/edit with variants) → `/vendor/inventory`
-  (inline stock edit; low-stock rows) → `/vendor/orders` (board; confirm/ship/cancel dialogs) →
+- **Web** (`pnpm dev`, partner fixture): `/partner` (dashboard counters) → `/partner/storefront`
+  (create/pause dialogs) → `/partner/products` (+ new/edit with variants) → `/partner/inventory`
+  (inline stock edit; low-stock rows) → `/partner/orders` (board; confirm/ship/cancel dialogs) →
   `/admin/commission` (stub). Fixture modes: `success/offline/forbidden/conflict/out_of_stock`.
   Desktop 1280 + 768.
 - **App** (fixture session): Marketplace → স্টোর → store page → product detail (variant picker +

@@ -19,12 +19,12 @@ Module 02 turns the binding brand (`docs/design-reference/README.md`, `prompt.tx
 | Guardian | Judges trust signals (verified badge, school branding) built from these primitives |
 | Teacher | Reads Bangla-heavy content in Hind Siliguri — no tofu, no clipped conjuncts |
 | School/Super Admin (web) | Command Center screens (dense tables, keyboard-complete forms) from these primitives |
-| Vendor / EdTech brand | Meets the brand via the landing page (`07-command-center-web`) built on these tokens |
+| Partner / EdTech brand | Meets the brand via the landing page (`07-command-center-web`) built on these tokens |
 | Developer (web + mobile) | Imports tokens and primitives only — raw hex/px/font names are lint-blocked |
 | Designer | Reviews primitives against the brand; exercises reduced-motion and bn-length variants |
 | System (CI) | Enforces catalog bn/en parity, token-only lint, font bundling, render tests |
 
-The five roles plus Vendors are defined by `03-identity-access §2`; verification gating is unaffected here — this module serves every role identically and owns no permissions.
+The five roles plus Partners are defined by `03-identity-access §2`; verification gating is unaffected here — this module serves every role identically and owns no permissions.
 
 ## 3. Scope
 
@@ -180,7 +180,7 @@ Content accuracy (`prompt.txt` §12): palette/typography facts here are sampled 
 
 | Field | Rule | Message key (per-app `src/i18n` catalog) |
 | --- | --- | --- |
-| Catalog key name | Matches `^(common\|validation\|errors\|auth\|verification\|hierarchy\|chat\|notices\|notifications\|settings\|landing\|admin\|school\|vendor\|ai\|analytics\|tuition\|marketplace\|commerce\|payments\|ads\|events\|sync\|ops)\.[a-z0-9_]+(\.[a-z0-9_-]+)*$` (registry: `02-solution-approach.md` §1.1; `snake_case` segments allowed — other modules already use e.g. `hierarchy.city_empty`) | N/A — build-time CI error (never user-facing) |
+| Catalog key name | Matches `^(common\|validation\|errors\|auth\|verification\|hierarchy\|chat\|notices\|notifications\|settings\|landing\|admin\|school\|partner\|ai\|analytics\|tuition\|marketplace\|commerce\|payments\|ads\|events\|sync\|ops)\.[a-z0-9_]+(\.[a-z0-9_-]+)*$` (registry: `02-solution-approach.md` §1.1; `snake_case` segments allowed — other modules already use e.g. `hierarchy.city_empty`) | N/A — build-time CI error (never user-facing) |
 | Catalog key parity | Key in both `bn.json` and `en.json`; non-empty; identical `{param}` placeholders | N/A — build-time CI error (`DSN-UT-001`) |
 | Locale value | Must be `bn` or `en`; anything else resolves to `bn` | `common.language.unsupported` (dev-facing warning) |
 | Language selection (onboarding/settings, `03`) | One of `bn` / `en`; default `bn` | `common.language.bn` / `common.language.en` labels |
