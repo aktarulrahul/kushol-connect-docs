@@ -1,10 +1,10 @@
-# Design Reference — Kushol Connect brand
+﻿# Design Reference — Kushol Connect brand
 
 | | |
 | --- | --- |
 | **Status** | 🟢 Binding reference — encode as tokens in each app's `src/theme` (web and app each hold their own copy) |
 | **Date** | 2026-09-29 |
-| **Brand asset** | `brand/kushol-connect-full-logo.png` (1280 × 647, transparent background) — source PNG supplied by the owner |
+| **Brand asset** | `brand/kushol-connect-full-logo.png` — new indigo logo applied everywhere (owner 2026-10-22, source `docs/logo/kusholConnect.png`; high-res original `docs/logo/kc-logo.jpg`) |
 | **Mobile UI reference** | CircleUp UI kit (Figma, owner-supplied 2026-09-30) + WhatsApp chat conventions — §6; screenshots in `mobile-circleup/` |
 | **Web UI direction** | Professional SaaS: landing = B2B marketing site, Command Center = dense admin console — §7 |
 
@@ -28,51 +28,64 @@ The Kushol Connect logo has three parts, always used together as a lockup:
 The brand speaks Bengali first: UI copy defaults to Bangla, with English as the secondary language
 (`brd.md` audience, `prd.md` §2).
 
-## 2. Palette (owner-approved v2, 2026-10-22 — purple brand anchored at kushol-700 `#662D91`)
+## 2. Palette (owner-approved v3, 2026-10-22 — Electric Indigo & Periwinkle Mesh-Glow System)
 
-### 2.1 Full brand scale (`kushol-*`)
+### 2.1 Full brand scale (`kushol-*` / `brand-*`)
 
 | Step | Hex | Usage in Kushol Connect |
 | --- | --- | --- |
-| 50 | `#FAF5FF` | Page backgrounds, subtle unread message row tint |
-| 100 | `#F3E8FF` | Selected item background, event category pill background |
-| 200 | `#E9D5FF` | Subtle borders, dividers on purple cards, badge outlines |
-| 300 | `#D8B4FE` | Disabled button background (light mode), decorative accents |
-| 400 | `#C084FC` | Active icons or links in Dark Mode |
-| 500 | `#9333EA` | Secondary buttons, progress bars, notification dots |
-| 600 | `#7E3AF2` | Interactive highlight: active bottom-tab icon, chat send button, links |
-| **700** | **`#662D91`** | **Primary Brand Anchor: app header, primary CTAs, QR pass frame, logo** |
-| 800 | `#532178` | Button :active / pressed state, gradient dark end |
-| 900 | `#3B1557` | Deep hero banners, VIP event pass background |
-| 950 | `#220A33` | Dark mode elevated surface / header |
+| 50 | `#EEEDFA` | Selected category tile background, unread message highlight, soft badge fill |
+| 100 | `#F2F2FC` | Derived light tint (hover rows) |
+| 200 | `#ACA9F2` | 1.5px border for active/selected cards and tiles |
+| 300 | `#C9C8F7` | Derived light accent |
+| 400 | `#8488F6` | Header radial glow highlight, active dark-mode accents |
+| 500 | `#6867E8` | Gradient mid-stop, secondary interactive elements |
+| 600 | `#5856D6` | **Primary interactive colour: primary buttons, FAB, active nav icons, links** |
+| 700 | `#4643BA` | Button hover/pressed state, solid fallback for glass sub-cards |
+| 800 | `#373499` | Deep active states, high-contrast borders |
+| 900 | `#2B2977` | Derived deep shade |
+| 950 | `#1B1A4A` | Derived darkest shade |
 
 Gradient for event ticket headers, campaign banners and splash screens:
-`linear-gradient(135deg, #7E3AF2 0%, #662D91 50%, #3B1557 100%)` (token: `kushol-gradient`).
+`linear-gradient(135deg, #7E3AF2 0%, #662D91 50%, #3B1557 100%)` (legacy recipe — the active
+system uses the mesh-glow and QR-frame gradients in §2.3).
 
 ### 2.2 Supporting semantic & module colours
 
 | Token | Value | Where it appears |
 | --- | --- | --- |
-| Gold (e-commerce accent) | `#F59E0B` | "Buy Now", flash-sale badges, star ratings, "Featured Event" tags |
-| Coral rose (urgency) | `#F43F5E` (AA text/badge form `#E11D48`) | "Closing Soon" campaign timers, live indicators, discount %, unread message badge counts |
-| Emerald (check-in/verification) | `#10B981` | "QR Pass Verified" at the gate, "Registration Confirmed", "Order Delivered" (text form `#047857`) |
-| Duplicate-scan warning | `#F59E0B` | "Already checked in / Duplicate scan" |
-| Invalid QR | `#EF4444` | Invalid QR code result |
+| Orange (campaigns/food/featured) | `#E8741E` solid · `#FDF1E8` tint | Category progress bars, campaign badges, "Featured" tags |
+| Indigo (messaging/transport/official) | `#5856D6` solid · `#EDEDFA` tint | Module badges, official notices |
+| Emerald (QR verified / check-in / in-stock) | `#24A148` solid · `#22A047` text · `#E6F6EC` tint | "QR Pass Verified", "Registration Confirmed", "Order Delivered" |
+| Orchid magenta (campus events/fest) | `#D946EF` solid · `#FAE8FF` tint | Event/fest accents |
+| Royal violet (bills/fees/VIP) | `#8B5CF6` solid · `#F2EBFE` tint | Bills, academic fees, VIP pass |
+| Coral red (urgent/sold out/error) | `#EF4444` solid · `#FEF2F2` tint | Urgent alerts, sold-out, invalid QR (text form `#DC2626`) |
 
-### 2.3 Neutrals (purple-tinted slate)
+### 2.3 Surfaces, typography & component recipes
 
 | Token | Value | Role |
 | --- | --- | --- |
-| Primary text | `#1E1B4B` (deep indigo-slate) | Product titles, sender names, event titles — never pure black |
-| Muted text | `#64748B` | Timestamps, product SKU, event location subtitle |
-| App background | `#F8FAFC` | Crisp off-white so white cards pop |
-| Card surface | `#FFFFFF` + `#E2E8F0` 1px border | Cards |
+| Surface background | `#F7F8FA` | Main app background and bottom-sheet container (never pure white) |
+| Card surface | `#FFFFFF` + `#EAECEF` 1px border + `0 2px 10px rgba(17,24,39,0.04)` | Cards, radius 16 (20 for large summary cards) |
+| Segmented track | `#EFEFF4`, radius 9999, padding 4 | Active pill: `#FFFFFF` + `#111827` bold + `0 2px 6px rgba(0,0,0,0.06)`; inactive: `#8E929F` |
+| Input / dropzone fill | `#F2F3F7`; dashed border `#D5D7E0` | Secondary inputs, upload zones |
+| Primary text | `#111827` | Headings, numeric values, titles, prices — never pure black |
+| Body text | `#374151` | Body copy, message text |
+| Muted text | `#8E929F` | Subtitles, timestamps, inactive nav (secondary; ≈3:1) |
+| On-primary subtext | `#D4D5FA` | Subtext on the indigo header |
 
-Heritage logo colours retained for the brand graphic only: swoosh gray `#707070`; the legacy
-slate-teal `#386070` family remains behind the `slate-*` surface/text classes.
+Header glow: `radial-gradient(circle at 65% 35%, #8488F6 0%, #6362E2 45%, #524FD1 100%)`
+(`.bg-header-glow`). Primary CTA: `linear-gradient(90deg, #6A68E6, #5856D6)` +
+`0 8px 20px -4px rgba(88,86,214,0.45)`, pill radius (`.bg-primary-btn`). Glass sub-cards:
+`rgba(255,255,255,0.14)` + `blur(12px)` + `rgba(255,255,255,0.22)` border (`.glass-card`).
+Bottom-sheet: `#F7F8FA`, 28px top corners. FAB: 56px circle `#5856D6`, white icon,
+`0 8px 16px rgba(88,86,214,0.35)`. QR pass: frame `#6362E2 → #524FD1`, inner QR container pure
+white with 16px padding, emerald pill `#E6F6EC`/`#22A047` for "Registration Confirmed".
 
-Derived scales for gold/coral/slate are generated in code (`pnpm theme:generate` on web); the
-kushol brand scale is hand-pinned to the owner's values above — do not regenerate it.
+Heritage logo colours retained for the brand graphic only: swoosh gray `#707070`.
+
+Selection-grid states: unselected `#FFFFFF` / `#EAECEF` / `#8E929F`; selected `#EEEDFA` /
+`1.5px #ACA9F2` / `#4F4CD1` icon + bold label. No white text on `#EEEDFA` or `#F7F8FA`.
 
 ## 3. Typography
 
