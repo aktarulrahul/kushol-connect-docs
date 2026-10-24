@@ -54,11 +54,11 @@
 
 ## Gate 2 — owner run (shared Neon DB)
 
-```bash
+``bash
 cd /Users/rahul/Desktop/aiWorkspace/me/kushol-connect/applications/api
 go run ./cmd/api migrate-status
 go run ./cmd/api migrate up --confirm
-```
+``
 
 Migrations to apply:
 
@@ -87,15 +87,15 @@ Migrations to apply:
 
 ### Pending Owner Run
 - Database migration execution:
-  ```bash
+  ``bash
   cd applications/api
   go run ./cmd/api migrate up --confirm
-  ```
+  ``
 - Integration test suite (requires testcontainers / live DB):
-  ```bash
+  ``bash
   cd applications/api
   make test-integration
-  ```
+  ``
 
 After you confirm migrate output, Stage 5 (fixture→client + IT pending) continues.
 
@@ -189,3 +189,268 @@ disable + sync-now. RBAC renders by session role (use-console-role); fixture sea
 (`fixtures/lms.ts` admin section) mirrors the api's `LmsConnection`/`LmsSyncRun` contract —
 swap point for 14's real endpoints, documented in-file. i18n `admin.lms.*` (en+bn, catalog
 parity kept); 3 new fixture tests (220/220 green).
+
+## Live institution & partner directory — 2026-10-23 (owner request)
+
+Owner: "remove all mock institutions and partner … institutions can be onboarded directly from
+/institution, from a partner's LMS, or by a partner from its details page". The console's
+institutions and partners now read the database through new Kushol-admin endpoints
+(`internal/directory`, contract tag `console`):
+
+| Surface | Now |
+| --- | --- |
+| `/institution` (Kushol admin) | `GET /api/v1/admin/institutions` — city, students, **Onboarded via** (direct · partner · partner's LMS) with filters; **Onboard institution** → `POST /api/v1/admin/institutions` (live city list, EIIN, address, optional first admin — verified, OTP sign-in) |
+| `/institution/[id]` | `GET /api/v1/admin/institutions/{id}` — Overview (stats, contact, how it joined), Teachers, Students, Classes, **LMS** (its own LMS; hidden when it came from a partner's LMS), LLM placeholder, Audit |
+| `/admin/partners` | `GET /api/v1/admin/vendors` + institution counts; **Add partner** → `POST /api/v1/admin/partners` (approved) |
+| `/admin/partners/[id]` | `GET /api/v1/admin/partners/{id}` — Overview (address, office hours, description, commission), Institutions (+ **Onboard institution** for this partner), **LMS** tab; approve/suspend live. Fixture Campaigns/Store/Activity tabs removed |
+| `/admin` dashboard, `/admin/cities`, `/admin/applications` | Stats, institutions, partners and partner approvals live; vendor persona home reads `/vendor/dashboard/metrics` |
+| Removed | `/admin/lms` (LMS lives inside partners/institutions — module 14), fixture `SCHOOLS`/`VENDORS`/store/school-details/school-LMS seams and the admin-LMS fixture section |
+
+Data: migration `20270313090002` **deletes** the demo tenant (2 demo institutions + everything
+under them, their accounts, the demo partner) — irreversible, owner choice; `20270313090003` seeds
+partner **e-jonaki** (+ its LMS); `20270313090001` adds partner address/office hours and
+institution address. Evidence: web `tsc` clean, eslint clean on changed files, vitest 315/315;
+api `internal/directory` tests (onboarded-via rules, phone masking, Kushol-admin gate, validation
+before the database). Gate 1 (owner UI review) pending.
+
+### Partner human ids and more partner tabs — 2026-10-23 (owner request)
+
+- **Readable partner URLs:** every partner has a `human_id` (slug of the company name, numbered on
+  collision; filled by a `vendor_accounts` insert trigger so every sign-up/approval path gets one;
+  backfilled in `20270313090001`). e-jonaki is `ejonaki` → `/admin/partners/ejonaki`. The api
+  accepts a human id or a uuid on `/api/v1/admin/partners/{partnerId}*`; an old uuid link redirects
+  to the readable URL. Approve/suspend still send the uuid.
+- **New partner tabs (live, read-only):** Access (`…/access` — owner login, both team tables, seats),
+  Store (`…/store` — storefronts, orders by status, completed sales + commission, latest 20 orders),
+  Campaigns (`…/campaigns` — ad campaigns and events with tickets), Logs (`…/logs` — the partner's
+  own portal audit tables plus Kushol-admin `audit_log` actions on it or its LMS, newest 100).
+- Evidence: api build/vet/tests/contracts-check clean (new: active-seat count, partner tabs refuse
+  non-Kushol-admins); web tsc + eslint clean, vitest 317/317.
+
+
+### Full vendor → partner rename — 2026-10-23 (owner: "there will no vendor, it will be partner")
+
+- **Scope:** the product noun is now `partner` everywhere — DB (`vendor_accounts` → `partner_accounts`,
+  `vendor_storefronts` → `partner_storefronts`, ledger/payouts/XP/audit/members renamed; the lean
+  `partner_members`/`partner_audit_logs` twins and `schools.onboarded_by_vendor_id` were **merged**
+  into the richer renamed tables), value vocabularies (`users.role='partner'`, `PARTNER_ADMIN`,
+  `partner_inquiry`, chat key `partner:`, referral prefix `KUS-PART-`, RBAC module `partners`),
+  API paths/operationIds/schemas (`/api/v1/partner/*`, `/api/v1/admin/partners` with the approval
+  queue folded in), Go (`internal/vendors` merged into `internal/partners` as `Lifecycle`), web
+  (`/vendor/*` shims and `/admin/vendors` redirects deleted; fixtures, i18n keys, landing ids),
+  and the app (schema fields, session roles). `internal/sync` "vendor" (the LMS vendor) and the
+  SMS-gateway "vendor" comments are a different noun — intentionally untouched.
+- **Migration:** `20270313090004_partner_rename.up.sql` (+ down, name-restoring; data merges are
+  best-effort). **Pending owner run together with `20270313090000`–`090003`** (Owner Rule 1) —
+  these were not yet applied, which is what produced the `human_id` 500s in the api log (G-24).
+- **Evidence (agent-side, no app run):** api `go build`/`go vet`/`go test -race ./...` green,
+  `make contracts` regenerated with no drift, `TestSpecValidates` green (three pre-existing
+  unquoted-flow-description YAML bugs fixed along the way); web vitest 317/317 + `tsc` clean;
+  app jest 419/419. `make lint` (api) and web eslint still report their pre-existing findings
+  (unchanged by the rename); `pnpm contracts:check` has a pre-existing Windows spawn bug.
+
+### Dev-DB repair migration — 2026-10-24 (owner report: `/admin/partners` + `/admin/institutions` 500)
+
+- **Diagnosis (from logs only — no database session, Owner Rule 1):** `migrate.log` reported
+  `database_version=20270313090004 … dirty=false`, yet Postgres rejected the directory queries with
+  `column pv.human_id does not exist` / `column "human_id" does not exist` (42703). No sequential
+  application of today's migration set can produce that state: `090003` seeds `human_id`, which only
+  `090001` adds, so a clean `090004` marker reached through `090003` implies the column existed.
+  Conclusion: the schema_migrations marker ran ahead of the applied content — `090001`–`090003`
+  never executed, and golang-migrate never applies versions below the recorded one (`migrate up` is
+  a permanent no-op there, so dev-start keeps printing "local schema up to date").
+- **Fix forward** (applied files are never edited): `20270313090005_partner_human_id_repair`
+  re-applies `090001`–`090003`'s effects idempotently on top of the renamed schema — `human_id`
+  column + trigger + backfill + NOT NULL + check + unique index, `address`/`office_hours` on
+  `partner_accounts`, `schools.address`, the demo-tenant purge (no-op when its targets are gone)
+  and the e-jonaki seed (fixed ids, `ON CONFLICT DO NOTHING`). No-op on a fully-migrated database.
+- **Evidence:** api `go build ./...` green; `TestExpectedVersionIsHighestUpFile` green with the new
+  file as the embedded maximum. Gate 2 (owner migration run) pending.
+- **Owner:** `cd applications/api && go run ./cmd/api migrate up --confirm` — or restart
+  `dev-start.sh` — then reload `/admin/partners` and `/admin/institutions`.
+
+### Add partner member from the Access tab — 2026-10-24 (owner request)
+
+Owner: "in /admin/partners/e-jonaki, in access tab, add an option to add member … once member
+added, both partner POC and new member will get mail", with the letter logo fixed to
+`docs/logo/kusholConnect.png` for every email template.
+
+- **Contract:** `POST /api/v1/admin/partners/{partnerId}/members` (Kushol admin, CSRF-checked;
+  human id or uuid) with `AdminPartnerMemberInput` — firstName, lastName, email, phone (BD),
+  designation, `modulePermissions` (`PartnerModulePermission` enum: event/store/campaign/
+  institution × admin/contributor), optional notes. Returns the created `AdminPartnerMember`
+  (now also carrying designation, notes, modulePermissions on reads).
+- **Service** (`internal/directory/members.go`): Kushol-admin gate → validation before the
+  database (name/email/phone/designation/notes lengths; permission vocabulary mirrored by the new
+  `partner_members_module_permissions_chk` CHECK) → approved partners only (CONFLICT otherwise)
+  → find-or-create the `partner` user by email (existing **non-partner** accounts are a CONFLICT
+  — a school login never gains a partner seat; new accounts are VERIFIED for OTP sign-in) →
+  duplicate membership is a CONFLICT → seat billable past `free_seat_quota` (portal rule) →
+  seat + audit row (`partner.member_added`, shows in the partner's Logs tab) in one transaction.
+- **Emails:** typed job `partner.member_added_email` (`internal/smsout`) sends two letters —
+  the member's welcome and the POC's notice (partner name, designation, permission chips; **notes
+  are never emailed**). POC = the partner account's email, else the portal owner's; duplicate
+  addresses get one letter. Enqueueing is best-effort after commit (degraded SMTP logs + retries).
+- **Logo:** every email template now embeds `docs/logo/kusholConnect.png` (869×287 wordmark;
+  `smsout/email-logo.png` replaced, both letter templates sized 180×59). Hash-verified copy.
+- **Web:** the Access tab gains **Add member** (approved partners only, title explains why it is
+  disabled) opening `PartnerMemberDialog` — all owner fields incl. the permission multi-select
+  grouped module × Admin/Contributor, seat hint (free vs billable), bn/en copy, aria-invalid
+  states, success toast; the tab list refreshes and now shows each member's designation and
+  permission badges.
+- **Decisions:** new members sit at `PARTNER_EXECUTIVE` (the granular grants live in
+  module_permissions; PARTNER_ADMIN stays the partner's own admin role); permission modules are
+  the partner portal's surfaces (event, store, campaign, institution) × (admin, contributor).
+- **Evidence (agent-side, no app run — Owner Rule 1):** api `go build`/`go vet`/`golangci-lint`
+  clean on touched packages, `go test -race ./...` green (new: permission normalizer, validation
+  matrix, admin-only gate, both-letters handler, degraded mode, duplicate-POC skip, permission
+  labels), `make contracts` no drift, `TestSpecValidates` green (fixed two pre-existing
+  unquoted-description YAML bugs in `LmsInstitutionSyncReport`); web `tsc` clean, prettier
+  clean on touched files, vitest 322/322 (new: permission catalog, form validation, request-body
+  builder), spec copy synced + TS client regenerated; eslint still reports its pre-existing
+  findings elsewhere (G-21 pattern).
+- **Pending owner:** migration `20270313090006_partner_member_details` (G-27) —
+  `cd applications/api && go run ./cmd/api migrate up --confirm` — then click-through:
+  /admin/partners/ejonaki → Access → Add member → verify the member row, both inboxes, and the
+  Logs tab entry.
+
+### Institution human-id URLs + chat oversight — 2026-10-24 (owner request)
+
+Owner: "instead of show uuid in the url, show institution human id … add one more tab to see the
+chat groups for this institution … in overview show the chat stats".
+
+- **Readable URLs:** every school now carries `schools.human_id` (slug of `name_en`, numbered
+  on collision, trigger-filled, backfilled; migration `20270313090007_school_human_id`, G-28).
+  `GET /admin/institutions/{institutionId}` accepts the human id **or** uuid; the console links
+  by human id (`institutionHref`) and old uuid links redirect. Partners set the pattern; the
+  institution list/detail and the partner page's institution links all moved over.
+- **Chat endpoints (Kushol admin, read-only):** the institution detail now embeds
+  `chatStats` (total/active groups, messages total + today (Asia/Dhaka days), attachment count
+  and storage bytes, last activity, incidents) and two new paths serve the Chat tab:
+  `GET /admin/institutions/{institutionId}/chat-groups` (per-group numbers, busiest first) and
+  `.../chat-groups/{groupId}` (roster, 14-day daily counts). DMs carry no school, so they are
+  out of scope by definition.
+- **Web:** new Chat tab — groups table (name/section, members, messages, today, attachment
+  storage, last activity, incident badges: moderated (tombstoned) messages and uploads that never
+  confirmed on R2); clicking a group opens the popup with its roster (group admin first, teacher
+  badge), storage, daily volume bars and incidents. The Overview tab gained a Chat section
+  (groups, today's messages across all groups, attachment storage, last activity).
+- **Evidence:** api `go build`/`go vet`/`golangci-lint`/`go test -race` green (spec
+  validates; one self-inflicted unquoted-YAML description fixed forward), `make contracts` no
+  drift; web `tsc` clean, prettier clean, vitest 324/324 (new: institutionHref fallback,
+  formatBytes).
+- **Pending owner:** migration `20270313090007_school_human_id` (G-28) — URLs fall back to
+  uuids until it runs; then verify /institution/<human-id> opens, the Chat tab lists e.g. the
+  section groups of 01a169fa-a56d-79ab-8953-1f4ae424be90, and the popup shows the class teacher
+  as group admin.
+
+### Popups: fixed header/footer, scrollable body — 2026-10-24 (owner request)
+
+- **Primitive:** `DialogContent` is now a `max-h-[90dvh]` flex column; `DialogHeader` and
+  `DialogFooter` pin via `shrink-0`; new **`DialogBody`** (`grid min-h-0 flex-1
+  content-start gap-4 overflow-y-auto`) is the scrollable middle.
+- **Sweep:** the console + feature popups put their middle content in `DialogBody` — onboarding
+  (institution/partner), partner add-member, institution chat-group, tuition-market pair, LMS sync
+  report, messenger poll + group settings, admin leads (review + partner review), partner suite
+  tabs, tuition market page, partner orders, moderation, applications, ads-ops. Small confirm
+  popups and dialogs without footers stay on the primitive (nothing to scroll). Per-usage
+  `max-h-* overflow-y-auto` classes on `DialogContent` were removed — the primitive owns the
+  cap now.
+- **Evidence:** web `tsc` clean, prettier clean on touched files, vitest 324/324; eslint on the
+  touched files reports only pre-existing findings (unused imports, raw colors, fetch).
+
+### Partner footprint stats (admin overview + portal dashboard) — 2026-10-24 (owner request)
+
+Owner: "in overview tab, i need the all status(institution, chat group, total message, storage
+used, event managed, store stock, order summary). also in partner loggedin dashboard, show same
+stats".
+
+- **One aggregate, two surfaces:** `GetPartnerFootprintStats` (`partner_accounts.sql`) computes
+  the block in a single statement — institutions the partner brought (directly or through its LMS,
+  the directory's definition), their chat groups / total messages / today's messages (Dhaka day) /
+  attachment storage, campaigns managed (`ad_campaigns`), storefront products + stock units on
+  hand (`inventory_items`), and the order summary (total / active = placed..shipped / completed /
+  cancelled).
+- **Contract:** new `PartnerFootprintStats` schema; `GET /api/v1/admin/partners/{partnerId}/stats`
+  (Kushol admin) serves it, and `PartnerMetrics` gains a required `footprint` block so the
+  partner's own dashboard gets the identical numbers from the live metrics endpoint.
+- **Web:** the admin partner Overview tab opens with an "Activity at a glance" card row (plus total
+  orders line); the partner portal home (`/partner`) now queries the live
+  `/partner/dashboard/metrics` and renders the same footprint row under its existing cards.
+  Storage sizes via `formatBytes`; bn/en copy under `admin.partners.footprint_*`.
+- **Evidence:** api `go build`/`go vet`/`goimports`/`go test -race` green (partners,
+  directory, smsout, gen/api; spec validates), `make contracts` no drift; web `tsc` clean,
+  prettier clean, vitest 324/324, eslint clean on the touched files.
+- **Pending owner:** none beyond the standing G-27/G-28 migrations (the stats read live tables and
+  work without them); verify on /admin/partners/ejonaki → Overview and on /partner after login.
+
+### Stat cards unified + Latin digits in Bangla — 2026-10-24 (owner request)
+
+Owner: "make 4 stats in one row … big icon in left side and count in right side and in next line
+some info … with some hover animation … create a common stats component for it. use it across the
+application", and "in all bangla number not visible properly. english number is okay".
+
+- **New primitive** `components/ui/metric-card.tsx` — `MetricCard` (icon tile left, count on
+  the right of the same row, name + optional info line under it; hover lifts the card, tints the
+  border and fills the icon tile) and `MetricGrid` (4 per row on wide screens). The DSN KPI
+  `StatCard` (sparkline/delta, stat-card.tsx) is untouched and stays for period-comparison KPIs.
+- **Used across the app:** partner footprint rows (admin overview + portal dashboard), institution
+  detail Overview stat rows (counts + chat section), partner Access tab (seats/members), partner
+  store totals (tone via `valueClassName`), portal home fixture stat cards.
+- **Latin digits:** Bangla numeral glyphs (০–৯) render unreliably in our font stack, so every
+  number now formats with `bn-BD-u-nu-latn` — `intlLocale` (i18n) and all hardcoded
+  `"bn-BD"` Intl tags across 32 files now emit Latin digits in the Bangla UI (dates, prices,
+  counts). Catalog tests updated to the new expectation (owner decision recorded).
+- **Evidence:** web `tsc` clean, prettier clean on touched files, vitest 324/324 (i18n,
+  primitives and auth-form suites updated to Latin-digit expectations), eslint clean on touched
+  files (incl. two findings fixed in files being touched: raw `text-[11px]` length, redundant
+  `??`).
+- **Pending owner:** visual review only.
+- **Light backgrounds:** MetricCard gained a tone prop (primary/success/warning/info) that paints the card with the theme soft tokens and matches the icon tile, filling with the tone solid on hover; footprint rows rotate all four tones (4 per row), Access/store/institution cards use semantic tones (pending=warning, awaiting delivery=warning, completed=success).
+
+### Partner-member login fix + admin partner edit — 2026-10-24 (owner request)
+
+Owner: "this user has been added to e-jonaki partner by kushol admin, why can't login this user"
+and "add edit option so that kushol admin can update the partner information".
+
+- **Login bugfix:** the OTP gate resolved the partner account only through
+  `partner_accounts.portal_user_id` (the account owner), so every **team member** — portal
+  invited or admin added — failed with the misleading 403 "UNDER_REVIEW" (the default status text
+  when no lead matches the phone). `GetPartnerAccountForUser` now resolves via ownership **or
+  active `partner_members` membership** (`status = 'active'`; removed seats excluded), and an
+  approved partnership wins when a user belongs to more than one. Query-only fix — the gate
+  itself still blocks non-approved accounts. Affects the auth module's flow (03 owns the
+  handler; root cause and fix live in the shared partner query).
+- **Admin partner edit:** `PATCH /api/v1/admin/partners/{partnerId}`
+  (`AdminPartnerUpdateInput`, PATCH semantics — provided fields only) with validation
+  (BD phone, email, commission 15–20%, name/description lengths), audited as `partner.updated`
+  with the provided-field list, then re-reads the full `AdminPartner` view. Web: an **Edit**
+  button in the partner header opens the prefilled dialog (company en/bn, contact, phone, email,
+  commission %, address, office hours, description) with bn/en copy and inline validation; save
+  refreshes the detail + list.
+- **Evidence:** api `go build`/`goimports`/`go vet`/`go test -race` green (directory,
+  partners, auth, smsout, gen/api), `make contracts` no drift, spec validates; web `tsc`
+  clean, prettier + eslint clean on touched files, vitest 324/324.
+- **Pending owner:** the login fix is query-only — no migration. Re-run OTP login as the member
+  (aktarul.i1708@gmail.com) on /login — should issue tokens now. Then try Edit on
+  /admin/partners/e-jonaki.
+- Interactive footprint cards: institutions/events/store cards navigate to their tabs (partner page tabs are now state-controlled), and the chat-groups / messages / storage cards open popups backed by a new ListPartnerChatGroups query embedded in the stats payload (PartnerFootprintStats.groups). The chat-groups popup lists institutions with a group-count button that deep-links to /institution/<human-id>?tab=chat (the institution page reads the tab param under Suspense and keeps it through the human-id redirect).
+- FIXED 500 on the institution detail page (found in applications/.dev/logs/api.log): GetInstitutionChatStats/ListInstitutionChatGroups/GetInstitutionChatGroup crashed with cannot scan NULL into *time.Time for institutions or groups with no chat activity. The last_activity_at aggregate is now COALESCEd to the epoch timestamptz sentinel and rendered as null by activityTime() in the directory handler.
+- Member management (owner 2026-10-24): the Access tab team table gains per-row actions (edit, permissions, remove). API: PATCH/PUT/DELETE /api/v1/admin/partners/{partnerId}/members/{memberUserId} with AdminMemberUpdateInput (name, phone, designation, notes; PATCH semantics) and AdminMemberPermissionsInput (full set replace); remove is a soft-delete (status removed, seat freed, history kept) — all audited (partner.member_updated / partner.member_permissions_updated / partner.member_removed). Web: PartnerMemberActions with three dialogs, masked-phone hint (re-enter to change; email is the login and cannot change), removed rows show their badge with actions disabled.
+- Institution-requests rename (owner 2026-10-24): the four school-requests endpoints moved to institution-requests paths — GET/POST /api/v1/admin/institution-requests (list, approve, reject) and POST /api/v1/institution-requests (public registration submit). Tag renamed to institution-requests; operation ids/schema names unchanged (internal only). Spec copies + TS clients regenerated for web and the mobile app; httpx + it_identity route tests updated; no live web/mobile call sites existed yet (both register flows are fixture-mode).
+- FIXED 500 (owner report, found in api.log): the same NULL-scan crash had also been serving 500s on /admin/institutions/e-jonaki-lms through a stale pre-restart api process; after the watcher restart the fixed binary answers 401/200 correctly (verified by probe).
+- R2 organized keys (owner 2026-10-24): uploads can declare a context (contextType/contextId on uploadMedia query params and the presign body) and land under readable prefixes — institution group chat {institution_human_id}/{group_name}/, kushol/partner group chat {partner_human_id}/{group_name}/ (kushol groups use a kushol prefix; the actor partner context names it), and user/event/campaign/lead/institution/partner files {entity_human_id}/. Omitted context keeps the legacy {kind}s/{owner}/{asset}.{ext} layout, so existing clients are unaffected.
+- Supporting changes: migration 20270313090008 adds human_id to users + events (slug triggers + backfill; partner_leads uses its reference_code); new internal/mediakeys package implements media.ScopeResolver with membership/ownership checks (group membership for chat, partner membership for campaign/event/partner, school staff or onboarding partner for institutions, kushol admin for leads); media.New gains the resolver param; the api merges it in cmd wiring.
+- Clickable institution stat cards (owner 2026-10-24): the Overview rows now jump like the partner page — students/pending → Students tab, teachers → Teachers, sections → Classes, and all four chat stats → the Chat tab (tabs are state-controlled; the ?tab= deep link still wins on load).
+- LLM tab removed from the institution detail page (owner 2026-10-24): every institution now shows the LMS (Learning Management System) tab — own-LMS institutions get the connector form/workspace, partner-LMS institutions (e.g. e-jonaki-lms) get a card naming the partner LMS that syncs them with a jump to the partner LMS tab. Unused llm i18n keys removed.
+- LMS tab hidden again for partner-synced institutions (owner 2026-10-24): after the LLM tab removal, the LMS tab shows only for institutions with their own LMS; partner-synced ones (e-jonaki-lms) stay managed on the partner page, so their detail page has no LMS/LLM tab at all.
+### Partner plans + capabilities ("Manage Capabilities") — 2026-10-24 (owner request)
+
+Owner: add a "Manage Capabilities" button on the partner page where a Kushol admin configures partner modules (institution, store, event, member quotas) — what is enabled is what the partner can use — plus the free/pro plan contract and a pro bill estimator.
+
+- **Plan contract (free, the default):** max 5 team members (a common chat group named after the partner is provisioned); 1 event/month with 20 volunteers (a volunteers chat group is auto-created) and 150 participants (an event chat group named after the event is auto-created — partner member as admin, volunteers as contributors, participants as members); 170 registrations per event with event tasks assignable to volunteers; unlimited institution onboarding through LMS or manual; the store is pro-only. After an event closes, participants and volunteers keep their login, can explore nearby events and use find-tutor/tuition. Privacy: users never see another user's phone number or email — discovery is by name search only.
+- **Pro plan:** the store unlocks (product listings become a billed quota) and the monthly bill is estimated from the quota numbers — rate card: ৳500/event/month, ৳50/member above the first 5, ৳20/product listing, ৳10/volunteer/event, ৳2/participant/event. The partner inputs the numbers; the estimated amount renders live.
+- **Storage + api:** migration `20270313090010` adds plan, store/events/institutions/event-task toggles and the quota columns to partner_accounts (member quota rides `free_seat_quota`). `GET/PUT /api/v1/admin/partners/{partnerId}/capabilities` (Kushol admin) reads/writes the snapshot — the server forces free-plan values regardless of the payload; pro bills are computed from the rate card (`directory/capabilities.go`). Add-member now hard-caps the free plan at the member quota (CONFLICT beyond 5).
+- **Web:** "Manage Capabilities" button + plan badge (Free/Pro) in the partner header; the dialog edits plan, toggles and quotas with a live pro bill preview and locks the free-plan values (server re-forces them).
+- **Evidence:** api build/goimports/vet/golangci-lint (0 issues) + `go test -race` green; web typecheck/eslint/vitest 324/324; contracts no-drift.
+- **Pending owner:** migration `20270313090010` (G-29). Event-runtime auto group/task creation and store/commerce gating are plan-contract behaviors for their owning modules (05 chat groups exist; 14 events/commerce wiring is the follow-up) — the quotas and flags this feature stores are the inputs those modules enforce.

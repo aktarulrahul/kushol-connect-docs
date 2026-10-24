@@ -52,7 +52,7 @@ Ships the web surface of Kushol Connect: the public B2B funnel — bilingual lan
 
 ### 3.1 Component diagram
 
-```text
+``text
 Visitor ──▶ / · /download (static + ISR, tag landing:content) · ROI calculator (client-side, ROI_ASSUMPTIONS)
 Principal ─▶ PilotForm · Partner ─▶ VendorInquiryForm ─┐
 Super Admin ─▶ /admin/* · School Admin ─▶ /institution/* ──┤ Route Handler / Server Action (zod re-validate, CSRF)
@@ -61,7 +61,7 @@ Super Admin ─▶ /admin/* · School Admin ─▶ /institution/* ──┤ Rout
                     portal data via 03/04/05 exported services · audit.Record (01) when destructive
                                                       ▼
         PostgreSQL: landing_leads · vendor_accounts (+ 01/03/04/05 tables via their owners)
-```
+``
 
 ### 3.2 Boundary
 
@@ -71,7 +71,7 @@ Super Admin ─▶ /admin/* · School Admin ─▶ /institution/* ──┤ Rout
 
 ### 3.3 Request / data flows
 
-```text
+``text
 1. Landing (public):  visitor → static/ISR HTML (CDN, tag landing:content) → ROI runs client-side →
    PilotForm / VendorInquiryForm → Route Handler → openapi-fetch → POST /leads · /partner/register
    → landing_leads(status=new) [+ vendor_accounts(pending), one tx]
@@ -83,7 +83,7 @@ Super Admin ─▶ /admin/* · School Admin ─▶ /institution/* ──┤ Rout
    dryRun:false → PREVIEWED → commit → poll GET /institution/migrations/{id} every 3 s → COMMITTED
 5. Degradation:  api down → landing/download still serve; portals error boundary + retry +
    X-Request-Id; lead submit retry-safe with input preserved
-```
+``
 
 ### 3.4 State machines
 
@@ -310,3 +310,5 @@ All errors surface as RFC-7807 `application/problem+json`; user-visible messages
 | 2026-09-30 | Initial technical document drafted from spec set 01–06 | Kilo |
 | 2026-09-30 | Consistency pass: partner portal login = 03 `partner` role created by `users.CreateVendorLogin` on approval; exports `partners.AccountForUser` + `RequireApprovedVendor` for 11/13; stub routes renamed to owners' names (`/institution/ai-matrix` — Teacher access to own sections, `/institution/integrations`), `/institution/sections/[sectionId]` added; UI direction = professional SaaS landing + admin console (`docs/design-reference/README.md` §7) | Claude |
 | 2026-10-03 | Build Stages 2–4: fixture UI for landing/admin/institution/partner; migrations `20261015090000–091000`; `leads`/`partners`/`webconsole` services + console handlers; unit tests green; Gate 2 pending owner migrate | Cursor |
+| 2026-10-24 | Access-tab add-member (owner request): `POST /api/v1/admin/partners/{partnerId}/members` (Kushol admin) + `AdminPartnerMemberInput`/`PartnerModulePermission` contracts; `partner_members` gains designation, notes and closed-vocabulary `module_permissions` (`20270313090006`, pending owner run); new members are VERIFIED `partner` users at `PARTNER_EXECUTIVE` with per-module grants; job `partner.member_added_email` sends the welcome letter to the member and a notice to the partner POC; every email template now embeds `docs/logo/kusholConnect.png`; web Access tab: Add-member dialog with the full form (permission multi-select, seat hint, bn/en) and designation + permission badges in the team table | Kilo |
+| 2026-10-24 | Institution human-id URLs + chat oversight (owner request): `schools.human_id` (slug of name_en, trigger-filled, migration `20270313090007`, pending owner run); institution detail accepts human id or uuid and embeds `chatStats`; new read-only endpoints `GET /admin/institutions/{institutionId}/chat-groups` and `.../{groupId}` (per-group stats, roster admin-first, 14-day Dhaka-day volume); incidents = moderated (tombstoned) messages + attachments not confirmed on R2; web Chat tab with group popup and Overview chat section (groups, today's messages, attachment storage, last activity); console links by human id with uuid fallback + redirect | Kilo |

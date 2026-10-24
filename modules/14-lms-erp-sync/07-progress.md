@@ -1,7 +1,7 @@
 # 14-lms-erp-sync — Build Progress
 
 Module: lms-erp-sync · Surfaces: **api + web** (app = N/A by design, `05` empty) ·
-**Last updated:** 2026-10-15
+**Last updated:** 2026-10-23
 
 > Owner instruction: "complete 14 lms-erp-sync" (08/09 deferred to phase 2). Same through-stages
 > precedent (06/10/11/12/13); gates 1–3 stay owner-manual.
@@ -115,3 +115,52 @@ exactly (fixture seam `fixtures/lms.ts` admin section; swap point = `internal/sy
   engine lives in `internal/sync` (pull.go); the admin platform-level endpoints (list ALL
   connections + trigger across institutions) remain 14 backend work (§6 sketch) — the web seam is
   the documented swap point.
+
+## LMS providers inside partners and institutions — 2026-10-23 (owner request)
+
+Owner asks: "configure this ejonaki LMS, sync all institutions, choose which join Kushol, sync
+them, a scheduler per LMS, all LMS calls from the Kushol api, Kushol admin only" → then "LMS can be
+configured only inside an institution or a partner — no independent LMS configuration" → "an
+institution onboarded through a partner's LMS shows no LMS tab". Supersedes the fixture-only
+`/admin/lms` pages of 2026-10-09 (deleted, with their fixture seam).
+
+| Area | What landed |
+| --- | --- |
+| Model | `lms_providers` (exactly one owner: `partner_id` **or** `school_id`, at most one LMS per owner; credential AES-256-GCM under `ERP_SECRET_KEY`, nullable until a Kushol admin saves it), `lms_provider_institutions` (what a partner LMS reported; `school_id` once added to Kushol; one Kushol institution ↔ one LMS institution), `lms_provider_runs` (discovery/sync runs; one running per LMS). Migration `20270313090000`. |
+| Client | Only place Kushol calls an LMS (`internal/sync/provider_client.go`): path or query request style (`{base}?path=teachers` for e-jonaki's `index.php`), API-key or bearer auth, `Kushol-LMS-API` version header, cursor and page pagination, 3 attempts on 429/5xx/network (Retry-After honoured), 16 MB page cap, HTTPS only, dials to private/loopback/link-local/CGNAT addresses refused (closes G-7 for providers), tolerant decoding (numeric ids, `1`/`0` flags, string class levels). |
+| Discovery | `GET /institutions` (partner spec §5.0, added) → else institution ids on roster rows → else the LMS is one institution. Missing institutions are flagged, never removed. |
+| Onboarding | Kushol admin picks institutions → each becomes a new Kushol institution (city + type) or links to an existing one; sync licence turned on; attributed to the partner (`schools.onboarded_by_partner_id`); optional immediate sync. |
+| Sync | One job per institution (`lms.provider.sync_institution`) so a big partner never hits the 4-min job limit; rows naming another institution are never applied; inactive rows skipped; per-institution report with skip reasons (no phone, invalid phone, phone in another institution, unknown membership ids…). Sections/people/enrollments through the shared `applyRoster` (also used by the institution-admin connector; people stay PENDING — LMS-BR-005). |
+| Schedule | Per LMS: off · hourly · every 6 h · daily · weekly, Asia/Dhaka hours. `lms.pull.tick` now re-queues itself every 5 min and the worker seeds it — before this nothing queued it, so no LMS schedule (institution connectors included) ever fired. The institution-connector tick also honours its preset now (it would have synced every tick). |
+| API | `/api/v1/admin/lms/providers*` (12 ops, Kushol admin + CSRF): list (`?partnerId=`/`?schoolId=`), create/get/patch/delete, test, discover, sync, onboard, institutions, pause/resume one institution, runs. |
+| Web | Partner page → **LMS** tab (connect, Sync institutions, choose + add to Kushol, Sync now, schedule, settings, history). Institution page → **LMS** tab for its own LMS (optional LMS institution id), hidden when the institution came from a partner's LMS (Overview names that LMS and links the partner). `/admin/lms` and its nav entry removed. |
+| Seed | `20270313090003`: partner **e-jonaki** + **e-jonaki LMS** (`https://dev.ejonaki.com/kushol/index.php`, query style, `X-Api-Key`, version 1, schedule off) owned by it. The API key is **not** seeded — add it on the partner's LMS tab → Settings. |
+
+### Evidence (2026-10-23)
+
+| Repo | Check | Result |
+| --- | --- | --- |
+| api | build · `go vet -tags=integration ./...` · `make contracts-check` | clean · clean · no drift |
+| api | golangci-lint (sync, directory, cmd) | 0 issues |
+| api | `go test ./internal/sync/...` (+ directory, httpapi, httpx, hierarchy, users, vendors, partners, jobs, cmd) | pass — new: URL styles, pagination (cursor/page/bare array/stuck cursor), discovery modes, scoping + foreign-row filter, auth stop, schedule maths, validation, HTTP fetcher headers/retries/no-retry-on-401/credential never in errors, private-address guard, PHP-style decoding |
+| web | `tsc` · eslint (changed files) · vitest | clean · clean · 315/315 |
+| live probe | e-jonaki dev, key from the owner (2026-10-23) | no key → 401 as specified; with key every endpoint → **500, empty body**; `path=institutions` → 404 (G-10) |
+
+### Sync everything — 2026-10-24 (owner: "while sync, sync everything like classes, section, teacher and students")
+
+- **Fixed: no roster path ever created people.** CSV import, the HMAC webhook and LMS pulls send
+  `TEACHER`/`STUDENT`; 03's `UpsertRosterUser` only accepted lowercase and answered "role not
+  rosterable". It now normalises the role (`users.RosterRole`).
+- **People:** new additive 03 export `users.SyncRosterUser` — finds a person by their LMS id
+  (`lms_external_ids`) first, then by phone; refreshes name, phone and email on every sync; adds
+  people **without a phone** (they cannot sign in until the LMS sends one); a phone/email already
+  used by another account is left out instead of failing the person; new people stay PENDING.
+- **Sections:** matched by LMS id first (active, same institution and session), else class + name,
+  created when missing — a renamed section in the LMS is no longer duplicated.
+- **Sync now** on a partner LMS refreshes the institution list, then syncs every institution in
+  Kushol (classes → sections, teachers, students, memberships). "Sync institutions" is now
+  "Refresh institution list".
+- **Report:** teachers/students added and updated separately, people saved without a phone, plus
+  the existing fetched/applied/skipped counts.
+- Evidence: api contracts-check no drift, `go vet -tags=integration ./...` clean, tests pass (new:
+  role normalisation, name/email normalisation); web tsc + eslint clean, vitest 317/317.

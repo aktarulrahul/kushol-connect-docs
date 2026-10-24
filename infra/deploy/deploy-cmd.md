@@ -80,10 +80,20 @@ The tags are read from your current commits:
 ssh -t root@72.61.114.20 "sudo -iu kushol /opt/kushol/ops/deploy.sh pilot api=main-$(git -C applications/api rev-parse --short=7 HEAD) web=main-$(git -C applications/web rev-parse --short=7 HEAD)"
 ```
 
-> **Expect exit 3 ("database behind")** because the new migration `20270308090000` hasn't run yet.
-> Nothing changes on the server at this point.
+> **Expect exit 3 ("database behind")** because the new migrations `20270313090000`–`20270313090003`
+> (and any earlier ones not yet applied) haven't run. Nothing changes on the server at this point.
 
 ## Step 4 — Run migrations
+
+> **Irreversible — make a Neon branch first.** `20270313090002_delete_demo_tenant` permanently
+> deletes the two demo institutions (Dhaka and Chattogram), every row under them (sections,
+> enrollments, chat, notices, ledger rows…), every account bound to them — including the demo
+> school-admin logins on your Gmail addresses — and the demo partner with its owner login.
+> Kushol admins, cities and the audit log stay. In the Neon console: **Branches → Create branch**
+> from the production branch, so you can restore if anything looks wrong.
+>
+> The same batch creates the LMS tables (`…090000`), adds partner/institution address fields
+> (`…090001`) and seeds partner **e-jonaki** with its LMS (`…090003`).
 
 Check the status first, then apply:
 
@@ -101,6 +111,17 @@ Run the same command as [Step 3](#step-3--deploy).
 
 - Success prints `SERVING pilot api=main-… web=main-…`.
 - If the health check fails, the script rolls back on its own.
+
+## Step 6 — Connect the e-jonaki LMS (after Step 5 succeeds)
+
+The API key is not in any migration or file. In the console as a Kushol admin:
+
+1. **Partners → e-jonaki → LMS tab → Settings**: paste the API key, keep header `X-Api-Key`,
+   request style "Query parameter", then **Save**.
+2. **Test connection.** On 2026-10-23 e-jonaki's dev API answered every request with a 500
+   (empty body), so expect "server error" until their team fixes it.
+3. **Sync institutions**, tick the institutions to add, choose a city (or link an existing
+   institution), **Add to Kushol**. Then set a schedule on the **Schedule** tab if wanted.
 
 ## Important
 

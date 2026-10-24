@@ -125,6 +125,7 @@ All timestamps MUST be ISO-8601 UTC (`2026-10-02T18:30:00Z`). Booleans JSON `tru
 
 | # | Method | Path | Purpose |
 | --- | --- | --- | --- |
+| 0 | `GET` | `/institutions` | **Multi-institution LMS only** — institutions this LMS serves (§5.0) |
 | 1 | `GET` | `/teachers` | Teachers list with teacher details |
 | 2 | `GET` | `/students` | Students list with student details |
 | 3 | `GET` | `/sections` | Classes list **with nested sections** |
@@ -132,6 +133,49 @@ All timestamps MUST be ISO-8601 UTC (`2026-10-02T18:30:00Z`). Booleans JSON `tru
 | 5 | `GET` | `/notices` | Notices (institution-wide and/or section-scoped) |
 
 `{sectionId}` is the section’s stable `external_id` (URL-encoded).
+
+**Request styles (2026-10-23).** Kushol calls either `{base}/teachers` (path style) or
+`{base}?path=teachers` (query style, for a single entry point such as `index.php`; the parameter
+name is configurable). `sections/{sectionId}` becomes `?path=sections/{sectionId}` in query style.
+Kushol sends `Kushol-LMS-API: <version>` and the API key header on every request.
+
+---
+
+### 5.0 Institutions (MUST for a multi-institution LMS — added 2026-10-23)
+
+One LMS deployment may serve many institutions (e.g. e-jonaki). Kushol syncs the list, and a
+Kushol admin chooses which institutions join Kushol — each becomes a Kushol institution (or links
+to an existing one) and is then synced on its own.
+
+```http
+GET /institutions?cursor=&limit=100
+```
+
+```json
+{
+  "data": [
+    {
+      "external_id": "101",
+      "name": "Mirpur Model High School",
+      "name_bn": "মিরপুর মডেল উচ্চ বিদ্যালয়",
+      "institution_type": "high_school",
+      "eiin": "108255",
+      "district": "Dhaka",
+      "active": true,
+      "updated_at": "2026-10-01T00:00:00Z"
+    }
+  ],
+  "next_cursor": null
+}
+```
+
+| Rule | Requirement |
+| --- | --- |
+| Scope parameter | Every other endpoint (§5.1–§5.5) MUST accept `institution_id={external_id}` and return only that institution's rows. |
+| Rows name their institution | Every teacher, student, class and section-membership row MUST carry `institution_id`. Kushol never applies a row whose `institution_id` differs from the one it asked for. |
+| Ids | `external_id` / `institution_id` MAY be numbers; Kushol treats them as strings. |
+| Single-institution LMS | MAY answer `404` here; Kushol then treats the whole LMS as one institution and sends no scope parameter. |
+| No `/institutions` but rows carry `institution_id` | Kushol groups rows by `institution_id` (and `institution_name` when present) to build the list — slower; implement `/institutions` when possible. |
 
 ---
 
@@ -564,3 +608,4 @@ Thin adapter / plugin:
 | 2026-10-03 | Binding terminology: Institution + required `institution_type` enum |
 | 2026-10-03 | Link to shareable GET response examples (`partner-lms-api-response-examples.md`) |
 | 2026-10-03 | **Simplified MVP surface:** `GET /teachers`, `/students`, `/sections` (classes nested), `/sections/{sectionId}` (teacher/student ids), `/notices`. Dropped separate `/classes`, `/section-teachers`, `/enrollments`, `/export`, `/institution`, `/terms`, `/capabilities` |
+| 2026-10-23 | **Multi-institution LMS:** `GET /institutions`, the `institution_id` scope parameter on every roster endpoint, `institution_id` on every roster row; query-style routing (`?path=teachers`); numeric ids accepted. First partner: e-jonaki |

@@ -13,12 +13,21 @@ info:
     Shareable GET + JSON response examples: `docs/modules/14-lms-erp-sync/vendor-lms-api-response-examples.md`.
 
     MVP endpoints:
+      0. GET /institutions      (multi-institution LMS only — added 2026-10-23)
       1. GET /teachers
       2. GET /students
       3. GET /sections          (classes with nested sections)
       4. GET /sections/{sectionId}  (teacher_ids + student_ids)
       5. GET /notices
-  version: "1.0.0"
+
+    Multi-institution LMS (one deployment serving many institutions, e.g. e-jonaki): expose
+    GET /institutions, accept `institution_id` on every other endpoint to limit the response to
+    one institution, and put `institution_id` on every roster row. Kushol never applies a row whose
+    institution_id differs from the one it asked for.
+
+    Request styles: Kushol calls either {base}/teachers (path style) or {base}?path=teachers
+    (query style — the parameter name is configurable), e.g. a single PHP entry point.
+  version: "1.1.0"
   contact:
     name: Kushol Connect
     email: integrations@kusholconnect.com
@@ -26,6 +35,7 @@ servers:
   - url: https://lms.example-institution.edu.bd/api/kushol/v1
     description: Example educational-institution LMS base URL (configured per Institution in Kushol)
 tags:
+  - name: Institutions
   - name: People
   - name: Sections
   - name: Notices
@@ -33,6 +43,32 @@ security:
   - BearerAuth: []
   - ApiKeyAuth: []
 paths:
+  /institutions:
+    get:
+      tags: [Institutions]
+      operationId: listInstitutions
+      summary: Institutions this LMS serves (multi-institution LMS only)
+      description: >-
+        Kushol syncs this list and a Kushol admin chooses which institutions join Kushol. A
+        single-institution LMS may answer 404; Kushol then treats it as one institution.
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paged institutions
+          headers:
+            Kushol-LMS-API:
+              schema: { type: string, example: "1" }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstitutionPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /teachers:
     get:
       tags: [People]
@@ -40,6 +76,7 @@ paths:
       summary: Teachers list with teacher details (MVP)
       parameters:
         - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/InstitutionScope"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/UpdatedSince"
       responses:
@@ -64,6 +101,7 @@ paths:
       summary: Students list with student details (MVP)
       parameters:
         - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/InstitutionScope"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/UpdatedSince"
       responses:
@@ -88,6 +126,7 @@ paths:
       summary: Classes list with nested sections (MVP)
       parameters:
         - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/InstitutionScope"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/UpdatedSince"
       responses:
@@ -116,6 +155,7 @@ paths:
           required: true
           description: Section external_id
           schema: { type: string, maxLength: 128, example: sec-10-a }
+        - $ref: "#/components/parameters/InstitutionScope"
       responses:
         "200":
           description: Section membership
@@ -140,6 +180,7 @@ paths:
       summary: Notices (institution and/or section scoped)
       parameters:
         - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/InstitutionScope"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/UpdatedSince"
         - name: scope
@@ -192,6 +233,13 @@ components:
       in: query
       schema: { type: string, format: date-time }
       description: Incremental sync filter (Full)
+    InstitutionScope:
+      name: institution_id
+      in: query
+      schema: { type: string, maxLength: 128 }
+      description: >-
+        Multi-institution LMS only — limit the response to this institution's external_id (from
+        GET /institutions). The parameter name is configurable in Kushol (default institution_id).
 
   responses:
     Unauthorized:
@@ -229,10 +277,36 @@ components:
             message: { type: string }
             request_id: { type: string }
 
+    Institution:
+      type: object
+      required: [external_id, name, active]
+      properties:
+        external_id: { type: string, maxLength: 128, description: Stable id; numbers are accepted }
+        name: { type: string }
+        name_bn: { type: string, nullable: true }
+        institution_type:
+          type: string
+          nullable: true
+          enum: [primary_school, high_school, college, null]
+        eiin: { type: string, nullable: true }
+        district: { type: string, nullable: true }
+        active: { type: boolean }
+        updated_at: { type: string, format: date-time }
+
+    InstitutionPage:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Institution" }
+        next_cursor: { type: string, nullable: true }
+
     Teacher:
       type: object
       required: [external_id, full_name, roles, active]
       properties:
+        institution_id: { type: string, description: Multi-institution LMS — MUST be set }
         external_id: { type: string, maxLength: 128 }
         full_name: { type: string }
         full_name_bn: { type: string }
@@ -251,6 +325,7 @@ components:
       type: object
       required: [external_id, full_name, active]
       properties:
+        institution_id: { type: string, description: Multi-institution LMS — MUST be set }
         external_id: { type: string, maxLength: 128 }
         full_name: { type: string }
         full_name_bn: { type: string }
@@ -277,6 +352,7 @@ components:
       type: object
       required: [external_id, class_level, name, sections, active]
       properties:
+        institution_id: { type: string, description: Multi-institution LMS — MUST be set }
         external_id: { type: string, maxLength: 128 }
         class_level: { type: integer, minimum: 1, maximum: 12 }
         name: { type: string }

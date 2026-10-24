@@ -294,3 +294,12 @@ Evidence:
   `make contracts-check`: no drift.
 - Web: auth/chat vitest 86/86; tsc and eslint clean.
 - App: tsc and eslint clean; jest 59/59 on the touched suites.
+
+### Roster role fix + LMS sync export — 2026-10-24 (for module 14)
+
+- `UpsertRosterUser` now accepts `TEACHER`/`STUDENT` (normalised to the lowercase `users.role`);
+  before, every roster/LMS caller was rejected with "role not rosterable".
+- Additive export `SyncRosterUser` (`internal/users/roster_sync.go`): LMS id → phone matching,
+  name/phone/email refresh, people without a phone allowed, PENDING on create, audited
+  `user.roster_upserted` / `user.roster_synced`. New query `UpdateRosterSyncedUser`.
+
